@@ -9,7 +9,7 @@ import torch
 import torch.utils
 
 
-def get_dataset(dataset_name, data_sources=None):
+def get_dataset(dataset_name, folder='./'):
     """ Gets the dataset specified by name and return the related components.
     Args:
         dataset_name: string with the name of the dataset
@@ -21,20 +21,14 @@ def get_dataset(dataset_name, data_sources=None):
         ignored_labels: list of int classes to ignore
         rgb_bands: int tuple that correspond to red, green and blue bands
     """
-    try:
-        DATA_FOLDER = data_sources[dataset_name]
-    except KeyError:
-        raise Exception("{} dataset is unknown. Available datasets: {}".format(
-            dataset_name, data_sources.keys()))
-
     if dataset_name == 'PaviaC':
         # Load the image
-        img = loadmat(DATA_FOLDER + 'Pavia.mat')['pavia']
+        img = loadmat(folder + 'Pavia.mat')['pavia']
         img = np.asarray(img, dtype='float32')
 
         rgb_bands = (55, 41, 12)
 
-        gt = loadmat(DATA_FOLDER + 'Pavia_gt.mat')['pavia_gt']
+        gt = loadmat(folder + 'Pavia_gt.mat')['pavia_gt']
 
         label_values = ["Undefined", "Water", "Trees", "Asphalt",
                         "Self-Blocking Bricks", "Bitumen", "Tiles", "Shadows",
@@ -44,12 +38,12 @@ def get_dataset(dataset_name, data_sources=None):
 
     elif dataset_name == 'PaviaU':
         # Load the image
-        img = loadmat(DATA_FOLDER + 'PaviaU.mat')['paviaU']
+        img = loadmat(folder + 'PaviaU.mat')['paviaU']
         img = np.asarray(img, dtype='float32')
 
         rgb_bands = (55, 41, 12)
 
-        gt = loadmat(DATA_FOLDER + 'PaviaU_gt.mat')['paviaU_gt']
+        gt = loadmat(folder + 'PaviaU_gt.mat')['paviaU_gt']
 
         label_values = ['Undefined', 'Asphalt', 'Meadows', 'Gravel', 'Trees',
                         'Painted metal sheets', 'Bare Soil', 'Bitumen',
@@ -59,13 +53,13 @@ def get_dataset(dataset_name, data_sources=None):
 
     elif dataset_name == 'IndianPines':
         # Load the image
-        img = loadmat(DATA_FOLDER + 'Indian_pines_corrected.mat')
+        img = loadmat(folder + 'Indian_pines_corrected.mat')
         img = img['indian_pines_corrected']
         img = np.asarray(img, dtype='float32')
 
         rgb_bands = (43, 21, 11)  # AVIRIS sensor
 
-        gt = loadmat(DATA_FOLDER + 'Indian_pines_gt.mat')['indian_pines_gt']
+        gt = loadmat(folder + 'Indian_pines_gt.mat')['indian_pines_gt']
         label_values = ["Undefined", "Alfalfa", "Corn-notill", "Corn-mintill",
                         "Corn", "Grass-pasture", "Grass-trees",
                         "Grass-pasture-mowed", "Hay-windrowed", "Oats",
@@ -77,12 +71,12 @@ def get_dataset(dataset_name, data_sources=None):
 
     elif dataset_name == 'Botswana':
         # Load the image
-        img = loadmat(DATA_FOLDER + 'Botswana.mat')['Botswana']
+        img = loadmat(folder + 'Botswana.mat')['Botswana']
         img = np.asarray(img, dtype='float32')
 
         rgb_bands = (75, 33, 15)
 
-        gt = loadmat(DATA_FOLDER + 'Botswana_gt.mat')['Botswana_gt']
+        gt = loadmat(folder + 'Botswana_gt.mat')['Botswana_gt']
         label_values = ["Undefined", "Water", "Hippo grass",
                         "Floodplain grasses 1", "Floodplain grasses 2",
                         "Reeds", "Riparian", "Firescar", "Island interior",
@@ -94,12 +88,12 @@ def get_dataset(dataset_name, data_sources=None):
 
     elif dataset_name == 'KSC':
         # Load the image
-        img = loadmat(DATA_FOLDER + 'KSC.mat')['KSC']
+        img = loadmat(folder + 'KSC.mat')['KSC']
         img = np.asarray(img, dtype='float32')
 
         rgb_bands = (43, 21, 11)  # AVIRIS sensor
 
-        gt = loadmat(DATA_FOLDER + 'KSC_gt.mat')['KSC_gt']
+        gt = loadmat(folder + 'KSC_gt.mat')['KSC_gt']
         label_values = ["Undefined", "Scrub", "Willow swamp",
                         "Cabbage palm hammock", "Cabbage palm/oak hammock",
                         "Slash pine", "Oak/broadleaf hammock",
@@ -107,6 +101,8 @@ def get_dataset(dataset_name, data_sources=None):
                         "Cattail marsh", "Salt marsh", "Mud flats", "Wate"]
 
         ignored_labels = [0]
+    else:
+        raise Exception("{} dataset is unknown.".format(dataset_name))
     return img, gt, label_values, ignored_labels, rgb_bands
 
 

@@ -41,12 +41,6 @@ from models import get_model, train, test
 
 import argparse
 
-DATA_SOURCES = {'PaviaC': './Pavia_C/',
-                'PaviaU': './Pavia_U/',
-                'IndianPines': './IndianPines/',
-                'Botswana': './Botswana/',
-                'KSC': './KSC/'}
-
 # Argument parser for CLI interaction
 parser = argparse.ArgumentParser(description="Run deep learning experiments on"
                                              " various hyperspectral datasets")
@@ -62,6 +56,8 @@ parser.add_argument('--model', type=str, required=True,
                     "lee (3D FCN), "
                     "chen (3D CNN), "
                     "li (3D CNN)")
+parser.add_argument('--folder', type=str, help="Path to dataset folder.",
+                    default="./")
 parser.add_argument('--cuda', type=bool, default=False, help="Use CUDA")
 parser.add_argument('--with_exploration', type=bool, default=False,
                     help="See data exploration visualization")
@@ -81,10 +77,11 @@ DATASET = args.dataset
 MODEL = args.model
 N_RUNS = args.runs
 DATAVIZ = args.with_exploration
+FOLDER = args.folder
 
 # Load the dataset
 img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS = get_dataset(DATASET,
-                                                               DATA_SOURCES)
+                                                               FOLDER)
 # Number of classes
 N_CLASSES = len(LABEL_VALUES)
 # Number of bands (last dimension of the image tensor)
