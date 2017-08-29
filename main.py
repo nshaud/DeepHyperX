@@ -22,6 +22,7 @@ from torch.autograd import Variable
 import numpy as np
 import sklearn.svm
 import sklearn.model_selection
+import seaborn as sns
 
 try:
     import visdom
@@ -31,7 +32,7 @@ except ImportError:
     # Fallback on Matplotlib + Seaborn
     import matplotlib.pyplot as plt
     plt.rcParams['figure.figsize'] = (8, 8)
-    import seaborn as sns
+
 
 from utils import metrics, convert_to_color_, convert_from_color_,\
                   display_dataset, explore_spectrums, plot_spectrums,\
@@ -160,8 +161,8 @@ for run in range(N_RUNS):
             break
         if hyperparams['cuda']:
             input = input.cuda()
-        data = Variable(input, volatile=True)
-        out = model(data, verbose=True)
+        input = Variable(input, volatile=True)
+        out = model(input, verbose=True)
         del(out)
 
         train(model, optimizer, loss, train_loader, hyperparams['epoch'],
