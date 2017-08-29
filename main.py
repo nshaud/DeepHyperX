@@ -76,6 +76,8 @@ parser.add_argument('--model', type=str, required=True,
                     "chen (3D CNN), "
                     "li (3D CNN)")
 parser.add_argument('--cuda', type=bool, default=False, help="Use CUDA")
+parser.add_argument('--with_exploration', type=bool, default=False,
+                    help="See data exploration visualization")
 parser.add_argument('--training_sample', type=float, default=0.05,
                     help="Percentage of samples to use for training")
 parser.add_argument('--epoch', type=int, help="Training epochs (optional, if"
@@ -91,6 +93,7 @@ SAMPLE_PERCENTAGE = args.training_sample
 DATASET = args.dataset
 MODEL = args.model
 N_RUNS = args.runs
+DATAVIZ = args.with_exploration
 
 # Load the dataset
 img, complete_gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS = get_dataset(DATASET,
@@ -116,10 +119,11 @@ convert_from_color = lambda x: convert_from_color_(x, palette=invert_palette)
 # Show the image and the ground truth
 display_dataset(img, complete_gt, RGB_BANDS, LABEL_VALUES, palette, visdom=viz)
 
-# Data exploration : compute and show the mean spectrums
-mean_spectrums = explore_spectrums(img, complete_gt, LABEL_VALUES,
+if DATAVIZ:
+    # Data exploration : compute and show the mean spectrums
+    mean_spectrums = explore_spectrums(img, complete_gt, LABEL_VALUES,
                                     ignored_labels=IGNORED_LABELS, visdom=viz)
-plot_spectrums(mean_spectrums, visdom=viz)
+    plot_spectrums(mean_spectrums, visdom=viz)
 
 # run the experiment several times
 for run in range(N_RUNS):
