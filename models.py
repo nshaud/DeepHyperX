@@ -413,6 +413,8 @@ def train(net, optimizer, criterion, data_loader, epoch,
     mean_losses = np.zeros(100000000)
     iter_ = 1
     win = None
+    if visdom:
+        display_iter = 1
 
     for e in tqdm(range(1, epoch + 1)):
         # Run the training loop for one epoch
