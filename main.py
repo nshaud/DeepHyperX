@@ -154,7 +154,8 @@ for run in range(N_RUNS):
                                center_pixel=hyperparams['center_pixel'])
         train_loader = torch.utils.data.DataLoader(train_dataset,
                                             batch_size=hyperparams['batch_size'],
-                                            pin_memory=hyperparams['cuda'])
+                                            pin_memory=hyperparams['cuda'],
+                                            shuffle=True)
 
         print("Network :")
         for data, _ in train_loader:

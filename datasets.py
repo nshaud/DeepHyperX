@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from scipy.io import loadmat
 import numpy as np
 import torch
@@ -114,17 +115,23 @@ class HyperX(torch.utils.data.Dataset):
         self.ignored_labels = set(ignored_labels)
         self.data_augmentation = data_augmentation
         self.center_pixel = center_pixel
+        mask = np.ones_like(gt)
+        for l in ignored_labels:
+            mask[gt == l] = 0
+        positions = np.nonzero(mask)
+        self.x_indices, self.y_indices = positions
 
     def __len__(self):
-        return 10000
+        return len(self.x_indices)
 
     def __getitem__(self, i):
-        pixel_label = None
-        while pixel_label in self.ignored_labels or pixel_label is None:
-            x1, x2, y1, y2 = get_random_pos(self.data, (self.patch_size, self.patch_size))
-            data = self.data[x1:x2,y1:y2]
-            label = self.label[x1:x2,y1:y2]
-            pixel_label = label[self.patch_size // 2, self.patch_size // 2]
+        x, y = self.x_indices[i], self.y_indices[i]
+        x1, y1 = x - self.patch_size // 2, y - self.patch_size // 2
+        x2, y2 = x + self.patch_size, y + self.patch_size
+
+        data = self.data[x1:x2,y1:y2]
+        label = self.label[x1:x2,y1:y2]
+        pixel_label = label[self.patch_size // 2, self.patch_size // 2]
 
         if self.data_augmentation and self.patch_size > 1:
             # Perform data augmentation (only on 2D patches)
