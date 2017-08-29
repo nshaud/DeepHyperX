@@ -43,8 +43,8 @@ def get_model(name, **kwargs):
                          kwargs.setdefault('dropout', False))
         optimizer = optim.Adam(model.parameters(), lr=0.00001)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
-        kwargs.setdefault('epoch', 20)
-        kwargs.setdefault('batch_size', 256)
+        kwargs.setdefault('epoch', 100)
+        kwargs.setdefault('batch_size', 100)
     elif name == 'hamida':
         patch_size = kwargs.setdefault('patch_size', 5)
         center_pixel = True
