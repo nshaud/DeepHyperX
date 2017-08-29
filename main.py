@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Python 2/3 compatiblity
 from __future__ import print_function
 from __future__ import division
