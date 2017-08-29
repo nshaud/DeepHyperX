@@ -5,16 +5,16 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import itertools
-import visdom
 import spectral
 # Torch
 import torch
 import torch.nn as nn
-from torch.autograd import Variable, Function
+from torch.autograd import Function as F
 from torch.legacy.nn import SpatialCrossMapLRN as SpatialCrossMapLRNOld
 
+
 def convert_to_color_(arr_2d, palette=None):
-    """ Array of labels to RGB color-encoded image
+    """Convert an array of labels to RGB color-encoded image.
 
     Args:
         arr_2d: int 2D array of labels
@@ -34,8 +34,9 @@ def convert_to_color_(arr_2d, palette=None):
 
     return arr_3d
 
+
 def convert_from_color_(arr_3d, palette=None):
-    """ RGB-color encoding to grayscale labels
+    """Convert an RGB-encoded image to grayscale labels.
 
     Args:
         arr_3d: int 2D image of color-coded labels on 3 channels
@@ -43,6 +44,7 @@ def convert_from_color_(arr_3d, palette=None):
 
     Returns:
         arr_2d: int 2D array of labels
+
     """
     if palette is None:
         raise Exception("Unknown color palette")
@@ -55,8 +57,9 @@ def convert_from_color_(arr_3d, palette=None):
 
     return arr_2d
 
+
 def display_dataset(img, gt, bands, labels, palette, visdom=None):
-    """ Display the specified dataset
+    """Display the specified dataset.
 
     Args:
         img: 3D hyperspectral image
@@ -65,6 +68,7 @@ def display_dataset(img, gt, bands, labels, palette, visdom=None):
         labels: list of label class names
         palette: dict of colors
         visdom (optional): visdom instance to connect (fallback to matplotlib)
+
     """
     print("Image has dimensions {}x{} and {} channels".format(*img.shape))
     rgb = spectral.get_rgb(img, bands)
@@ -75,9 +79,11 @@ def display_dataset(img, gt, bands, labels, palette, visdom=None):
     # TODO : fixme
     if visdom:
         # send to visdom server
-        visdom.images([np.transpose(rgb, (2,0,1)),
-                    np.transpose(convert_to_color_(gt, palette=palette), (2,0,1))],
-                    nrow=2)
+        visdom.images([np.transpose(rgb, (2, 0, 1)),
+                       np.transpose(convert_to_color_(gt, palette=palette),
+                                    (2, 0, 1))
+                       ],
+                      nrow=2)
     else:
         # use Matplotlib
         fig = plt.figure()
@@ -96,9 +102,10 @@ def display_dataset(img, gt, bands, labels, palette, visdom=None):
         plt.axis('off')
         plt.show()
 
+
 def explore_spectrums(img, complete_gt, class_names,
                       ignored_labels=None, visdom=None):
-    """ Plot sampled spectrums with mean + std for each class
+    """Plot sampled spectrums with mean + std for each class.
 
     Args:
         img: 3D hyperspectral image
@@ -108,6 +115,7 @@ def explore_spectrums(img, complete_gt, class_names,
 
     Returns:
         mean_spectrums: dict of mean spectrum by class
+
     """
     mean_spectrums = {}
 
@@ -119,7 +127,7 @@ def explore_spectrums(img, complete_gt, class_names,
         if visdom:
             step = max(1, class_spectrums.shape[0] // 100)
             # Sample and plot spectrums from the selected class
-            for spectrum in class_spectrums[::step,:]:
+            for spectrum in class_spectrums[::step, :]:
                 plt.title(class_names[c])
                 plt.plot(spectrum, alpha=0.25)
         mean_spectrum = np.mean(class_spectrums, axis=0)
@@ -130,19 +138,19 @@ def explore_spectrums(img, complete_gt, class_names,
         if visdom:
             # Plot the mean spectrum with thickness based on std
             plt.fill_between(range(len(mean_spectrum)), lower_spectrum,
-                         higher_spectrum, color="#3F5D7D")
+                             higher_spectrum, color="#3F5D7D")
             plt.plot(mean_spectrum, alpha=1, color="#FFFFFF", lw=2)
-
-            #plt.savefig('/home/naudeber/paviaU_{}.png'.format(LABEL_VALUES[c]), format='png')
             plt.show()
         mean_spectrums[class_names[c]] = mean_spectrum
     return mean_spectrums
 
+
 def plot_spectrums(spectrums, visdom=None):
-    """ Plot the specified dictionary of spectrums
+    """Plot the specified dictionary of spectrums.
 
     Args:
         spectrums: dictionary (name -> spectrum) of spectrums to plot
+
     """
     # Generate a color palette using seaborn
     palette = sns.color_palette("hls", len(spectrums.keys()))
@@ -162,14 +170,17 @@ def plot_spectrums(spectrums, visdom=None):
         plt.legend(spectrums.keys(), loc=9, bbox_to_anchor=(0.5, -0.1), ncol=2)
         plt.show()
 
+
 def build_dataset(mat, gt, ignored_labels=None):
-    """ Create a list of training samples based on an image and a masked ground truth
+    """Create a list of training samples based on an image and a mask.
 
     Args:
         mat: 3D hyperspectral matrix to extract the spectrums from
         gt: 2D ground truth
-        ignored_labels (optional): list of classes to ignore, e.g. 0 to remove unlabeled pixels
-        return_indices (optional): bool set to True to return the indices of the chosen samples
+        ignored_labels (optional): list of classes to ignore, e.g. 0 to remove
+        unlabeled pixels
+        return_indices (optional): bool set to True to return the indices of
+        the chosen samples
 
     """
     samples = []
@@ -182,11 +193,10 @@ def build_dataset(mat, gt, ignored_labels=None):
             continue
         else:
             indices = np.nonzero(gt == label)
-            #print(label, indices)
-            #print(all_samples, mat[indices])
             samples += list(mat[indices])
             labels += len(indices[0]) * [label]
     return np.asarray(samples), np.asarray(labels)
+
 
 def get_random_pos(img, window_shape):
     """ Return the corners of a random window in the input image
@@ -207,16 +217,19 @@ def get_random_pos(img, window_shape):
     y2 = y1 + h
     return x1, x2, y1, y2
 
-def sliding_window(image, step=10, window_size=(20,20), with_data=True):
-    """ Sliding window generator over an input image
+
+def sliding_window(image, step=10, window_size=(20, 20), with_data=True):
+    """Sliding window generator over an input image.
 
     Args:
-        image: 2D+ image to slide the window on, e.g. grayscale, RGB, hyperspectral, ...
+        image: 2D+ image to slide the window on, e.g. RGB or hyperspectral
         step: int stride of the sliding window
         window_size: int tuple, width and height of the window
-        with_data (optional): bool set to True to return both the data and the corner indices
+        with_data (optional): bool set to True to return both the data and the
+        corner indices
     Yields:
-        ([data], x, y, w, h) where x and y are the top-left corner of the window, (w,h) the window size
+        ([data], x, y, w, h) where x and y are the top-left corner of the
+        window, (w,h) the window size
 
     """
     # slide a window across the image
@@ -231,48 +244,53 @@ def sliding_window(image, step=10, window_size=(20,20), with_data=True):
             if y + h > H:
                 y = H - h
             if with_data:
-                yield image[x:x+w, y:y+h], x, y, w, h
+                yield image[x:x + w, y:y + h], x, y, w, h
             else:
                 yield x, y, w, h
 
-def count_sliding_window(top, step=10, window_size=(20,20)):
-    """ Count the number of windows in an image
+
+def count_sliding_window(top, step=10, window_size=(20, 20)):
+    """ Count the number of windows in an image.
 
     Args:
-        image: 2D+ image to slide the window on, e.g. grayscale, RGB, hyperspectral, ...
+        image: 2D+ image to slide the window on, e.g. RGB or hyperspectral, ...
         step: int stride of the sliding window
         window_size: int tuple, width and height of the window
-        with_data (optional): bool set to True to return both the data and the corner indices
     Returns:
-        int number of window
+        int number of windows
     """
     sw = sliding_window(top, step, window_size, with_data=False)
     return sum(1 for _ in sw)
 
+
 def grouper(n, iterable):
-    """ Browse an iterable by grouping n elements by n elements
+    """ Browse an iterable by grouping n elements by n elements.
 
     Args:
         n: int, size of the groups
         iterable: the iterable to Browse
     Yields:
         chunk of n elements from the iterable
+
     """
     it = iter(iterable)
     while True:
-       chunk = tuple(itertools.islice(it, n))
-       if not chunk:
-           return
-       yield chunk
+        chunk = tuple(itertools.islice(it, n))
+        if not chunk:
+            return
+        yield chunk
 
-def metrics(prediction, target, ignored_labels=None, label_values=None, details=True, visual=False):
-    """ Compute and print metrics (global accuracy, confusion matrix and F1 scores by class)
+
+def metrics(prediction, target, ignored_labels=None, label_values=None,
+            details=True, visual=False):
+    """Compute and print metrics (accuracy, confusion matrix and F1 scores).
 
     Args:
         prediction: list of predicted labels
         target: list of target labels
-        ignored_labels (optional): list of labels to ignore, e.g. 0 for undefined
-        visual (optional): bool set to True to have seaborn plot the confusion matrix
+        ignored_labels (optional): list of labels to ignore, e.g. 0 for undef
+        visual (optional): bool set to True to use seaborn plots
+
     """
     ignored_mask = np.zeros(target.shape[:2], dtype=np.bool)
     for l in ignored_labels:
@@ -282,8 +300,8 @@ def metrics(prediction, target, ignored_labels=None, label_values=None, details=
     prediction = prediction[ignored_mask]
 
     cm = confusion_matrix(
-            target,
-            prediction)
+        target,
+        prediction)
 
     if details and visual:
         plt.rcParams.update({'font.size': 10})
@@ -311,7 +329,7 @@ def metrics(prediction, target, ignored_labels=None, label_values=None, details=
     F1Score = np.zeros(len(label_values))
     for i in range(len(label_values)):
         try:
-            F1Score[i] = 2. * cm[i,i] / (np.sum(cm[i,:]) + np.sum(cm[:,i]))
+            F1Score[i] = 2. * cm[i, i] / (np.sum(cm[i, :]) + np.sum(cm[:, i]))
         except:
             # Ignore exception if there is no element in class i for test set
             pass
@@ -324,33 +342,48 @@ def metrics(prediction, target, ignored_labels=None, label_values=None, details=
 
         # Compute kappa coefficient
         pa = np.trace(cm) / float(total)
-        pe = np.sum(np.sum(cm, axis=0) * np.sum(cm, axis=1)) / float(total*total)
-        kappa = (pa - pe) / (1 - pe);
+        pe = np.sum(np.sum(cm, axis=0) * np.sum(cm, axis=1)) / \
+            float(total * total)
+        kappa = (pa - pe) / (1 - pe)
         print("Kappa: {:.4f}".format(kappa))
     return accuracy
 
+
 def sample_gt(gt, percentage):
-    """
-    Extract a fixed percentage of samples from an array of labels
+    """Extract a fixed percentage of samples from an array of labels.
+
     Args:
         gt: a 2D array of int labels
         percentage: [0, 1] float
     Returns:
         gt_out: a 2D array of int labels with zeroes on removed labels
+
     """
     gt_out = np.copy(gt)
     mask = np.random.rand(*gt.shape) > percentage
     gt_out[mask] = 0
     return gt_out
 
+
 def CrossEntropy2d(input, target, weight=None, size_average=True):
+    """2D version of the PyTorch cross entropy loss.
+
+    Args:
+        input: PyTorch tensor of predictions
+        target: PyTorch tensor of labels
+        weight: PyTorch tensor of weights for the classes
+        size_average (optional): bool, set to True to average the loss on the
+        tensor
+    Returns:
+        cross entropy loss
+    """
     dim = input.dim()
     if dim == 2:
         return F.cross_entropy(input, target, weight, size_average)
     elif dim == 4:
-        output = input.view(input.size(0),input.size(1), -1)
-        output = torch.transpose(output,1,2).contiguous()
-        output = output.view(-1,output.size(2))
+        output = input.view(input.size(0), input.size(1), -1)
+        output = torch.transpose(output, 1, 2).contiguous()
+        output = output.view(-1, output.size(2))
         target = target.view(-1)
         return F.cross_entropy(output, target, weight, size_average)
     else:
@@ -360,7 +393,9 @@ def CrossEntropy2d(input, target, weight=None, size_average=True):
 # https://github.com/pytorch/pytorch/issues/653#issuecomment-304361386
 
 # function interface, internal, do not use this one!!!
-class SpatialCrossMapLRNFunc(Function):
+
+
+class SpatialCrossMapLRNFunc(F):
     def __init__(self, size, alpha=1e-4, beta=0.75, k=1):
         self.size = size
         self.alpha = alpha
@@ -369,7 +404,8 @@ class SpatialCrossMapLRNFunc(Function):
 
     def forward(self, input):
         self.save_for_backward(input)
-        self.lrn = SpatialCrossMapLRNOld(self.size, self.alpha, self.beta, self.k)
+        self.lrn = SpatialCrossMapLRNOld(
+            self.size, self.alpha, self.beta, self.k)
         self.lrn.type(input.type())
         return self.lrn.forward(input)
 
@@ -378,6 +414,8 @@ class SpatialCrossMapLRNFunc(Function):
         return self.lrn.backward(input, grad_output)
 
 # use this one instead
+
+
 class SpatialCrossMapLRN(nn.Module):
     def __init__(self, size, alpha=1e-4, beta=0.75, k=1):
         super(SpatialCrossMapLRN, self).__init__()
@@ -387,4 +425,5 @@ class SpatialCrossMapLRN(nn.Module):
         self.k = k
 
     def forward(self, input):
-        return SpatialCrossMapLRNFunc(self.size, self.alpha, self.beta, self.k)(input)
+        return SpatialCrossMapLRNFunc(self.size, self.alpha,
+                                      self.beta, self.k)(input)

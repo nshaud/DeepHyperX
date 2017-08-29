@@ -2,18 +2,16 @@
 # Torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.utils.data as data
 import torch
 import torch.optim as optim
-from torch.autograd import Variable, Function
+from torch.autograd import Variable
 # utils
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from IPython.display import clear_output
-import visdom
-from utils import *
-from tqdm import tqdm
+from utils import grouper, SpatialCrossMapLRN, CrossEntropy2d,\
+                  sliding_window, count_sliding_window
 
 
 def get_model(name, **kwargs):
@@ -56,7 +54,8 @@ def get_model(name, **kwargs):
         center_pixel = False
         model = LeeEtAl(n_bands, n_classes)
         optimizer = optim.Adam(model.parameters(), lr=0.00001)
-        criterion = lambda x,y: CrossEntropy2d(x,y, weight=weights)
+
+        def criterion(x, y): return CrossEntropy2d(x, y, weight=weights)
     elif name == 'chen':
         patch_size = kwargs.setdefault('patch_size', 23)
         center_pixel = True
@@ -69,7 +68,8 @@ def get_model(name, **kwargs):
         patch_size = kwargs.setdefault('patch_size', 5)
         center_pixel = True
         model = LiEtAl(n_bands, n_classes, n_planes=2, patch_size=patch_size)
-        optimizer = optim.SGD(model.parameters(), lr=0.001, weight_decay=0.0005)
+        optimizer = optim.SGD(model.parameters(),
+                              lr=0.001, weight_decay=0.0005)
         kwargs.setdefault('epoch', 100)
         criterion = nn.CrossEntropyLoss(weight=weights)
 
@@ -81,10 +81,12 @@ def get_model(name, **kwargs):
     kwargs['center_pixel'] = center_pixel
     return model, optimizer, criterion, kwargs
 
+
 class Baseline(nn.Module):
     """
     Baseline network
     """
+
     def __init__(self, input_channels, n_classes, dropout=False):
         super(Baseline, self).__init__()
         self.use_dropout = dropout
@@ -119,12 +121,14 @@ class Baseline(nn.Module):
             print("Output size: {}".format(x.size()))
         return x
 
+
 class HamidaEtAl(nn.Module):
     """
     DEEP LEARNING APPROACH FOR REMOTE SENSING IMAGE ANALYSIS
     Amina Ben Hamida, Alexandre Benoit, Patrick Lambert, Chokri Ben Amar
     Big Data from Space (BiDS'16)
     """
+
     def __init__(self, input_channels, n_classes, patch_size=5):
         super(HamidaEtAl, self).__init__()
         # The first layer is a (3,3,3) kernel sized Conv characterized
@@ -133,23 +137,30 @@ class HamidaEtAl(nn.Module):
         self.input_channels = input_channels
 
         if patch_size == 3:
-            self.conv1 = nn.Conv3d(1, 20, (3, 3, 3), stride=(1,1,1), padding=1)
+            self.conv1 = nn.Conv3d(
+                1, 20, (3, 3, 3), stride=(1, 1, 1), padding=1)
         else:
-            self.conv1 = nn.Conv3d(1, 20, (3, 3, 3), stride=(1,1,1), padding=0)
+            self.conv1 = nn.Conv3d(
+                1, 20, (3, 3, 3), stride=(1, 1, 1), padding=0)
         # Next pooling is applied using a layer identical to the previous one
-        # with the difference of a 1D kernel size (1,1,3) and a larger stride equal
-        # to 2 in order to reduce the spectral dimension
-        self.pool1 = nn.Conv3d(20, 20, (3, 1, 1), stride=(2,1,1), padding=(1,0,0))
+        # with the difference of a 1D kernel size (1,1,3) and a larger stride
+        # equal to 2 in order to reduce the spectral dimension
+        self.pool1 = nn.Conv3d(
+            20, 20, (3, 1, 1), stride=(2, 1, 1), padding=(1, 0, 0))
         # Then, a duplicate of the first and second layers is created with
         # 35 hidden neurons per layer.
-        self.conv2 = nn.Conv3d(20, 35, (3, 3, 3), stride=(1,1,1), padding=(1,0,0))
-        self.pool2 = nn.Conv3d(35, 35, (3, 1, 1), stride=(2,1,1), padding=(1, 0, 0))
+        self.conv2 = nn.Conv3d(
+            20, 35, (3, 3, 3), stride=(1, 1, 1), padding=(1, 0, 0))
+        self.pool2 = nn.Conv3d(
+            35, 35, (3, 1, 1), stride=(2, 1, 1), padding=(1, 0, 0))
         # Finally, the 1D spatial dimension is progressively reduced
         # thanks to the use of two Conv layers, 35 neurons each,
         # with respective kernel sizes of (1,1,3) and (1,1,2) and strides
         # respectively equal to (1,1,1) and (1,1,2)
-        self.conv3 = nn.Conv3d(35, 35, (3, 1, 1), stride=(1,1,1), padding=(1,0,0))
-        self.conv4 = nn.Conv3d(35, 35, (2, 1, 1), stride=(2,1,1), padding=(1,0,0))
+        self.conv3 = nn.Conv3d(
+            35, 35, (3, 1, 1), stride=(1, 1, 1), padding=(1, 0, 0))
+        self.conv4 = nn.Conv3d(
+            35, 35, (2, 1, 1), stride=(2, 1, 1), padding=(1, 0, 0))
 
         self.features_size = self._get_final_flattened_size()
         # The architecture ends with a fully connected layer where the number
@@ -157,14 +168,15 @@ class HamidaEtAl(nn.Module):
         self.fc = nn.Linear(self.features_size, n_classes)
 
     def _get_final_flattened_size(self):
-        x = torch.zeros((1, 1, self.input_channels, self.patch_size, self.patch_size))
+        x = torch.zeros((1, 1, self.input_channels,
+                         self.patch_size, self.patch_size))
         x = Variable(x)
         x = self.pool1(self.conv1(x))
         x = self.pool2(self.conv2(x))
         x = self.conv3(x)
         x = self.conv4(x)
         _, t, c, w, h = x.size()
-        return t*c*w*h
+        return t * c * w * h
 
     def forward(self, x, verbose=False):
         if verbose:
@@ -195,36 +207,40 @@ class HamidaEtAl(nn.Module):
             print("Output size : {}".format(x.size()))
         return x
 
+
 class LeeEtAl(nn.Module):
     """
     CONTEXTUAL DEEP CNN BASED HYPERSPECTRAL CLASSIFICATION
     Hyungtae Lee and Heesung Kwon
     IGARSS 2016
     """
-    def __init__(self):
-        super(LeeEtAl, self).__init__(input_channels, n_classes)
+
+    def __init__(self, in_channels, n_classes):
+        super(LeeEtAl, self).__init__()
         # The first convolutional layer applied to the input hyperspectral
         # image uses an inception module that locally convolves the input
         # image with two convolutional filters with different sizes
         # (1x1xB and 3x3xB where B is the number of spectral bands)
-        self.conv_3x3 = nn.Conv3d(1, 128, (input_channels, 3, 3), stride=(1,1,1), padding=(0,1,1))
-        self.conv_1x1 = nn.Conv3d(1, 128, (input_channels, 1, 1), stride=(1,1,1), padding=0)
+        self.conv_3x3 = nn.Conv3d(
+            1, 128, (in_channels, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1))
+        self.conv_1x1 = nn.Conv3d(
+            1, 128, (in_channels, 1, 1), stride=(1, 1, 1), padding=0)
 
         # We use two modules from the residual learning approach
         # Residual block 1
-        self.conv1 = nn.Conv2d(256, 128, (1,1))
-        self.conv2 = nn.Conv2d(128, 128, (1,1))
-        self.conv3 = nn.Conv2d(128, 128, (1,1))
+        self.conv1 = nn.Conv2d(256, 128, (1, 1))
+        self.conv2 = nn.Conv2d(128, 128, (1, 1))
+        self.conv3 = nn.Conv2d(128, 128, (1, 1))
 
         # Residual block 2
-        self.conv4 = nn.Conv2d(128, 128, (1,1))
-        self.conv5 = nn.Conv2d(128, 128, (1,1))
+        self.conv4 = nn.Conv2d(128, 128, (1, 1))
+        self.conv5 = nn.Conv2d(128, 128, (1, 1))
 
         # The layer combination in the last three convolutional layers
         # is the same as the fully connected layers of Alexnet
-        self.conv6 = nn.Conv2d(128, 128, (1,1))
-        self.conv7 = nn.Conv2d(128, 128, (1,1))
-        self.conv8 = nn.Conv2d(128, n_classes, (1,1))
+        self.conv6 = nn.Conv2d(128, 128, (1, 1))
+        self.conv7 = nn.Conv2d(128, 128, (1, 1))
+        self.conv8 = nn.Conv2d(128, n_classes, (1, 1))
 
         self.lrn1 = SpatialCrossMapLRN(256)
         self.lrn2 = SpatialCrossMapLRN(128)
@@ -280,6 +296,7 @@ class LeeEtAl(nn.Module):
             print("Output size : {}".format(x.size()))
         return x
 
+
 class ChenEtAl(nn.Module):
     """
     DEEP FEATURE EXTRACTION AND CLASSIFICATION OF HYPERSPECTRAL IMAGES BASED ON
@@ -287,6 +304,7 @@ class ChenEtAl(nn.Module):
     Yushi Chen, Hanlu Jiang, Chunyang Li, Xiuping Jia and Pedram Ghamisi
     IEEE Transactions on Geoscience and Remote Sensing (TGRS), 2017
     """
+
     def __init__(self, input_channels, n_classes, n_planes=32):
         super(ChenEtAl, self).__init__()
         self.input_channels = input_channels
@@ -304,12 +322,13 @@ class ChenEtAl(nn.Module):
         self.dropout = nn.Dropout(p=0.05)
 
     def _get_final_flattened_size(self):
-        x = torch.zeros((1, 1, self.input_channels, self.patch_size, self.patch_size))
+        x = torch.zeros((1, 1, self.input_channels,
+                         self.patch_size, self.patch_size))
         x = Variable(x)
         x = self.pool1(self.conv1(x))
         x = self.pool2(self.conv2(x))
         _, t, c, w, h = x.size()
-        return t*c*w*h
+        return t * c * w * h
 
     def forward(self, x, verbose=False):
         if verbose:
@@ -334,6 +353,7 @@ class ChenEtAl(nn.Module):
             print("Output size : {}".format(x.size()))
         return x
 
+
 class LiEtAl(nn.Module):
     """
     SPECTRAL–SPATIAL CLASSIFICATION OF HYPERSPECTRAL IMAGERY
@@ -341,6 +361,7 @@ class LiEtAl(nn.Module):
     Ying Li, Haokui Zhang and Qiang Shen
     MDPI Remote Sensing, 2017
     """
+
     def __init__(self, input_channels, n_classes, n_planes=2, patch_size=5):
         super(LiEtAl, self).__init__()
         self.input_channels = input_channels
@@ -351,22 +372,24 @@ class LiEtAl(nn.Module):
         # and a fully-connected layer (F1)
         # we fix the spatial size of the 3D convolution kernels to 3 × 3
         # while only slightly varying the spectral depth of the kernels
-        self.conv1 = nn.Conv3d(1, n_planes, (7, 3, 3), padding=(1,0,0))
+        self.conv1 = nn.Conv3d(1, n_planes, (7, 3, 3), padding=(1, 0, 0))
         # the number of kernels in the second convolution layer is set to be
         # twice as many as that in the first convolution layer
-        self.conv2 = nn.Conv3d(n_planes, 2*n_planes, (3, 3, 3), padding=(1,0,0))
+        self.conv2 = nn.Conv3d(n_planes, 2 * n_planes,
+                               (3, 3, 3), padding=(1, 0, 0))
 
         self.features_size = self._get_final_flattened_size()
 
         self.fc = nn.Linear(self.features_size, n_classes)
 
     def _get_final_flattened_size(self):
-        x = torch.zeros((1, 1, self.input_channels, self.patch_size, self.patch_size))
+        x = torch.zeros((1, 1, self.input_channels,
+                         self.patch_size, self.patch_size))
         x = Variable(x)
         x = self.conv1(x)
         x = self.conv2(x)
         _, t, c, w, h = x.size()
-        return t*c*w*h
+        return t * c * w * h
 
     def forward(self, x, verbose=False):
         if verbose:
@@ -385,6 +408,7 @@ class LiEtAl(nn.Module):
             print("Output size : {}".format(x.size()))
         return x
 
+
 def train(net, optimizer, criterion, data_loader, epoch,
           display_iter=50, cuda=True, visdom=None):
     """
@@ -397,7 +421,8 @@ def train(net, optimizer, criterion, data_loader, epoch,
         epoch: int specifying the number of training epochs
         criterion: a PyTorch-compatible loss function, e.g. nn.CrossEntropyLoss
         cuda (optional): bool set to True to use CUDA/CUDNN
-        display_iter (optional): number of iterations before refreshing the display (False/None to switch off).
+        display_iter (optional): number of iterations before refreshing the
+        display (False/None to switch off).
     """
 
     if criterion is None:
@@ -431,11 +456,13 @@ def train(net, optimizer, criterion, data_loader, epoch,
             optimizer.step()
 
             losses[iter_] = loss.data[0]
-            mean_losses[iter_] = np.mean(losses[max(0,iter_-100):iter_+1])
+            mean_losses[iter_] = np.mean(losses[max(0, iter_ - 100):iter_ + 1])
             if display_iter and iter_ % display_iter == 0:
-                string = 'Train (epoch {}/{}) [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                        e, epoch, batch_idx * len(data), len(data) * len(data_loader),
-                        100. * batch_idx / len(data_loader), mean_losses[iter_])
+                string = 'Train (epoch {}/{}) [{}/{} ({:.0f}%)]\tLoss: {:.6f}'
+                string = string.format(
+                    e, epoch, batch_idx *
+                    len(data), len(data) * len(data_loader),
+                    100. * batch_idx / len(data_loader), mean_losses[iter_])
 
                 if visdom and win:
                     visdom.line(
@@ -458,29 +485,32 @@ def train(net, optimizer, criterion, data_loader, epoch,
                     plt.plot(mean_losses[:iter_]) and plt.show()
             iter_ += 1
 
+
 def test(net, img, hyperparams, patch_size=3,
          center_pixel=True, batch_size=25, cuda=True):
     """
     Test a model on a specific image
     """
     net.eval()
-    patch_size, center_pixel = hyperparams['patch_size'], hyperparams['center_pixel']
+    patch_size = hyperparams['patch_size']
+    center_pixel = hyperparams['center_pixel']
     batch_size, cuda = hyperparams['batch_size'], hyperparams['cuda']
     n_classes = hyperparams['n_classes']
 
-    kwargs = { 'step': 1, 'window_size': (patch_size, patch_size) }
+    kwargs = {'step': 1, 'window_size': (patch_size, patch_size)}
     probs = np.zeros(img.shape[:2] + (n_classes,))
 
     for batch in tqdm(grouper(batch_size, sliding_window(img, **kwargs)),
-                  total=(count_sliding_window(img, **kwargs) // batch_size)):
+                      total=(count_sliding_window(img, **kwargs) // batch_size)
+                      ):
         if patch_size == 1:
-            data = [b[0][0,0] for b in batch]
+            data = [b[0][0, 0] for b in batch]
             data = np.copy(data)
             data = torch.from_numpy(data)
         else:
             data = [b[0] for b in batch]
             data = np.copy(data)
-            data = data.transpose(0,3,1,2)
+            data = data.transpose(0, 3, 1, 2)
             data = torch.from_numpy(data)
             data = data.unsqueeze(1)
 
@@ -490,15 +520,15 @@ def test(net, img, hyperparams, patch_size=3,
             data = data.cuda()
             output = net(data).data.cpu()
         else:
-            output = model(data).data
+            output = net(data).data
 
         if patch_size == 1 or center_pixel:
             output = output.numpy()
         else:
             output = np.transpose(output.numpy(), (0, 2, 3, 1))
-        for (x,y,w,h), out in zip(indices, output):
+        for (x, y, w, h), out in zip(indices, output):
             if center_pixel:
-                probs[x+w//2, y+h//2] += out
+                probs[x + w // 2, y + h // 2] += out
             else:
-                probs[x:x+w, y:y+h] += out
+                probs[x:x + w, y:y + h] += out
     return probs

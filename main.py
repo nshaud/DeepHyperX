@@ -1,20 +1,25 @@
+"""
+DEEP LEARNING FOR HYPERSPECTRAL DATA.
+
+This script allows the user to run several deep models (and SVM baselines)
+against various hyperspectral datasets. It is designed to quickly benchmark
+state-of-the-art CNNs on various public hyperspectral datasets.
+
+This code is released under the GPLv3 license for non-commercial and research
+purposes only.
+For commercial use, please contact the authors.
+"""
 # -*- coding: utf-8 -*-
 # Python 2/3 compatiblity
 from __future__ import print_function
 from __future__ import division
 
 # Torch
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.utils.data as data
-import torch
-import torch.optim as optim
-from torch.autograd import Variable, Function
+from torch.autograd import Variable
 
 # Numpy, scipy, scikit-image, spectral
 import numpy as np
-import scipy.io
-import spectral
 import sklearn.svm
 import sklearn.model_selection
 
@@ -25,40 +30,22 @@ try:
 except ImportError:
     # Fallback on Matplotlib + Seaborn
     import matplotlib.pyplot as plt
-    plt.rcParams['figure.figsize'] = (8,8)
+    plt.rcParams['figure.figsize'] = (8, 8)
     import seaborn as sns
 
-# Utils
-import itertools
-from tqdm import tqdm
-import random
-from IPython.display import clear_output
-
-from utils import *
+from utils import metrics, convert_to_color_, convert_from_color_,\
+                  display_dataset, explore_spectrums, plot_spectrums,\
+                  sample_gt, build_dataset
 from datasets import get_dataset, HyperX
-from models import *
+from models import get_model, train, test
 
 import argparse
 
-"""
-DEEP LEARNING FOR HYPERSPECTRAL DATA
-
-This script allows the user to run several deep models (and SVM baselines)
-against various hyperspectral datasets. It is designed to quickly benchmark
-state-of-the-art CNNs on various public hyperspectral datasets.
-
-This code is released under the GPLv3 license for non-commercial and research
-purposes only.
-For commercial use, please contact the authors.
-
-
-"""
-
-DATASETS_SOURCES = {'PaviaC': '/home/naudeber/data_astro/naudeber/HyperX/Pavia_C/',
-                    'PaviaU': '/home/naudeber/data_astro/naudeber/HyperX/Pavia_U/',
-                    'IndianPines': '/home/naudeber/data_astro/naudeber/HyperX/IndianPines/',
-                    'Botswana' : '/home/naudeber/data_astro/naudeber/HyperX/Botswana/',
-                    'KSC': '/home/naudeber/data_astro/naudeber/HyperX/KSC/'}
+DATA_SOURCES = {'PaviaC': './Pavia_C/',
+                'PaviaU': './Pavia_U/',
+                'IndianPines': './IndianPines/',
+                'Botswana': './Botswana/',
+                'KSC': './KSC/'}
 
 # Argument parser for CLI interaction
 parser = argparse.ArgumentParser(description="Run deep learning experiments on"
@@ -96,8 +83,8 @@ N_RUNS = args.runs
 DATAVIZ = args.with_exploration
 
 # Load the dataset
-img, complete_gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS = get_dataset(DATASET,
-                                                               DATASETS_SOURCES)
+img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS = get_dataset(DATASET,
+                                                               DATA_SOURCES)
 # Number of classes
 N_CLASSES = len(LABEL_VALUES)
 # Number of bands (last dimension of the image tensor)
@@ -105,7 +92,7 @@ N_BANDS = img.shape[-1]
 
 # Parameters for the SVM grid search
 SVM_GRID_PARAMS = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4],
-                                        'C': [1, 10, 100, 1000]},
+                                       'C': [1, 10, 100, 1000]},
                    {'kernel': ['linear'], 'C': [0.1, 1, 10, 100, 1000]}]
 
 # Generate color palette
@@ -113,29 +100,38 @@ palette = {0: (0, 0, 0)}
 for k, color in enumerate(sns.color_palette("hls", len(LABEL_VALUES) - 1)):
     palette[k + 1] = tuple(np.asarray(255 * np.array(color), dtype='uint8'))
 invert_palette = {v: k for k, v in palette.items()}
-convert_to_color = lambda x: convert_to_color_(x, palette=palette)
-convert_from_color = lambda x: convert_from_color_(x, palette=invert_palette)
+
+
+def convert_to_color(x):
+    return convert_to_color_(x, palette=palette)
+
+
+def convert_from_color(x):
+    return convert_from_color_(x, palette=invert_palette)
+
 
 # Show the image and the ground truth
-display_dataset(img, complete_gt, RGB_BANDS, LABEL_VALUES, palette, visdom=viz)
+display_dataset(img, gt, RGB_BANDS, LABEL_VALUES, palette, visdom=viz)
 
 if DATAVIZ:
     # Data exploration : compute and show the mean spectrums
-    mean_spectrums = explore_spectrums(img, complete_gt, LABEL_VALUES,
-                                    ignored_labels=IGNORED_LABELS, visdom=viz)
+    mean_spectrums = explore_spectrums(img, gt, LABEL_VALUES,
+                                       ignored_labels=IGNORED_LABELS,
+                                       visdom=viz)
     plot_spectrums(mean_spectrums, visdom=viz)
 
 # run the experiment several times
 for run in range(N_RUNS):
     # Sample random training spectra
-    gt = sample_gt(complete_gt, SAMPLE_PERCENTAGE)
-    color_gt = convert_to_color(gt)
+    train_gt = sample_gt(gt, SAMPLE_PERCENTAGE)
+    color_gt = convert_to_color(train_gt)
     print("{} samples randomly selected".format(np.count_nonzero(gt)))
 
     if MODEL == 'SVM':
         print("Running a grid search SVM")
         # Grid search SVM (linear and RBF)
-        X_train, y_train = build_dataset(img, gt, ignored_labels=IGNORED_LABELS)
+        X_train, y_train = build_dataset(img, train_gt,
+                                         ignored_labels=IGNORED_LABELS)
 
         clf = sklearn.svm.SVC()
         clf = sklearn.model_selection.GridSearchCV(clf, SVM_GRID_PARAMS)
@@ -148,55 +144,51 @@ for run in range(N_RUNS):
     else:
         print("Running an experiment with the {} model".format(MODEL))
         # Instantiate the experiment based on predefined networks
-        model, optimizer, criterion, hyperparams = get_model(MODEL, cuda=CUDA,
-                                                             n_classes=N_CLASSES,
-                                                             n_bands=N_BANDS)
+        model, optimizer, loss, hyperparams = get_model(MODEL, cuda=CUDA,
+                                                        n_classes=N_CLASSES,
+                                                        n_bands=N_BANDS)
 
         # Generate the dataset
-        train_dataset = HyperX(img, gt, ignored_labels=IGNORED_LABELS,
+        train_dataset = HyperX(img, train_gt, ignored_labels=IGNORED_LABELS,
                                patch_size=hyperparams['patch_size'],
                                data_augmentation=False,
                                center_pixel=hyperparams['center_pixel'])
-        train_loader = torch.utils.data.DataLoader(train_dataset,
-                                            batch_size=hyperparams['batch_size'],
-                                            pin_memory=hyperparams['cuda'],
-                                            shuffle=True)
+        train_loader = data.DataLoader(train_dataset,
+                                       batch_size=hyperparams['batch_size'],
+                                       pin_memory=hyperparams['cuda'],
+                                       shuffle=True)
 
         print("Network :")
-        for data, _ in train_loader:
+        for input, _ in train_loader:
             break
         if hyperparams['cuda']:
-            data = data.cuda()
-        data = Variable(data, volatile=True)
+            input = input.cuda()
+        data = Variable(input, volatile=True)
         out = model(data, verbose=True)
         del(out)
 
-        train(model, optimizer, criterion, train_loader, hyperparams['epoch'],
-                                           cuda=hyperparams['cuda'], visdom=viz)
+        train(model, optimizer, loss, train_loader, hyperparams['epoch'],
+              cuda=hyperparams['cuda'], visdom=viz)
 
         probabilities = test(model, img, hyperparams)
         prediction = np.argmax(probabilities, axis=-1)
 
     if viz:
-        viz.images([np.transpose(convert_to_color(prediction), (2,0,1)),
-                    np.transpose(convert_to_color(complete_gt), (2,0,1))],
-                    nrow=2)
+        viz.images([np.transpose(convert_to_color(prediction), (2, 0, 1)),
+                    np.transpose(convert_to_color(gt), (2, 0, 1))],
+                   nrow=2)
     else:
         # Plot the results
         fig = plt.figure()
-        fig.add_subplot(1,3,1)
+        fig.add_subplot(1, 2, 1)
         plt.imshow(convert_to_color(prediction))
-        plt.title("Prediction {}".format(model_info))
+        plt.title("Prediction")
         plt.axis('off')
-        fig.add_subplot(1,3,2)
-        plt.imshow(convert_to_color(complete_gt))
+        fig.add_subplot(1, 2, 2)
+        plt.imshow(convert_to_color(gt))
         plt.title("Ground truth")
-        plt.axis('off')
-        fig.add_subplot(1,3,3)
-        plt.imshow(np.bitwise_and(prediction != complete_gt, complete_gt > 0))
-        plt.title('Differences')
         plt.axis('off')
         plt.show()
 
-    metrics(prediction, complete_gt, ignored_labels=IGNORED_LABELS,
+    metrics(prediction, gt, ignored_labels=IGNORED_LABELS,
             label_values=LABEL_VALUES)
