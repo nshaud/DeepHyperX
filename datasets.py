@@ -7,13 +7,37 @@ from scipy.io import loadmat
 import numpy as np
 import torch
 import torch.utils
+import os
+from tqdm import tqdm
+try:
+    # Python 3
+    from urllib.request import urlretrieve
+except ImportError:
+    # Python 2
+    from urllib import urlretrieve
 
 
-def get_dataset(dataset_name, folder='./'):
+class TqdmUpTo(tqdm):
+    """Provides `update_to(n)` which uses `tqdm.update(delta_n)`."""
+    def update_to(self, b=1, bsize=1, tsize=None):
+        """
+        b  : int, optional
+            Number of blocks transferred so far [default: 1].
+        bsize  : int, optional
+            Size of each block (in tqdm units) [default: 1].
+        tsize  : int, optional
+            Total size (in tqdm units). If [default: None] remains unchanged.
+        """
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)  # will also set self.n = b * bsize
+
+
+def get_dataset(dataset_name, target_folder=None):
     """ Gets the dataset specified by name and return the related components.
     Args:
         dataset_name: string with the name of the dataset
-        data_sources: paths to the datasets
+        target_folder: folder to store the datasets
     Returns:
         img: 3D hyperspectral image (WxHxB)
         gt: 2D int array of labels
@@ -21,6 +45,45 @@ def get_dataset(dataset_name, folder='./'):
         ignored_labels: list of int classes to ignore
         rgb_bands: int tuple that correspond to red, green and blue bands
     """
+
+    datasets = {
+        'PaviaC': {
+            'img': 'http://www.ehu.eus/ccwintco/uploads/e/e3/Pavia.mat',
+            'gt': 'http://www.ehu.eus/ccwintco/uploads/5/53/Pavia_gt.mat'
+            },
+        'PaviaU': {
+            'img': 'http://www.ehu.eus/ccwintco/uploads/e/ee/PaviaU.mat',
+            'gt': 'http://www.ehu.eus/ccwintco/uploads/5/50/PaviaU_gt.mat'
+            },
+        'KSC': {
+            'img': 'http://www.ehu.es/ccwintco/uploads/2/26/KSC.mat',
+            'gt': 'http://www.ehu.es/ccwintco/uploads/a/a6/KSC_gt.mat'
+            },
+        'IndianPines': {
+            'img': 'http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat',
+            'gt': 'http://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat'
+            },
+        'Botswana': {
+            'img': 'http://www.ehu.es/ccwintco/uploads/7/72/Botswana.mat',
+            'gt': 'http://www.ehu.es/ccwintco/uploads/5/58/Botswana_gt.mat'
+            }
+    }
+
+    folder = target_folder + dataset_name + '/'
+    # Download the dataset if is not present
+    if os.path.isdir(folder):
+        for url in datasets[dataset_name].values():
+            filename = url.split('/')[-1]
+    if not os.path.isdir(folder):
+        os.mkdir(folder)
+        for url in datasets[dataset_name].values():
+            # download the files
+            filename = url.split('/')[-1]
+            with TqdmUpTo(unit='B', unit_scale=True, miniters=1,
+                          desc="Downloading {}".format(filename)) as t:
+                urlretrieve(url, filename=folder + filename,
+                            reporthook=t.update_to)
+
     if dataset_name == 'PaviaC':
         # Load the image
         img = loadmat(folder + 'Pavia.mat')['pavia']
