@@ -87,7 +87,6 @@ def get_dataset(dataset_name, target_folder=None):
     if dataset_name == 'PaviaC':
         # Load the image
         img = loadmat(folder + 'Pavia.mat')['pavia']
-        img = np.asarray(img, dtype='float32')
 
         rgb_bands = (55, 41, 12)
 
@@ -102,7 +101,6 @@ def get_dataset(dataset_name, target_folder=None):
     elif dataset_name == 'PaviaU':
         # Load the image
         img = loadmat(folder + 'PaviaU.mat')['paviaU']
-        img = np.asarray(img, dtype='float32')
 
         rgb_bands = (55, 41, 12)
 
@@ -118,7 +116,6 @@ def get_dataset(dataset_name, target_folder=None):
         # Load the image
         img = loadmat(folder + 'Indian_pines_corrected.mat')
         img = img['indian_pines_corrected']
-        img = np.asarray(img, dtype='float32')
 
         rgb_bands = (43, 21, 11)  # AVIRIS sensor
 
@@ -135,7 +132,6 @@ def get_dataset(dataset_name, target_folder=None):
     elif dataset_name == 'Botswana':
         # Load the image
         img = loadmat(folder + 'Botswana.mat')['Botswana']
-        img = np.asarray(img, dtype='float32')
 
         rgb_bands = (75, 33, 15)
 
@@ -152,7 +148,6 @@ def get_dataset(dataset_name, target_folder=None):
     elif dataset_name == 'KSC':
         # Load the image
         img = loadmat(folder + 'KSC.mat')['KSC']
-        img = np.asarray(img, dtype='float32')
 
         rgb_bands = (43, 21, 11)  # AVIRIS sensor
 
@@ -166,6 +161,11 @@ def get_dataset(dataset_name, target_folder=None):
         ignored_labels = [0]
     else:
         raise Exception("{} dataset is unknown.".format(dataset_name))
+
+    # Normalization
+    img = np.asarray(img, dtype='float32')
+    img /= np.max(img)
+
     return img, gt, label_values, ignored_labels, rgb_bands
 
 
