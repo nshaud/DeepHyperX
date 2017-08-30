@@ -184,8 +184,13 @@ class HyperX(torch.utils.data.Dataset):
             data_augmentation: bool, set to True to perform random flips
         """
         super(HyperX, self).__init__()
-        self.data = data
-        self.label = gt
+        offset = patch_size // 2
+        self.data = np.pad(data,
+                           ((offset, offset), (offset, offset), (0, 0)),
+                           'constant')
+        self.label = np.pad(gt,
+                            ((offset, offset), (offset, offset)),
+                            'constant')
         self.patch_size = patch_size
         self.ignored_labels = set(ignored_labels)
         self.data_augmentation = data_augmentation
@@ -194,15 +199,18 @@ class HyperX(torch.utils.data.Dataset):
         for l in ignored_labels:
             mask[gt == l] = 0
         positions = np.nonzero(mask)
-        self.x_indices, self.y_indices = positions
+        x_pos = positions[0] + offset
+        y_pos = positions[1] + offset
+        self.indices = zip(x_pos, y_pos)
+        np.random.shuffle(self.indices)
 
     def __len__(self):
-        return len(self.x_indices)
+        return len(self.indices)
 
     def __getitem__(self, i):
-        x, y = self.x_indices[i], self.y_indices[i]
+        x, y = self.indices[i]
         x1, y1 = x - self.patch_size // 2, y - self.patch_size // 2
-        x2, y2 = x + self.patch_size, y + self.patch_size
+        x2, y2 = x + self.patch_size // 2 + 1, y + self.patch_size // 2 + 1
 
         data = self.data[x1:x2, y1:y2]
         label = self.label[x1:x2, y1:y2]
