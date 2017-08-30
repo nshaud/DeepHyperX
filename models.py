@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torch
 import torch.optim as optim
 from torch.autograd import Variable
+from torch.nn import init
 # utils
 import numpy as np
 import matplotlib.pyplot as plt
@@ -86,6 +87,10 @@ class Baseline(nn.Module):
     """
     Baseline network
     """
+    @staticmethod
+    def weight_init(m):
+        if isinstance(m, nn.Linear):
+            init.xavier_uniform(m.weight.data)
 
     def __init__(self, input_channels, n_classes, dropout=False):
         super(Baseline, self).__init__()
@@ -97,6 +102,8 @@ class Baseline(nn.Module):
         self.fc2 = nn.Linear(2048, 4096)
         self.fc3 = nn.Linear(4096, 2048)
         self.fc4 = nn.Linear(2048, n_classes)
+
+        self.apply(self.weight_init)
 
     def forward(self, x, verbose=False):
         if verbose:
@@ -128,6 +135,10 @@ class HamidaEtAl(nn.Module):
     Amina Ben Hamida, Alexandre Benoit, Patrick Lambert, Chokri Ben Amar
     Big Data from Space (BiDS'16)
     """
+    @staticmethod
+    def weight_init(m):
+        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
+            init.xavier_uniform(m.weight.data)
 
     def __init__(self, input_channels, n_classes, patch_size=5):
         super(HamidaEtAl, self).__init__()
@@ -166,6 +177,8 @@ class HamidaEtAl(nn.Module):
         # The architecture ends with a fully connected layer where the number
         # of neurons is equal to the number of input classes.
         self.fc = nn.Linear(self.features_size, n_classes)
+
+        self.apply(self.weight_init)
 
     def _get_final_flattened_size(self):
         x = torch.zeros((1, 1, self.input_channels,
@@ -214,6 +227,10 @@ class LeeEtAl(nn.Module):
     Hyungtae Lee and Heesung Kwon
     IGARSS 2016
     """
+    @staticmethod
+    def weight_init(m):
+        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
+            init.xavier_uniform(m.weight.data)
 
     def __init__(self, in_channels, n_classes):
         super(LeeEtAl, self).__init__()
@@ -247,6 +264,8 @@ class LeeEtAl(nn.Module):
 
         # The 7 th and 8 th convolutional layers have dropout in training
         self.dropout = nn.Dropout(p=0.5)
+
+        self.apply(self.weight_init)
 
     def forward(self, x, verbose=False):
         # Inception module
@@ -304,8 +323,14 @@ class ChenEtAl(nn.Module):
     Yushi Chen, Hanlu Jiang, Chunyang Li, Xiuping Jia and Pedram Ghamisi
     IEEE Transactions on Geoscience and Remote Sensing (TGRS), 2017
     """
+    @staticmethod
+    def weight_init(m):
+        # In the beginning, the weights are randomly initialized
+        # with standard deviation 0.001
+        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
+            init.normal(m.weight.data, std=0.001)
 
-    def __init__(self, input_channels, n_classes, n_planes=32):
+    def __init__(self, input_channels, n_classes, patch_size=27, n_planes=32):
         super(ChenEtAl, self).__init__()
         self.input_channels = input_channels
         self.n_planes = n_planes
@@ -319,7 +344,9 @@ class ChenEtAl(nn.Module):
 
         self.fc = nn.Linear(self.features_size, n_classes)
 
-        self.dropout = nn.Dropout(p=0.05)
+        self.dropout = nn.Dropout(p=0.5)
+
+        self.apply(self.weight_init)
 
     def _get_final_flattened_size(self):
         x = torch.zeros((1, 1, self.input_channels,
@@ -361,6 +388,10 @@ class LiEtAl(nn.Module):
     Ying Li, Haokui Zhang and Qiang Shen
     MDPI Remote Sensing, 2017
     """
+    @staticmethod
+    def weight_init(m):
+        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
+            init.xavier_uniform(m.weight.data)
 
     def __init__(self, input_channels, n_classes, n_planes=2, patch_size=5):
         super(LiEtAl, self).__init__()
@@ -381,6 +412,8 @@ class LiEtAl(nn.Module):
         self.features_size = self._get_final_flattened_size()
 
         self.fc = nn.Linear(self.features_size, n_classes)
+
+        self.apply(self.weight_init)
 
     def _get_final_flattened_size(self):
         x = torch.zeros((1, 1, self.input_channels,
