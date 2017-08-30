@@ -517,13 +517,11 @@ def train(net, optimizer, criterion, data_loader, epoch,
                         win=win,
                         update='append'
                     )
-                    visdom.text(string)
                 elif visdom:
                     win = visdom.line(
                         X=np.arange(0, iter_),
                         Y=mean_losses[:iter_],
                     )
-                    visdom.text(string)
                 else:
                     # Refresh the Jupyter cell output
                     clear_output()
