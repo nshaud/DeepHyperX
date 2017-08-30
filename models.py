@@ -35,12 +35,12 @@ def get_model(name, **kwargs):
     if cuda:
         kwargs['weights'] = weights.cuda()
 
-    if name == 'baseline':
+    if name == 'nn':
         kwargs.setdefault('patch_size', 1)
         center_pixel = True
         model = Baseline(n_bands, n_classes,
                          kwargs.setdefault('dropout', False))
-        optimizer = optim.Adam(model.parameters(), lr=0.00001)
+        optimizer = optim.Adam(model.parameters(), lr=0.0001)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
         kwargs.setdefault('epoch', 100)
         kwargs.setdefault('batch_size', 100)
@@ -48,31 +48,35 @@ def get_model(name, **kwargs):
         patch_size = kwargs.setdefault('patch_size', 5)
         center_pixel = True
         model = HamidaEtAl(n_bands, n_classes, patch_size=patch_size)
-        optimizer = optim.Adam(model.parameters(), lr=0.00001)
+        optimizer = optim.SGD(model.parameters(), lr=0.0001)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
     elif name == 'lee':
+        kwargs.setdefault('epoch', 200)
         patch_size = kwargs.setdefault('patch_size', 5)
         center_pixel = False
         model = LeeEtAl(n_bands, n_classes)
-        optimizer = optim.Adam(model.parameters(), lr=0.00001)
+        optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-        def criterion(x, y): return CrossEntropy2d(x, y, weight=weights)
+        def criterion(x, y):
+            return CrossEntropy2d(x, y, weight=kwargs['weights'])
     elif name == 'chen':
-        patch_size = kwargs.setdefault('patch_size', 23)
+        patch_size = kwargs.setdefault('patch_size', 27)
         center_pixel = True
-        model = ChenEtAl(n_bands, n_classes, n_planes=32)
-        optimizer = optim.SGD(model.parameters(), lr=0.003)
-        criterion = nn.CrossEntropyLoss(weight=weights)
-        kwargs.setdefault('epoch', 200)
+        model = ChenEtAl(n_bands, n_classes, patch_size=patch_size)
+        optimizer = optim.Adam(model.parameters(), lr=0.003)
+        criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
+        kwargs.setdefault('epoch', 400)
         kwargs.setdefault('batch_size', 100)
     elif name == 'li':
         patch_size = kwargs.setdefault('patch_size', 5)
         center_pixel = True
-        model = LiEtAl(n_bands, n_classes, n_planes=2, patch_size=patch_size)
+        model = LiEtAl(n_bands, n_classes, n_planes=4, patch_size=patch_size)
         optimizer = optim.SGD(model.parameters(),
-                              lr=0.001, weight_decay=0.0005)
-        kwargs.setdefault('epoch', 100)
-        criterion = nn.CrossEntropyLoss(weight=weights)
+                              lr=0.001, momentum=0.9, weight_decay=0.0005)
+        kwargs.setdefault('epoch', 200)
+        criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
+    else:
+        raise KeyError("{} model is unknown.".format(name))
 
     if cuda:
         model = model.cuda()
@@ -334,11 +338,13 @@ class ChenEtAl(nn.Module):
         super(ChenEtAl, self).__init__()
         self.input_channels = input_channels
         self.n_planes = n_planes
+        self.patch_size = patch_size
 
         self.conv1 = nn.Conv3d(1, n_planes, (32, 4, 4))
         self.pool1 = nn.MaxPool3d((1, 2, 2))
         self.conv2 = nn.Conv3d(n_planes, n_planes, (32, 4, 4))
         self.pool2 = nn.MaxPool3d((1, 2, 2))
+        self.conv3 = nn.Conv3d(n_planes, n_planes, (32, 4, 4))
 
         self.features_size = self._get_final_flattened_size()
 
@@ -354,6 +360,7 @@ class ChenEtAl(nn.Module):
         x = Variable(x)
         x = self.pool1(self.conv1(x))
         x = self.pool2(self.conv2(x))
+        x = self.conv3(x)
         _, t, c, w, h = x.size()
         return t * c * w * h
 
@@ -374,7 +381,13 @@ class ChenEtAl(nn.Module):
         if verbose:
             print("Pool2 size : {}".format(x.size()))
         x = self.dropout(x)
+        x = F.relu(self.conv3(x))
+        if verbose:
+            print("Conv3 size : {}".format(x.size()))
+        x = self.dropout(x)
         x = x.view(-1, self.features_size)
+        if verbose:
+            print("Flattened size : {}".format(x.size()))
         x = self.fc(x)
         if verbose:
             print("Output size : {}".format(x.size()))
