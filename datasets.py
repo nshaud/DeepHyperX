@@ -219,8 +219,10 @@ class HyperX(torch.utils.data.Dataset):
             # Perform data augmentation (only on 2D patches)
             if np.random.random() > 0.5:
                 data = np.fliplr(data)
+                label = np.fliplr(label)
             if np.random.random() > 0.5:
                 data = np.flipud(data)
+                label = np.flipud(label)
 
         # Copy the data into numpy arrays (PyTorch doesn't like numpy views)
         data = np.asarray(np.copy(data).transpose((2, 0, 1)), dtype='float32')
