@@ -6,10 +6,15 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import itertools
 import spectral
+try:
+    import visdom
+except:
+    pass
 # Torch
 import torch
 import torch.nn as nn
-from torch.autograd import Function as F
+import torch.nn.functional as F
+from torch.autograd import Function
 from torch.legacy.nn import SpatialCrossMapLRN as SpatialCrossMapLRNOld
 
 
@@ -281,8 +286,7 @@ def grouper(n, iterable):
         yield chunk
 
 
-def metrics(prediction, target, ignored_labels=None, label_values=None,
-            details=True, visual=False):
+def metrics(prediction, target, ignored_labels=[]):
     """Compute and print metrics (accuracy, confusion matrix and F1 scores).
 
     Args:
@@ -290,7 +294,8 @@ def metrics(prediction, target, ignored_labels=None, label_values=None,
         target: list of target labels
         ignored_labels (optional): list of labels to ignore, e.g. 0 for undef
         visual (optional): bool set to True to use seaborn plots
-
+    Returns:
+        accuracy, F1 score by class, confusion matrix
     """
     ignored_mask = np.zeros(target.shape[:2], dtype=np.bool)
     for l in ignored_labels:
@@ -301,41 +306,48 @@ def metrics(prediction, target, ignored_labels=None, label_values=None,
 
     cm = confusion_matrix(
         target,
-        prediction)
-
-    if details and visual:
-        plt.rcParams.update({'font.size': 10})
-        sns.heatmap(cm, annot=True, square=True)
-        plt.title("Confusion matrix")
-        plt.show()
-        plt.rcParams.update({'font.size': 22})
-    elif details:
-        print("Confusion matrix :")
-        print(cm)
-        print("---")
-
+        prediction,
+        labels=range(np.max(target) + 1))
     # Compute global accuracy
     total = np.sum(cm)
     accuracy = sum([cm[x][x] for x in range(len(cm))])
     accuracy *= 100 / float(total)
     total = sum(sum(cm))
-    if details:
-        print("{} pixels processed".format(total))
-        print("Total accuracy : {:.4f}%".format(accuracy))
-
-        print("---")
 
     # Compute F1 score
-    F1Score = np.zeros(len(label_values))
-    for i in range(len(label_values)):
+    F1scores = np.zeros(len(cm))
+    for i in range(len(F1scores)):
         try:
-            F1Score[i] = 2. * cm[i, i] / (np.sum(cm[i, :]) + np.sum(cm[:, i]))
-        except:
-            # Ignore exception if there is no element in class i for test set
-            pass
-    if details:
-        print("F1Score :")
-        for l_id, score in enumerate(F1Score):
+            F1scores[i] = 2. * cm[i, i] / (np.sum(cm[i, :]) + np.sum(cm[:, i]))
+        except ZeroDivisionError:
+            F1scores[i] = 0.
+    return accuracy, F1scores, cm
+
+
+def show_results(accuracy, F1scores, cm, label_values=None,
+                 display=None):
+    if isinstance(display, visdom.Visdom):
+        display.heatmap(cm)
+    elif display:
+        plt.rcParams.update({'font.size': 10})
+        sns.heatmap(cm, annot=True, square=True)
+        plt.title("Confusion matrix")
+        plt.show()
+        plt.rcParams.update({'font.size': 22})
+    else:
+        print("Confusion matrix :")
+        print(cm)
+        print("---")
+
+    total = sum(sum(cm))
+    if True:
+        print("{} pixels processed".format(total))
+        print("Total accuracy : {:.4f}%".format(accuracy))
+        print("---")
+
+    if True:
+        print("F1 score :")
+        for l_id, score in enumerate(F1scores):
             print("\t{}: {:.4f}".format(label_values[l_id], score))
 
         print("---")
@@ -346,7 +358,6 @@ def metrics(prediction, target, ignored_labels=None, label_values=None,
             float(total * total)
         kappa = (pa - pe) / (1 - pe)
         print("Kappa: {:.4f}".format(kappa))
-    return accuracy
 
 
 def sample_gt(gt, percentage):
@@ -356,13 +367,21 @@ def sample_gt(gt, percentage):
         gt: a 2D array of int labels
         percentage: [0, 1] float
     Returns:
-        gt_out: a 2D array of int labels with zeroes on removed labels
+        train_gt, test_gt: 2D arrays of int labels
 
     """
-    gt_out = np.copy(gt)
-    mask = np.random.rand(*gt.shape) > percentage
-    gt_out[mask] = 0
-    return gt_out
+    mask = np.zeros(gt.shape, dtype='bool')
+    for l in np.unique(gt):
+        x, y = np.nonzero(gt == l)
+        indices = np.random.choice(len(x), int(len(x) * percentage),
+                                   replace=False)
+        x, y = x[indices], y[indices]
+        mask[x, y] = True
+    train_gt = np.zeros_like(gt)
+    train_gt[mask] = gt[mask]
+    test_gt = np.zeros_like(gt)
+    test_gt[~mask] = gt[~mask]
+    return train_gt, test_gt
 
 
 def CrossEntropy2d(input, target, weight=None, size_average=True):
@@ -395,7 +414,7 @@ def CrossEntropy2d(input, target, weight=None, size_average=True):
 # function interface, internal, do not use this one!!!
 
 
-class SpatialCrossMapLRNFunc(F):
+class SpatialCrossMapLRNFunc(Function):
     def __init__(self, size, alpha=1e-4, beta=0.75, k=1):
         self.size = size
         self.alpha = alpha

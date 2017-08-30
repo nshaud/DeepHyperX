@@ -15,6 +15,7 @@ from __future__ import print_function
 from __future__ import division
 
 # Torch
+import torch
 import torch.utils.data as data
 from torch.autograd import Variable
 
@@ -22,21 +23,13 @@ from torch.autograd import Variable
 import numpy as np
 import sklearn.svm
 import sklearn.model_selection
+# Visualization
+import matplotlib.pyplot as plt
 import seaborn as sns
-
-try:
-    import visdom
-    # Open connection to Visdom server
-    viz = visdom.Visdom()
-except ImportError:
-    # Fallback on Matplotlib + Seaborn
-    import matplotlib.pyplot as plt
-    plt.rcParams['figure.figsize'] = (8, 8)
-
 
 from utils import metrics, convert_to_color_, convert_from_color_,\
                   display_dataset, explore_spectrums, plot_spectrums,\
-                  sample_gt, build_dataset
+                  sample_gt, build_dataset, show_results
 from datasets import get_dataset, HyperX
 from models import get_model, train, test
 
@@ -57,16 +50,19 @@ parser.add_argument('--model', type=str, required=True,
                     "lee (3D FCN), "
                     "chen (3D CNN), "
                     "li (3D CNN)")
-parser.add_argument('--folder', type=str, help="Path to dataset folder.",
+parser.add_argument('--folder', type=str, help="Folder where to store the "
+                    "datasets (defaults to the current working directory).",
                     default="./")
-parser.add_argument('--cuda', type=bool, default=False, help="Use CUDA")
+parser.add_argument('--cuda', type=bool, const=True, nargs='?',
+                    help="Use CUDA")
 parser.add_argument('--with_exploration', type=bool, default=False,
                     help="See data exploration visualization")
-parser.add_argument('--training_sample', type=float, default=0.05,
+parser.add_argument('--training_sample', type=float, default=0.10,
                     help="Percentage of samples to use for training")
 parser.add_argument('--epoch', type=int, help="Training epochs (optional, if"
                     " absent will be set by the model)")
 parser.add_argument('--runs', type=int, default=1, help="Number of runs")
+parser.add_argument('--visdom', type=bool, default=True, help="Use Visdom")
 
 args = parser.parse_args()
 
@@ -79,6 +75,22 @@ MODEL = args.model
 N_RUNS = args.runs
 DATAVIZ = args.with_exploration
 FOLDER = args.folder
+EPOCH = args.epoch
+
+if args.visdom:
+    try:
+        import visdom
+    except ImportError:
+        print("visdom not available, fallback on Matplotlib")
+    else:
+        # Open connection to Visdom server
+        viz = visdom.Visdom()
+plt.rcParams['figure.figsize'] = (8, 8)
+
+if CUDA:
+    print("Using CUDA")
+else:
+    print("Not using CUDA, will run on CPU.")
 
 # Load the dataset
 img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS = get_dataset(DATASET,
@@ -118,12 +130,13 @@ if DATAVIZ:
                                        visdom=viz)
     plot_spectrums(mean_spectrums, visdom=viz)
 
+results = []
 # run the experiment several times
 for run in range(N_RUNS):
     # Sample random training spectra
-    train_gt = sample_gt(gt, SAMPLE_PERCENTAGE)
+    train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE)
     color_gt = convert_to_color(train_gt)
-    print("{} samples randomly selected".format(np.count_nonzero(gt)))
+    print("{} samples randomly selected".format(np.count_nonzero(train_gt)))
 
     if MODEL == 'SVM':
         print("Running a grid search SVM")
@@ -140,11 +153,16 @@ for run in range(N_RUNS):
         prediction = prediction.reshape(img.shape[:2])
 
     else:
-        print("Running an experiment with the {} model".format(MODEL))
+        weights = torch.ones(N_CLASSES)
+        weights[torch.LongTensor(IGNORED_LABELS)] = 0.
         # Instantiate the experiment based on predefined networks
-        model, optimizer, loss, hyperparams = get_model(MODEL, cuda=CUDA,
-                                                        n_classes=N_CLASSES,
-                                                        n_bands=N_BANDS)
+        kwargs = {'cuda': CUDA, 'n_classes': N_CLASSES, 'n_bands': N_BANDS,
+                  'epoch': EPOCH, 'weights': weights}
+        kwargs = dict((k, v) for k, v in kwargs.iteritems() if v is not None)
+        model, optimizer, loss, hyperparams = get_model(MODEL, **kwargs)
+        print("Running an experiment with the {} model".format(MODEL),
+              "{} epochs, run {}/{}".format(hyperparams['epoch'],
+                                            run + 1, N_RUNS))
 
         # Generate the dataset
         train_dataset = HyperX(img, train_gt, ignored_labels=IGNORED_LABELS,
@@ -165,11 +183,18 @@ for run in range(N_RUNS):
         out = model(input, verbose=True)
         del(out)
 
-        train(model, optimizer, loss, train_loader, hyperparams['epoch'],
-              cuda=hyperparams['cuda'], visdom=viz)
+        try:
+            train(model, optimizer, loss, train_loader, hyperparams['epoch'],
+                  cuda=hyperparams['cuda'], visdom=viz)
+        except KeyboardInterrupt:
+            pass
 
         probabilities = test(model, img, hyperparams)
         prediction = np.argmax(probabilities, axis=-1)
+        mask = np.zeros(gt.shape, dtype='bool')
+        for l in IGNORED_LABELS:
+            mask[gt == l] = True
+        prediction[mask] = 0
 
     if viz:
         viz.images([np.transpose(convert_to_color(prediction), (2, 0, 1)),
@@ -188,5 +213,21 @@ for run in range(N_RUNS):
         plt.axis('off')
         plt.show()
 
-    metrics(prediction, gt, ignored_labels=IGNORED_LABELS,
-            label_values=LABEL_VALUES)
+    run_results = metrics(prediction, test_gt, ignored_labels=IGNORED_LABELS)
+    results.append(run_results)
+    show_results(*run_results, label_values=LABEL_VALUES, display=viz)
+
+accuracies = [r[0] for r in results]
+F1_scores = [r[1] for r in results]
+confusion_matrices = [r[2] for r in results]
+print("Accuracy: {:.03f} +- {:.03f}".format(np.mean(accuracies),
+                                            np.std(accuracies)))
+F1_scores_mean = np.mean(F1_scores, axis=0)
+F1_scores_std = np.std(F1_scores, axis=0)
+print(LABEL_VALUES, F1_scores, F1_scores_std)
+print("F1 scores:")
+for label, score, std in zip(LABEL_VALUES, F1_scores_mean, F1_scores_std):
+    print("{}: {} +- {}".format(label, score, std))
+cm = np.mean(confusion_matrices, axis=0)
+if viz:
+    viz.heatmap(cm)
