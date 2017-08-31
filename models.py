@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from IPython.display import clear_output
 from utils import grouper, SpatialCrossMapLRN, CrossEntropy2d,\
-                  sliding_window, count_sliding_window
+                  sliding_window, count_sliding_window, get_display_type
 
 
 def get_model(name, **kwargs):
@@ -31,7 +31,9 @@ def get_model(name, **kwargs):
     cuda = kwargs.setdefault('cuda', False)
     n_classes = kwargs['n_classes']
     n_bands = kwargs['n_bands']
-    weights = kwargs.setdefault('weights', torch.ones(n_classes))
+    weights = torch.ones(n_classes)
+    weights[torch.LongTensor(kwargs['ignored_labels'])] = 0.
+    weights = kwargs.setdefault('weights', weights)
     if cuda:
         kwargs['weights'] = weights.cuda()
 
@@ -456,7 +458,7 @@ class LiEtAl(nn.Module):
 
 
 def train(net, optimizer, criterion, data_loader, epoch,
-          display_iter=50, cuda=True, visdom=None):
+          display_iter=50, cuda=True, display=None):
     """
     Training loop to optimize a network for several epochs and a specified loss
 
@@ -484,10 +486,11 @@ def train(net, optimizer, criterion, data_loader, epoch,
     mean_losses = np.zeros(100000000)
     iter_ = 1
     win = None
-    if visdom:
+    d_type = get_display_type(display)
+    if d_type == 'visdom':
         display_iter = 1
 
-    for e in tqdm(range(1, epoch + 1)):
+    for e in tqdm(range(1, epoch + 1), desc="Training the network"):
         # Run the training loop for one epoch
         for batch_idx, (data, target) in enumerate(data_loader):
             # Load the data into the GPU if required
@@ -510,23 +513,25 @@ def train(net, optimizer, criterion, data_loader, epoch,
                     len(data), len(data) * len(data_loader),
                     100. * batch_idx / len(data_loader), mean_losses[iter_])
 
-                if visdom and win:
-                    visdom.line(
+                if d_type == 'visdom' and win:
+                    display.line(
                         X=np.arange(iter_ - display_iter, iter_),
                         Y=mean_losses[iter_ - display_iter:iter_],
                         win=win,
                         update='append'
                     )
-                elif visdom:
-                    win = visdom.line(
+                elif d_type == 'visdom':
+                    win = display.line(
                         X=np.arange(0, iter_),
                         Y=mean_losses[:iter_],
                     )
-                else:
+                elif d_type == 'plt':
                     # Refresh the Jupyter cell output
                     clear_output()
                     print(string)
                     plt.plot(mean_losses[:iter_]) and plt.show()
+                else:
+                    tqdm.write(string)
             iter_ += 1
 
 
@@ -544,8 +549,10 @@ def test(net, img, hyperparams, patch_size=3,
     kwargs = {'step': 1, 'window_size': (patch_size, patch_size)}
     probs = np.zeros(img.shape[:2] + (n_classes,))
 
+    iterations = count_sliding_window(img, **kwargs) // batch_size
     for batch in tqdm(grouper(batch_size, sliding_window(img, **kwargs)),
-                      total=(count_sliding_window(img, **kwargs) // batch_size)
+                      total=(iterations),
+                      desc="Inference on the image"
                       ):
         if patch_size == 1:
             data = [b[0][0, 0] for b in batch]

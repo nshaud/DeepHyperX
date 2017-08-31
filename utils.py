@@ -63,7 +63,28 @@ def convert_from_color_(arr_3d, palette=None):
     return arr_2d
 
 
-def display_dataset(img, gt, bands, labels, palette, visdom=None):
+def display_predictions(pred, gt, display=None):
+    d_type = get_display_type(display)
+    if d_type == 'visdom':
+        display.images([np.transpose(pred, (2, 0, 1)),
+                        np.transpose(gt, (2, 0, 1))],
+                       nrow=2,
+                       opts={'caption': "Prediction vs. ground truth"})
+    elif d_type == 'plt':
+        # Plot the results
+        fig = plt.figure()
+        fig.add_subplot(1, 2, 1)
+        plt.imshow(pred)
+        plt.title("Prediction")
+        plt.axis('off')
+        fig.add_subplot(1, 2, 2)
+        plt.imshow(gt)
+        plt.title("Ground truth")
+        plt.axis('off')
+        plt.show()
+
+
+def display_dataset(img, gt, bands, labels, palette, display=None):
     """Display the specified dataset.
 
     Args:
@@ -72,24 +93,27 @@ def display_dataset(img, gt, bands, labels, palette, visdom=None):
         bands: tuple of RGB bands to select
         labels: list of label class names
         palette: dict of colors
-        visdom (optional): visdom instance to connect (fallback to matplotlib)
+        display (optional): type of display, if any
 
     """
+    d_type = get_display_type(display)
     print("Image has dimensions {}x{} and {} channels".format(*img.shape))
     rgb = spectral.get_rgb(img, bands)
     rgb /= np.max(rgb)
     rgb = np.asarray(255 * rgb, dtype='uint8')
 
     # Display the RGB composite image
-    # TODO : fixme
-    if visdom:
+    if d_type == 'visdom':
+        caption = "RGB (bands {}, {}, {}) and ground truth".format(*bands)
         # send to visdom server
-        visdom.images([np.transpose(rgb, (2, 0, 1)),
-                       np.transpose(convert_to_color_(gt, palette=palette),
-                                    (2, 0, 1))
-                       ],
-                      nrow=2)
-    else:
+        display.images([np.transpose(rgb, (2, 0, 1)),
+                        np.transpose(convert_to_color_(gt, palette=palette),
+                                     (2, 0, 1))
+                        ],
+                       nrow=2,
+                       opts={'caption': caption})
+    elif d_type == 'plt':
+        print("plotting with matplotlib")
         # use Matplotlib
         fig = plt.figure()
         fig.add_subplot(121)
@@ -109,7 +133,7 @@ def display_dataset(img, gt, bands, labels, palette, visdom=None):
 
 
 def explore_spectrums(img, complete_gt, class_names,
-                      ignored_labels=None, visdom=None):
+                      ignored_labels=None, display=None):
     """Plot sampled spectrums with mean + std for each class.
 
     Args:
@@ -117,12 +141,13 @@ def explore_spectrums(img, complete_gt, class_names,
         complete_gt: 2D array of labels
         class_names: list of class names
         ignored_labels (optional): list of labels to ignore
-
+        display (optional): type of display, if any
     Returns:
         mean_spectrums: dict of mean spectrum by class
 
     """
     mean_spectrums = {}
+    d_type = get_display_type(display)
 
     for c in np.unique(complete_gt):
         if c in ignored_labels:
@@ -140,7 +165,9 @@ def explore_spectrums(img, complete_gt, class_names,
         lower_spectrum = np.maximum(0, mean_spectrum - std_spectrum)
         higher_spectrum = mean_spectrum + std_spectrum
 
-        if visdom:
+        if d_type == 'visdom':
+            pass
+        elif d_type == 'plt':
             # Plot the mean spectrum with thickness based on std
             plt.fill_between(range(len(mean_spectrum)), lower_spectrum,
                              higher_spectrum, color="#3F5D7D")
@@ -150,7 +177,7 @@ def explore_spectrums(img, complete_gt, class_names,
     return mean_spectrums
 
 
-def plot_spectrums(spectrums, visdom=None):
+def plot_spectrums(spectrums, display=None):
     """Plot the specified dictionary of spectrums.
 
     Args:
@@ -161,8 +188,10 @@ def plot_spectrums(spectrums, visdom=None):
     palette = sns.color_palette("hls", len(spectrums.keys()))
     sns.set_palette(palette)
 
-    # TODO : fix me
-    if visdom:
+    d_type = get_display_type(display)
+    if d_type == 'visdom':
+        pass
+    elif d_type == 'plt':
         fig = plt.figure()
         for k, v in spectrums.items():
             plt.plot(v)
@@ -293,7 +322,6 @@ def metrics(prediction, target, ignored_labels=[]):
         prediction: list of predicted labels
         target: list of target labels
         ignored_labels (optional): list of labels to ignore, e.g. 0 for undef
-        visual (optional): bool set to True to use seaborn plots
     Returns:
         accuracy, F1 score by class, confusion matrix
     """
@@ -304,60 +332,118 @@ def metrics(prediction, target, ignored_labels=[]):
     target = target[ignored_mask]
     prediction = prediction[ignored_mask]
 
+    results = {}
+
     cm = confusion_matrix(
         target,
         prediction,
         labels=range(np.max(target) + 1))
+
+    results["Confusion matrix"] = cm
+
     # Compute global accuracy
     total = np.sum(cm)
     accuracy = sum([cm[x][x] for x in range(len(cm))])
     accuracy *= 100 / float(total)
-    total = sum(sum(cm))
+
+    results["Accuracy"] = accuracy
 
     # Compute F1 score
     F1scores = np.zeros(len(cm))
-    for i in range(len(F1scores)):
+    for i in range(len(cm)):
         try:
-            F1scores[i] = 2. * cm[i, i] / (np.sum(cm[i, :]) + np.sum(cm[:, i]))
+            F1 = 2. * cm[i, i] / (np.sum(cm[i, :]) + np.sum(cm[:, i]))
         except ZeroDivisionError:
-            F1scores[i] = 0.
-    return accuracy, F1scores, cm
+            F1 = 0.
+        F1scores[i] = F1
+
+    results["F1 scores"] = F1scores
+
+    # Compute kappa coefficient
+    pa = np.trace(cm) / float(total)
+    pe = np.sum(np.sum(cm, axis=0) * np.sum(cm, axis=1)) / \
+        float(total * total)
+    kappa = (pa - pe) / (1 - pe)
+    results["Kappa"] = kappa
+
+    return results
 
 
-def show_results(accuracy, F1scores, cm, label_values=None,
-                 display=None):
-    if isinstance(display, visdom.Visdom):
-        display.heatmap(cm)
-    elif display:
+def get_display_type(display):
+    if display:
+        display_type = 'plt'
+        try:
+            if isinstance(display, visdom.Visdom):
+                display_type = 'visdom'
+        except NameError:
+            pass
+    else:
+        display_type = 'print'
+    return display_type
+
+
+def show_results(results, label_values=None,
+                 display=None, agregated=False):
+    d_type = get_display_type(display)
+    text = ""
+
+    if agregated:
+        accuracies = [r["Accuracy"] for r in results]
+        kappas = [r["Kappa"] for r in results]
+        F1_scores = [r["F1 scores"] for r in results]
+
+        F1_scores_mean = np.mean(F1_scores, axis=0)
+        F1_scores_std = np.std(F1_scores, axis=0)
+        cm = np.mean([r["Confusion matrix"] for r in results], axis=0)
+        text += "Agregated results :\n"
+    else:
+        cm = results["Confusion matrix"]
+        accuracy = results["Accuracy"]
+        F1scores = results["F1 scores"]
+        kappa = results["Kappa"]
+
+    if d_type == 'visdom':
+        display.heatmap(cm, opts={'rownames': label_values,
+                                  'columnnames': label_values})
+    elif d_type == 'plt':
         plt.rcParams.update({'font.size': 10})
         sns.heatmap(cm, annot=True, square=True)
         plt.title("Confusion matrix")
         plt.show()
         plt.rcParams.update({'font.size': 22})
+    elif d_type == 'print':
+        text += "Confusion matrix :\n"
+        text += str(cm)
+        text += "---\n"
+
+    if agregated:
+        text += ("Accuracy: {:.03f} +- {:.03f}\n".format(np.mean(accuracies),
+                                                         np.std(accuracies)))
     else:
-        print("Confusion matrix :")
-        print(cm)
-        print("---")
+        text += "Accuracy : {:.03f}%\n".format(accuracy)
+    text += "---\n"
 
-    total = sum(sum(cm))
-    if True:
-        print("{} pixels processed".format(total))
-        print("Total accuracy : {:.4f}%".format(accuracy))
-        print("---")
+    text += "F1 scores :\n"
+    if agregated:
+        for label, score, std in zip(label_values, F1_scores_mean,
+                                     F1_scores_std):
+            text += "\t{}: {} +- {}\n".format(label, score, std)
+    else:
+        for label, score in zip(label_values, F1scores):
+            text += "\t{}: {:.03f}\n".format(label, score)
+    text += "---\n"
 
-    if True:
-        print("F1 score :")
-        for l_id, score in enumerate(F1scores):
-            print("\t{}: {:.4f}".format(label_values[l_id], score))
+    if agregated:
+        text += ("Kappa: {:.03f} +- {:.03f}\n".format(np.mean(kappas),
+                                                      np.std(kappas)))
+    else:
+        text += "Kappa: {:.03f}\n".format(kappa)
 
-        print("---")
-
-        # Compute kappa coefficient
-        pa = np.trace(cm) / float(total)
-        pe = np.sum(np.sum(cm, axis=0) * np.sum(cm, axis=1)) / \
-            float(total * total)
-        kappa = (pa - pe) / (1 - pe)
-        print("Kappa: {:.4f}".format(kappa))
+    if d_type == 'visdom':
+        text = text.replace('\n', '<br/>')
+        display.text(text)
+    else:
+        print(text)
 
 
 def sample_gt(gt, percentage):

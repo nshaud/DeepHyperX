@@ -201,7 +201,7 @@ class HyperX(torch.utils.data.Dataset):
         positions = np.nonzero(mask)
         x_pos = positions[0] + offset
         y_pos = positions[1] + offset
-        self.indices = zip(x_pos, y_pos)
+        self.indices = [idx for idx in zip(x_pos, y_pos)]
         np.random.shuffle(self.indices)
 
     def __len__(self):
