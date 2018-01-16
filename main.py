@@ -66,6 +66,9 @@ parser.add_argument('--epoch', type=int, help="Training epochs (optional, if"
 parser.add_argument('--patch_size', type=int,
                     help="Size of the spatial neighbourhood (optional, if "
                     "absent will be set by the model)")
+parser.add_argument('--sampling_mode', type=str, help="Sampling mode"
+                    " (random sampling or disjoint, default: random)",
+                    default='random')
 parser.add_argument('--runs', type=int, default=1, help="Number of runs")
 parser.add_argument('--display', type=str, default='visdom',
                     help="Display type (either 'visdom' or 'matplotlib')")
@@ -85,6 +88,7 @@ DATAVIZ = args.with_exploration
 FOLDER = args.folder
 EPOCH = args.epoch
 DISPLAY = args.display
+SAMPLING_MODE = args.sampling_mode
 
 if DISPLAY == 'visdom':
     try:
@@ -151,7 +155,7 @@ results = []
 # run the experiment several times
 for run in range(N_RUNS):
     # Sample random training spectra
-    train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE)
+    train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
     print("{} samples randomly selected".format(np.count_nonzero(train_gt)))
 
     print("Running an experiment with the {} model".format(MODEL),

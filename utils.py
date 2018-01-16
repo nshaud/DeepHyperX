@@ -446,7 +446,7 @@ def show_results(results, label_values=None,
         print(text)
 
 
-def sample_gt(gt, percentage):
+def sample_gt(gt, percentage, mode='random'):
     """Extract a fixed percentage of samples from an array of labels.
 
     Args:
@@ -457,16 +457,19 @@ def sample_gt(gt, percentage):
 
     """
     mask = np.zeros(gt.shape, dtype='bool')
-    for l in np.unique(gt):
-        x, y = np.nonzero(gt == l)
-        indices = np.random.choice(len(x), int(len(x) * percentage),
-                                   replace=False)
-        x, y = x[indices], y[indices]
-        mask[x, y] = True
-    train_gt = np.zeros_like(gt)
-    train_gt[mask] = gt[mask]
-    test_gt = np.zeros_like(gt)
-    test_gt[~mask] = gt[~mask]
+    if mode == 'random':
+        for l in np.unique(gt):
+            x, y = np.nonzero(gt == l)
+            indices = np.random.choice(len(x), int(len(x) * percentage),
+                                       replace=False)
+            x, y = x[indices], y[indices]
+            mask[x, y] = True
+        train_gt = np.zeros_like(gt)
+        train_gt[mask] = gt[mask]
+        test_gt = np.zeros_like(gt)
+        test_gt[~mask] = gt[~mask]
+    else:
+        raise ValueError("{} sampling is not implemented yet.".format(mode))
     return train_gt, test_gt
 
 
