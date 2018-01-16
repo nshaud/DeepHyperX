@@ -82,7 +82,7 @@ def get_model(name, **kwargs):
 
     if cuda:
         model = model.cuda()
-
+    kwargs.setdefault('data_augmentation', False)
     kwargs.setdefault('epoch', 100)
     kwargs.setdefault('batch_size', 100)
     kwargs['center_pixel'] = center_pixel
