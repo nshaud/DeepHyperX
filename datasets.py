@@ -68,6 +68,9 @@ def get_dataset(dataset_name, target_folder=None):
             'gt': 'http://www.ehu.es/ccwintco/uploads/5/58/Botswana_gt.mat'
             }
     }
+    
+    if dataset_name not in datasets.keys():
+        raise ValueError("{} dataset is unknown.".format(dataset_name))
 
     folder = target_folder + dataset_name + '/'
     # Download the dataset if is not present
@@ -159,8 +162,6 @@ def get_dataset(dataset_name, target_folder=None):
                         "Cattail marsh", "Salt marsh", "Mud flats", "Wate"]
 
         ignored_labels = [0]
-    else:
-        raise Exception("{} dataset is unknown.".format(dataset_name))
 
     # Normalization
     img = np.asarray(img, dtype='float32')
