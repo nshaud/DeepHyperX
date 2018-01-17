@@ -156,7 +156,8 @@ results = []
 for run in range(N_RUNS):
     # Sample random training spectra
     train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
-    print("{} samples randomly selected".format(np.count_nonzero(train_gt)))
+    print("{} samples selected (over {})".format(np.count_nonzero(train_gt),
+                                                 np.count_nonzero(gt)))
 
     print("Running an experiment with the {} model".format(MODEL),
           "run {}/{}".format(run + 1, N_RUNS))

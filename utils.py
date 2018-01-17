@@ -456,8 +456,8 @@ def sample_gt(gt, percentage, mode='random'):
         train_gt, test_gt: 2D arrays of int labels
 
     """
-    mask = np.zeros(gt.shape, dtype='bool')
     if mode == 'random':
+        mask = np.zeros(gt.shape, dtype='bool')
         for l in np.unique(gt):
             x, y = np.nonzero(gt == l)
             indices = np.random.choice(len(x), int(len(x) * percentage),
@@ -468,6 +468,24 @@ def sample_gt(gt, percentage, mode='random'):
         train_gt[mask] = gt[mask]
         test_gt = np.zeros_like(gt)
         test_gt[~mask] = gt[~mask]
+    elif mode == 'disjoint':
+        train_gt = np.copy(gt)
+        test_gt = np.copy(gt)
+        for c in np.unique(gt):
+            mask = gt == c
+            for x in range(gt.shape[0]):
+                first_half_count = np.count_nonzero(mask[:x, :])
+                second_half_count = np.count_nonzero(mask[x:, :])
+                try:
+                    ratio = first_half_count / second_half_count
+                    if ratio > 0.9 * percentage and ratio < 1.1 * percentage:
+                        break
+                except ZeroDivisionError:
+                    continue
+            mask[:x, :] = 0
+            train_gt[mask] = 0
+
+        test_gt[train_gt > 0] = 0
     else:
         raise ValueError("{} sampling is not implemented yet.".format(mode))
     return train_gt, test_gt
