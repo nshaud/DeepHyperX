@@ -45,7 +45,8 @@ parser.add_argument('--dataset', type=str, required=True,
                     "Botswana")
 parser.add_argument('--model', type=str, required=True,
                     help="Model to train. Available:\n"
-                    "SVM, baseline (fully connected NN), "
+                    "SVM, SVM_grid, baseline (fully connected NN), "
+                    "hu (1D CNN), "
                     "hamida (3D CNN + 1D classifier), "
                     "lee (3D FCN), "
                     "chen (3D CNN), "
@@ -162,7 +163,7 @@ for run in range(N_RUNS):
     print("Running an experiment with the {} model".format(MODEL),
           "run {}/{}".format(run + 1, N_RUNS))
 
-    if MODEL == 'SVM':
+    if MODEL == 'SVM_grid':
         print("Running a grid search SVM")
         # Grid search SVM (linear and RBF)
         X_train, y_train = build_dataset(img, train_gt,
@@ -173,7 +174,13 @@ for run in range(N_RUNS):
         print("SVM best parameters : {}".format(clf.best_params_))
         prediction = clf.predict(img.reshape(-1, N_BANDS))
         prediction = prediction.reshape(img.shape[:2])
-
+    elif MODEL == 'SVM':
+        X_train, y_train = build_dataset(img, train_gt,
+                                         ignored_labels=IGNORED_LABELS)
+        clf = sklearn.svm.SVC()
+        clf.fit(X_train, y_train)
+        prediction = clf.predict(img.reshape(-1, N_BANDS))
+        prediction = prediction.reshape(img.shape[:2])
     else:
         # Neural network
         model, optimizer, loss, hyperparams = get_model(MODEL, **kwargs)

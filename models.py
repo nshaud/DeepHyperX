@@ -77,6 +77,14 @@ def get_model(name, **kwargs):
                               lr=0.001, momentum=0.9, weight_decay=0.0005)
         kwargs.setdefault('epoch', 200)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
+    elif name == 'hu':
+        kwargs.setdefault('patch_size', 1)
+        center_pixel = True
+        model = HuEtAl(n_bands, n_classes)
+        optimizer = optim.SGD(model.parameters(), lr=0.0001)
+        criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
+        kwargs.setdefault('epoch', 1000)
+        kwargs.setdefault('batch_size', 100)
     else:
         raise KeyError("{} model is unknown.".format(name))
 
@@ -134,6 +142,58 @@ class Baseline(nn.Module):
             print("Output size: {}".format(x.size()))
         return x
 
+class HuEtAl(nn.Module):
+    """
+    Deep Convolutional Neural Networks for Hyperspectral Image Classification
+    Wei Hu, Yangyu Huang, Li Wei, Fan Zhang and Hengchao Li
+    Journal of Sensors, Volume 2015 (2015)
+    https://www.hindawi.com/journals/js/2015/258619/
+    """
+    @staticmethod
+    def weight_init(m):
+        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
+            init.kaiming_normal(m.weight.data)
+        
+
+    def _get_final_flattened_size(self):
+        x = torch.zeros(1, 1, self.input_channels)
+        x = Variable(x, volatile=True)
+        x = self.pool(self.conv(x))
+        return x.numel() 
+
+    def __init__(self, input_channels, n_classes, kernel_size=None, pool_size=None):
+        super(HuEtAl, self).__init__()
+        if kernel_size is None:
+           kernel_size = input_channels // 10 + 1
+        if pool_size is None:
+           pool_size = kernel_size // 5 + 1
+        self.input_channels = input_channels
+
+        self.conv = nn.Conv1d(1, 20, kernel_size)
+        self.pool = nn.MaxPool1d(pool_size)
+        self.features_size = self._get_final_flattened_size()
+        self.fc1 = nn.Linear(self.features_size, 100)
+        self.fc2 = nn.Linear(100, n_classes)
+        self.apply(self.weight_init)
+
+    def forward(self, x, verbose=False):
+        x = x.unsqueeze(1)
+        if verbose:
+            print(x.size())
+        x = self.conv(x)
+        if verbose:
+            print(x.size())
+        x = F.relu(self.pool(x))
+        if verbose:
+            print(x.size())
+        x = x.view(-1, self.features_size)
+        x = F.relu(self.fc1(x))
+        if verbose:
+            print(x.size())
+        x = F.relu(self.fc2(x))
+        if verbose:
+            print(x.size())
+        return x
 
 class HamidaEtAl(nn.Module):
     """
