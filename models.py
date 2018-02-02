@@ -593,6 +593,7 @@ def train(net, optimizer, criterion, data_loader, epoch,
                 else:
                     tqdm.write(string)
             iter_ += 1
+            del(data, target, loss)
 
 
 def test(net, img, hyperparams, patch_size=3,
