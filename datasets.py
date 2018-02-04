@@ -66,7 +66,11 @@ def get_dataset(dataset_name, target_folder=None):
         'Botswana': {
             'img': 'http://www.ehu.es/ccwintco/uploads/7/72/Botswana.mat',
             'gt': 'http://www.ehu.es/ccwintco/uploads/5/58/Botswana_gt.mat'
-            }
+            },
+         'Mandji': {
+            'img': 'Mandji.mat',
+            'gt': 'Mandji_gt.mat'
+         }
     }
     
     if dataset_name not in datasets.keys():
@@ -160,6 +164,28 @@ def get_dataset(dataset_name, target_folder=None):
                         "Slash pine", "Oak/broadleaf hammock",
                         "Hardwood swamp", "Graminoid marsh", "Spartina marsh",
                         "Cattail marsh", "Salt marsh", "Mud flats", "Wate"]
+
+        ignored_labels = [0]
+    elif dataset_name == 'Mandji':
+        # Load the image
+        img = loadmat(folder + 'Mandji.mat')['mandji']
+
+        rgb_bands = (60, 32, 10)
+
+        gt = loadmat(folder + 'Mandji_gt.mat')['mandji_gt']
+        gt = gt.astype('uint8')
+        label_values = ["non identifie", #0
+                        "eau", #1
+                        "laterite", #2
+                        "sable gris", #3
+                        "béton", #4
+                        "ancien marigot sud", #5
+                        "ancien marigot nord",#6
+                        "", #7
+                        "végétation rase stressée", #8
+                        "pipeline/merlon", #9
+                        "vegetation dense verte", #10
+                        "végétation autre"] #11
 
         ignored_labels = [0]
 
