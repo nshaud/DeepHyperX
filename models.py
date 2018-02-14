@@ -7,6 +7,8 @@ import torch.optim as optim
 from torch.autograd import Variable
 from torch.nn import init
 # utils
+import os
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -518,7 +520,7 @@ class LiEtAl(nn.Module):
 
 
 def train(net, optimizer, criterion, data_loader, epoch,
-          display_iter=50, cuda=True, display=None):
+          save_epoch=5, display_iter=50, cuda=True, display=None):
     """
     Training loop to optimize a network for several epochs and a specified loss
 
@@ -539,6 +541,8 @@ def train(net, optimizer, criterion, data_loader, epoch,
     if cuda:
         net.cuda()
 
+    model_name = str(datetime.datetime.now()) + "_{}.pth"
+
     # Set the network to training mode
     net.train()
 
@@ -551,6 +555,13 @@ def train(net, optimizer, criterion, data_loader, epoch,
         display_iter = 1
 
     for e in tqdm(range(1, epoch + 1), desc="Training the network"):
+
+        # Save the weights
+        if e % save_epoch == 0:
+            if not os.path.isdir('./checkpoints/'):
+                os.mkdir('./checkpoints/')
+            torch.save(net.state_dict(), './checkpoints/' + model_name.format(e))
+
         # Run the training loop for one epoch
         for batch_idx, (data, target) in enumerate(data_loader):
             # Load the data into the GPU if required

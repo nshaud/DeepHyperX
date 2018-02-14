@@ -73,7 +73,8 @@ parser.add_argument('--sampling_mode', type=str, help="Sampling mode"
 parser.add_argument('--runs', type=int, default=1, help="Number of runs")
 parser.add_argument('--display', type=str, default='visdom',
                     help="Display type (either 'visdom' or 'matplotlib')")
-
+parser.add_argument('--restore', type=str, default=None,
+                    help="Weights to use for initialization, e.g. a checkpoint")
 args = parser.parse_args()
 
 # Use GPU ?
@@ -90,6 +91,7 @@ FOLDER = args.folder
 EPOCH = args.epoch
 DISPLAY = args.display
 SAMPLING_MODE = args.sampling_mode
+CHECKPOINT = args.restore
 
 if DISPLAY == 'visdom':
     try:
@@ -202,6 +204,9 @@ for run in range(N_RUNS):
         input = Variable(input, volatile=True)
         out = model(input, verbose=True)
         del(out)
+
+        if CHECKPOINT is not None:
+            model.load_state_dict(torch.load(CHECKPOINT))
 
         try:
             train(model, optimizer, loss, train_loader, hyperparams['epoch'],
