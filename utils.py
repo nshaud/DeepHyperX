@@ -491,6 +491,23 @@ def sample_gt(gt, percentage, mode='random'):
     return train_gt, test_gt
 
 
+def compute_mf_weights(ground_truth, n_classes, ignored_classes=[]):
+    weights = np.zeros(n_classes)
+    frequencies = np.zeros(n_classes)
+
+    for c in range(0, n_classes):
+        if c in ignored_classes:
+            continue
+        frequencies[c] = np.count_nonzero(ground_truth == c)
+
+    # Normalize the pixel counts to obtain frequencies
+    frequencies /= np.sum(frequencies)
+    # Obtain the median on non-zero frequencies
+    median = np.median(frequencies[np.nonzero(frequencies)])
+    weights = median / frequencies
+    weights[frequencies == 0] = 0.
+    return weights
+
 def CrossEntropy2d(input, target, weight=None, size_average=True):
     """2D version of the PyTorch cross entropy loss.
 
