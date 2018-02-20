@@ -67,6 +67,8 @@ parser.add_argument('--epoch', type=int, help="Training epochs (optional, if"
 parser.add_argument('--patch_size', type=int,
                     help="Size of the spatial neighbourhood (optional, if "
                     "absent will be set by the model)")
+parser.add_argument('--lr', type=float,
+                    help="Learning rate, set by the model if not specified.")
 parser.add_argument('--sampling_mode', type=str, help="Sampling mode"
                     " (random sampling or disjoint, default: random)",
                     default='random')
@@ -92,6 +94,7 @@ EPOCH = args.epoch
 DISPLAY = args.display
 SAMPLING_MODE = args.sampling_mode
 CHECKPOINT = args.restore
+LEARNING_RATE = args.lr
 
 if DISPLAY == 'visdom':
     try:
@@ -140,7 +143,8 @@ def convert_from_color(x):
 # Instantiate the experiment based on predefined networks
 kwargs = {'cuda': CUDA, 'n_classes': N_CLASSES, 'n_bands': N_BANDS,
           'epoch': EPOCH, 'ignored_labels': IGNORED_LABELS,
-          'data_augmentation': DATA_AUGMENTATION, 'patch_size': PATCH_SIZE}
+          'data_augmentation': DATA_AUGMENTATION, 'patch_size': PATCH_SIZE,
+          'learning_rate': LEARNING_RATE}
 kwargs = dict((k, v) for k, v in kwargs.items() if v is not None)
 
 # Show the image and the ground truth

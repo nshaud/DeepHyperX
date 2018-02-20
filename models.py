@@ -44,7 +44,8 @@ def get_model(name, **kwargs):
         center_pixel = True
         model = Baseline(n_bands, n_classes,
                          kwargs.setdefault('dropout', False))
-        optimizer = optim.Adam(model.parameters(), lr=0.0001)
+        lr = kwargs.setdefault('learning_rate', 0.0001)
+        optimizer = optim.Adam(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
         kwargs.setdefault('epoch', 100)
         kwargs.setdefault('batch_size', 100)
@@ -52,14 +53,16 @@ def get_model(name, **kwargs):
         patch_size = kwargs.setdefault('patch_size', 5)
         center_pixel = True
         model = HamidaEtAl(n_bands, n_classes, patch_size=patch_size)
-        optimizer = optim.SGD(model.parameters(), lr=0.0001)
+        lr = kwargs.setdefault('learning_rate', 0.0001)
+        optimizer = optim.SGD(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
     elif name == 'lee':
         kwargs.setdefault('epoch', 200)
         patch_size = kwargs.setdefault('patch_size', 5)
         center_pixel = False
         model = LeeEtAl(n_bands, n_classes)
-        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        lr = kwargs.setdefault('learning_rate', 0.001)
+        optimizer = optim.Adam(model.parameters(), lr=lr)
 
         def criterion(x, y):
             return CrossEntropy2d(x, y, weight=kwargs['weights'])
@@ -67,7 +70,8 @@ def get_model(name, **kwargs):
         patch_size = kwargs.setdefault('patch_size', 27)
         center_pixel = True
         model = ChenEtAl(n_bands, n_classes, patch_size=patch_size)
-        optimizer = optim.Adam(model.parameters(), lr=0.003)
+        lr = kwargs.setdefault('learning_rate', 0.003)
+        optimizer = optim.Adam(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
         kwargs.setdefault('epoch', 400)
         kwargs.setdefault('batch_size', 100)
@@ -75,15 +79,17 @@ def get_model(name, **kwargs):
         patch_size = kwargs.setdefault('patch_size', 5)
         center_pixel = True
         model = LiEtAl(n_bands, n_classes, n_planes=4, patch_size=patch_size)
+        lr = kwargs.setdefault('learning_rate', 0.001)
         optimizer = optim.SGD(model.parameters(),
-                              lr=0.001, momentum=0.9, weight_decay=0.0005)
+                              lr=lr, momentum=0.9, weight_decay=0.0005)
         kwargs.setdefault('epoch', 200)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
     elif name == 'hu':
         kwargs.setdefault('patch_size', 1)
         center_pixel = True
         model = HuEtAl(n_bands, n_classes)
-        optimizer = optim.SGD(model.parameters(), lr=0.0001)
+        lr = kwargs.setdefault('learning_rate', 0.001)
+        optimizer = optim.SGD(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
         kwargs.setdefault('epoch', 1000)
         kwargs.setdefault('batch_size', 100)
