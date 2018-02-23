@@ -29,7 +29,7 @@ import seaborn as sns
 
 from utils import metrics, convert_to_color_, convert_from_color_,\
     display_dataset, display_predictions, explore_spectrums, plot_spectrums,\
-    sample_gt, build_dataset, show_results, compute_mf_weights
+    sample_gt, build_dataset, show_results, compute_imf_weights
 from datasets import get_dataset, HyperX
 from models import get_model, train, test
 
@@ -194,7 +194,7 @@ for run in range(N_RUNS):
         # Neural network
         model, optimizer, loss, hyperparams = get_model(MODEL, **kwargs)
         if CLASS_BALANCING:
-            weights = compute_mf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
+            weights = compute_imf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
             hyperparams['weights'] = torch.from_numpy(weights)
         # Generate the dataset
         train_dataset = HyperX(img, train_gt, ignored_labels=IGNORED_LABELS,

@@ -491,7 +491,23 @@ def sample_gt(gt, percentage, mode='random'):
     return train_gt, test_gt
 
 
-def compute_mf_weights(ground_truth, n_classes, ignored_classes=[]):
+def compute_imf_weights(ground_truth, n_classes=None, ignored_classes=[]):
+    """ Compute inverse median frequency weights for class balancing.
+
+    For each class i, it computes its frequency f_i, i.e the ratio between
+    the number of pixels from class i and the total number of pixels.
+
+    Then, it computes the median m of all frequencies. For each class the
+    associated weight is m/f_i.
+
+    Args:
+        ground_truth: the annotations array
+        n_classes: number of classes (optional, defaults to max(ground_truth))
+        ignored_classes: id of classes to ignore (optional)
+    Returns:
+        numpy array with the IMF coefficients 
+    """
+    n_classes = np.max(ground_truth) if n_classes is None else n_classes
     weights = np.zeros(n_classes)
     frequencies = np.zeros(n_classes)
 
