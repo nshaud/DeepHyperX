@@ -85,18 +85,31 @@ args = parser.parse_args()
 CUDA = args.cuda
 # % of training samples
 SAMPLE_PERCENTAGE = args.training_sample
+# Data augmentation ?
 DATA_AUGMENTATION = args.data_augmentation
+# Dataset name
 DATASET = args.dataset
+# Model name
 MODEL = args.model
+# Number of runs (for cross-validation)
 N_RUNS = args.runs
+# Spatial context size (number of neighbours in each spatial direction)
 PATCH_SIZE = args.patch_size
+# Add some visualization of the spectra ?
 DATAVIZ = args.with_exploration
+# Target folder to store/download/load the datasets
 FOLDER = args.folder
+# Number of epochs to run
 EPOCH = args.epoch
+# Display mode, e.g. matplotlib
 DISPLAY = args.display
+# Sampling mode, e.g random sampling
 SAMPLING_MODE = args.sampling_mode
+# Pre-computed weights to restore
 CHECKPOINT = args.restore
+# Learning rate for the SGD
 LEARNING_RATE = args.lr
+# Automated class balancing
 CLASS_BALANCING = args.class_balancing
 
 if DISPLAY == 'visdom':
