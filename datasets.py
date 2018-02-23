@@ -3,7 +3,8 @@ This file contains the PyTorch dataset for hyperspectral images and
 related helpers.
 """
 # -*- coding: utf-8 -*-
-from scipy.io import loadmat
+from scipy import io, misc
+import spectral
 import numpy as np
 import torch
 import torch.utils
@@ -16,6 +17,18 @@ except ImportError:
     # Python 2
     from urllib import urlretrieve
 
+
+def loader(dataset):
+    ext = os.path.splitext(dataset)
+    if ext == '.mat':
+        # Load Matlab array
+        return io.loadmat(dataset)
+    elif ext == '.tif' or ext == '.tiff':
+        # Load TIFF file
+        return misc.imread(dataset)
+    elif ext == '.hdr':
+        img = spectral.open_image(dataset)
+        return img.load()
 
 class TqdmUpTo(tqdm):
     """Provides `update_to(n)` which uses `tqdm.update(delta_n)`."""
@@ -93,11 +106,11 @@ def get_dataset(dataset_name, target_folder=None):
 
     if dataset_name == 'PaviaC':
         # Load the image
-        img = loadmat(folder + 'Pavia.mat')['pavia']
+        img = io.loadmat(folder + 'Pavia.mat')['pavia']
 
         rgb_bands = (55, 41, 12)
 
-        gt = loadmat(folder + 'Pavia_gt.mat')['pavia_gt']
+        gt = io.loadmat(folder + 'Pavia_gt.mat')['pavia_gt']
 
         label_values = ["Undefined", "Water", "Trees", "Asphalt",
                         "Self-Blocking Bricks", "Bitumen", "Tiles", "Shadows",
@@ -107,11 +120,11 @@ def get_dataset(dataset_name, target_folder=None):
 
     elif dataset_name == 'PaviaU':
         # Load the image
-        img = loadmat(folder + 'PaviaU.mat')['paviaU']
+        img = io.loadmat(folder + 'PaviaU.mat')['paviaU']
 
         rgb_bands = (55, 41, 12)
 
-        gt = loadmat(folder + 'PaviaU_gt.mat')['paviaU_gt']
+        gt = io.loadmat(folder + 'PaviaU_gt.mat')['paviaU_gt']
 
         label_values = ['Undefined', 'Asphalt', 'Meadows', 'Gravel', 'Trees',
                         'Painted metal sheets', 'Bare Soil', 'Bitumen',
@@ -121,12 +134,12 @@ def get_dataset(dataset_name, target_folder=None):
 
     elif dataset_name == 'IndianPines':
         # Load the image
-        img = loadmat(folder + 'Indian_pines_corrected.mat')
+        img = io.loadmat(folder + 'Indian_pines_corrected.mat')
         img = img['indian_pines_corrected']
 
         rgb_bands = (43, 21, 11)  # AVIRIS sensor
 
-        gt = loadmat(folder + 'Indian_pines_gt.mat')['indian_pines_gt']
+        gt = io.loadmat(folder + 'Indian_pines_gt.mat')['indian_pines_gt']
         label_values = ["Undefined", "Alfalfa", "Corn-notill", "Corn-mintill",
                         "Corn", "Grass-pasture", "Grass-trees",
                         "Grass-pasture-mowed", "Hay-windrowed", "Oats",
@@ -138,11 +151,11 @@ def get_dataset(dataset_name, target_folder=None):
 
     elif dataset_name == 'Botswana':
         # Load the image
-        img = loadmat(folder + 'Botswana.mat')['Botswana']
+        img = io.loadmat(folder + 'Botswana.mat')['Botswana']
 
         rgb_bands = (75, 33, 15)
 
-        gt = loadmat(folder + 'Botswana_gt.mat')['Botswana_gt']
+        gt = io.loadmat(folder + 'Botswana_gt.mat')['Botswana_gt']
         label_values = ["Undefined", "Water", "Hippo grass",
                         "Floodplain grasses 1", "Floodplain grasses 2",
                         "Reeds", "Riparian", "Firescar", "Island interior",
@@ -154,11 +167,11 @@ def get_dataset(dataset_name, target_folder=None):
 
     elif dataset_name == 'KSC':
         # Load the image
-        img = loadmat(folder + 'KSC.mat')['KSC']
+        img = io.loadmat(folder + 'KSC.mat')['KSC']
 
         rgb_bands = (43, 21, 11)  # AVIRIS sensor
 
-        gt = loadmat(folder + 'KSC_gt.mat')['KSC_gt']
+        gt = io.loadmat(folder + 'KSC_gt.mat')['KSC_gt']
         label_values = ["Undefined", "Scrub", "Willow swamp",
                         "Cabbage palm hammock", "Cabbage palm/oak hammock",
                         "Slash pine", "Oak/broadleaf hammock",
@@ -168,11 +181,11 @@ def get_dataset(dataset_name, target_folder=None):
         ignored_labels = [0]
     elif dataset_name == 'Mandji':
         # Load the image
-        img = loadmat(folder + 'Mandji.mat')['mandji']
+        img = io.loadmat(folder + 'Mandji.mat')['mandji']
 
         rgb_bands = (60, 32, 10)
 
-        gt = loadmat(folder + 'Mandji_gt.mat')['mandji_gt']
+        gt = io.loadmat(folder + 'Mandji_gt.mat')['mandji_gt']
         gt = gt.astype('uint8')
         label_values = ["non identifie", #0
                         "eau", #1
