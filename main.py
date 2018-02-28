@@ -30,7 +30,7 @@ import seaborn as sns
 from utils import metrics, convert_to_color_, convert_from_color_,\
     display_dataset, display_predictions, explore_spectrums, plot_spectrums,\
     sample_gt, build_dataset, show_results, compute_imf_weights
-from datasets import get_dataset, HyperX
+from datasets import get_dataset, HyperX, open_file
 from models import get_model, train, test
 
 import argparse
@@ -79,6 +79,12 @@ parser.add_argument('--display', type=str, default='visdom',
                     help="Display type (either 'visdom' or 'matplotlib')")
 parser.add_argument('--restore', type=str, default=None,
                     help="Weights to use for initialization, e.g. a checkpoint")
+parser.add_argument('--train_set', type=str, default=None,
+                    help="Path to the train ground truth (optional, this "
+                    "supersedes the --sampling_mode option)")
+parser.add_argument('--test_set', type=str, default=None,
+                    help="Path to the test set (optional, by default "
+                    "the test_set is the entire ground truth minus the training)")
 args = parser.parse_args()
 
 # Use GPU ?
@@ -111,6 +117,10 @@ CHECKPOINT = args.restore
 LEARNING_RATE = args.lr
 # Automated class balancing
 CLASS_BALANCING = args.class_balancing
+# Training ground truth file
+TRAIN_GT = args.train_set
+# Testing ground truth file
+TEST_GT = args.test_set
 
 if DISPLAY == 'visdom':
     try:
@@ -177,8 +187,19 @@ if DATAVIZ:
 results = []
 # run the experiment several times
 for run in range(N_RUNS):
-    # Sample random training spectra
-    train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
+    if TRAIN_GT is not None and TEST_GT is not None:
+        train_gt = open_file(TRAIN_GT)
+        test_gt = open_file(TEST_GT)
+    elif TRAIN_GT is not None:
+        train_gt = open_file(TRAIN_GT)
+        test_gt = np.copy(gt)
+        w, h = test_gt.shape
+        test_gt[(train_gt > 0)[:w,:h]] = 0
+    elif TEST_GT is not None:
+        test_gt = open_file(TEST_GT)
+    else:
+	# Sample random training spectra
+        train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
     print("{} samples selected (over {})".format(np.count_nonzero(train_gt),
                                                  np.count_nonzero(gt)))
 

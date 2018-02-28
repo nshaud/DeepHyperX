@@ -18,8 +18,8 @@ except ImportError:
     from urllib import urlretrieve
 
 
-def loader(dataset):
-    ext = os.path.splitext(dataset)
+def open_file(dataset):
+    _, ext = os.path.splitext(dataset)
     if ext == '.mat':
         # Load Matlab array
         return io.loadmat(dataset)
