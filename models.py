@@ -93,6 +93,21 @@ def get_model(name, **kwargs):
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
         kwargs.setdefault('epoch', 1000)
         kwargs.setdefault('batch_size', 100)
+    elif name == 'he':
+        # We train our model by AdaGrad [18] algorithm, in which
+        # the base learning rate is 0.01. In addition, we set the batch
+        # as 40, weight decay as 0.01 for all the layers
+        # The input of our network is the HSI 3D patch in the size of 7×7×Band
+        kwargs.setdefault('patch_size', 7)
+        kwargs.setdefault('batch_size', 40)
+        lr = kwargs.setdefault('learning_rate', 0.01)
+        center_pixel = True
+        model = HeEtAl(n_bands, n_classes, patch_size=kwargs['patch_size'])
+        # For Adagrad, we need to load the model on GPU before creating the optimizer
+        if cuda:
+            model = model.cuda()
+        optimizer = optim.Adagrad(model.parameters(), lr=lr, weight_decay=0.01)
+        criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
     else:
         raise KeyError("{} model is unknown.".format(name))
 
@@ -524,6 +539,98 @@ class LiEtAl(nn.Module):
             print("Output size : {}".format(x.size()))
         return x
 
+class HeEtAl(nn.Module):
+    """
+    MULTI-SCALE 3D DEEP CONVOLUTIONAL NEURAL NETWORK FOR HYPERSPECTRAL
+    IMAGE CLASSIFICATION
+    Mingyi He, Bo Li, Huahui Chen
+    IEEE International Conference on Image Processing (ICIP) 2017
+    """
+
+    @staticmethod
+    def weight_init(m):
+        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
+            init.kaiming_uniform(m.weight.data)
+
+    def __init__(self, input_channels, n_classes, patch_size=7):
+        super(HeEtAl, self).__init__()
+        self.input_channels = input_channels
+        self.patch_size = patch_size
+
+        self.conv1 = nn.Conv3d(1, 16, (11, 3, 3), stride=(3,1,1))
+        self.conv2_1 = nn.Conv3d(16, 16, (1, 1, 1), padding=(0,0,0))
+        self.conv2_2 = nn.Conv3d(16, 16, (3, 1, 1), padding=(1,0,0))
+        self.conv2_3 = nn.Conv3d(16, 16, (5, 1, 1), padding=(2,0,0))
+        self.conv2_4 = nn.Conv3d(16, 16, (11, 1, 1), padding=(5,0,0))
+        self.conv3_1 = nn.Conv3d(16, 16, (1, 1, 1), padding=(0,0,0))
+        self.conv3_2 = nn.Conv3d(16, 16, (3, 1, 1), padding=(1,0,0))
+        self.conv3_3 = nn.Conv3d(16, 16, (5, 1, 1), padding=(2,0,0))
+        self.conv3_4 = nn.Conv3d(16, 16, (11, 1, 1), padding=(5,0,0))
+        self.conv4 = nn.Conv3d(16, 16, (3, 2, 2))
+        self.pooling = nn.MaxPool2d((3,2,2), stride=(3,2,2))
+        # the ratio of dropout is 0.6 in our experiments
+        self.dropout = nn.Dropout(p=0.6)
+
+        self.features_size = self._get_final_flattened_size()
+
+        self.fc = nn.Linear(self.features_size, n_classes)
+
+        self.apply(self.weight_init)
+
+    def _get_final_flattened_size(self):
+        x = torch.zeros((1, 1, self.input_channels,
+                         self.patch_size, self.patch_size))
+        x = Variable(x)
+        x = self.conv1(x)
+        print(x.size())
+        x2_1 = self.conv2_1(x)
+        x2_2 = self.conv2_2(x)
+        x2_3 = self.conv2_3(x)
+        x2_4 = self.conv2_4(x)
+        print(x2_1.size(), x2_2.size(), x2_3.size(), x2_4.size())
+        x = x2_1 + x2_2 + x2_3 + x2_4
+        x3_1 = self.conv3_1(x)
+        x3_2 = self.conv3_2(x)
+        x3_3 = self.conv3_3(x)
+        x3_4 = self.conv3_4(x)
+        x = x3_1 + x3_2 + x3_3 + x3_4
+        x = self.conv4(x)
+        _, t, c, w, h = x.size()
+        return t * c * w * h
+
+    def forward(self, x, verbose=False):
+        if verbose:
+            print("Input size : {}".format(x.size()))
+        x = F.relu(self.conv1(x))
+        if verbose:
+            print("Conv1 size : {}".format(x.size()))
+        x2_1 = self.conv2_1(x)
+        x2_2 = self.conv2_2(x)
+        x2_3 = self.conv2_3(x)
+        x2_4 = self.conv2_4(x)
+        x = x2_1 + x2_2 + x2_3 + x2_4
+        x = F.relu(x)
+        if verbose:
+            print("Conv2 size : {}".format(x.size()))
+        x3_1 = self.conv3_1(x)
+        x3_2 = self.conv3_2(x)
+        x3_3 = self.conv3_3(x)
+        x3_4 = self.conv3_4(x)
+        x = x3_1 + x3_2 + x3_3 + x3_4
+        x = F.relu(x)
+        if verbose:
+            print("Conv3 size : {}".format(x.size()))
+        x = F.relu(self.conv4(x))
+        if verbose:
+            print("Conv4 size : {}".format(x.size()))
+        x = x.view(-1, self.features_size)
+        x = self.dropout(x)
+        if verbose:
+            print("Flattened size : {}".format(x.size()))
+        x = self.fc(x)
+        if verbose:
+            print("Output size : {}".format(x.size()))
+        return x
 
 def train(net, optimizer, criterion, data_loader, epoch,
           save_epoch=5, display_iter=50, cuda=True, display=None):
