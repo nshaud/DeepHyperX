@@ -108,6 +108,16 @@ def get_model(name, **kwargs):
             model = model.cuda()
         optimizer = optim.Adagrad(model.parameters(), lr=lr, weight_decay=0.01)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
+    elif name == 'luo':
+        # All  the  experiments  are  settled  by  the  learning  rate  of  0.1,
+        # the  decay  term  of  0.09  and  batch  size  of  100.
+        kwargs.setdefault('patch_size', 3)
+        kwargs.setdefault('batch_size', 100)
+        lr = kwargs.setdefault('learning_rate', 0.1)
+        center_pixel = True
+        model = LuoEtAl(n_bands, n_classes, patch_size=kwargs['patch_size'])
+        optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=0.09)
+        criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
     else:
         raise KeyError("{} model is unknown.".format(name))
 
@@ -628,6 +638,75 @@ class HeEtAl(nn.Module):
         if verbose:
             print("Flattened size : {}".format(x.size()))
         x = self.fc(x)
+        if verbose:
+            print("Output size : {}".format(x.size()))
+        return x
+
+class LuoEtAl(nn.Module):
+    """
+    HSI-CNN: A Novel Convolution Neural Network for Hyperspectral Image
+    Yanan Luo, Jie Zou, Chengfei Yao, Tao Li, Gang Bai
+    International Conference on Pattern Recognition 2018
+    """
+
+    @staticmethod
+    def weight_init(m):
+        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
+            init.kaiming_uniform(m.weight.data)
+
+    def __init__(self, input_channels, n_classes, patch_size=3, n_planes=90):
+        super(LuoEtAl, self).__init__()
+        self.input_channels = input_channels
+        self.patch_size = patch_size
+        self.n_planes = n_planes
+
+        # the 8-neighbor pixels [...] are fed into the Conv1 convolved by n1 kernels
+        # and s1 stride. Conv1 results are feature vectors each with height of and
+        # the width is 1. After reshape layer, the feature vectors becomes an image-like 
+        # 2-dimension data.
+        # Conv2 has 64 kernels size of 3x3, with stride s2.
+        # After that, the 64 results are drawn into a vector as the input of the fully 
+        # connected layer FC1 which has n4 nodes.
+        # In the four datasets, the kernel height nk1 is 24 and stride s1, s2 is 9 and 1
+        self.conv1 = nn.Conv3d(1, 90, (24, 3, 3), padding=0, stride=(9,1,1))
+        self.conv2 = nn.Conv2d(1, 64, (3, 3), stride=(1, 1))
+
+        self.features_size = self._get_final_flattened_size()
+
+        self.fc1 = nn.Linear(self.features_size, 1024)
+        self.fc2 = nn.Linear(1024, n_classes)
+
+        self.apply(self.weight_init)
+
+    def _get_final_flattened_size(self):
+        x = torch.zeros((1, 1, self.input_channels,
+                         self.patch_size, self.patch_size))
+        x = Variable(x)
+        x = self.conv1(x)
+        b = x.size(0)
+        x = x.view(b, 1, -1, self.n_planes)
+        x = self.conv2(x)
+        _, c, w, h = x.size()
+        return c * w * h
+
+    def forward(self, x, verbose=False):
+        if verbose:
+            print("Input size : {}".format(x.size()))
+        x = F.relu(self.conv1(x))
+        if verbose:
+            print("Conv1 size : {}".format(x.size()))
+        b = x.size(0)
+        x = x.view(b, 1, -1, self.n_planes)
+        x = F.relu(self.conv2(x))
+        if verbose:
+            print("Conv2 size : {}".format(x.size()))
+        x = x.view(-1, self.features_size)
+        if verbose:
+            print("Flattened size : {}".format(x.size()))
+        x = F.relu(self.fc1(x))
+        if verbose:
+            print("FC1 size : {}".format(x.size()))
+        x = self.fc2(x)
         if verbose:
             print("Output size : {}".format(x.size()))
         return x
