@@ -118,6 +118,24 @@ def get_model(name, **kwargs):
         model = LuoEtAl(n_bands, n_classes, patch_size=kwargs['patch_size'])
         optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=0.09)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
+    elif name == 'sharma':
+        # We train our S-CNN from scratch using stochastic gradient descent with
+        # momentum set to 0.9, weight decay of 0.0005, and with a batch size
+        # of 60.  We initialize an equal learning rate for all trainable layers
+        # to 0.05, which is manually decreased by a factor of 10 when the validation
+        # error stopped decreasing. Prior to the termination the learning rate was
+        # reduced two times at 15th and 25th epoch. [...]
+        # We trained the network for 30 epochs
+        kwargs.setdefault('batch_size', 60)
+        kwargs.setdefault('epoch', 30)
+        lr = kwargs.setdefault('lr', 0.05)
+        center_pixel = True
+        # We assume patch_size = 64
+        kwargs.setdefault('patch_size', 64)
+        model = SharmaEtAl(n_bands, n_classes, patch_size=kwargs['patch_size'])
+        optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=0.0005)
+        criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
+        #scheduler = 15th and 25th / 10
     else:
         raise KeyError("{} model is unknown.".format(name))
 
@@ -706,6 +724,98 @@ class LuoEtAl(nn.Module):
         x = F.relu(self.fc1(x))
         if verbose:
             print("FC1 size : {}".format(x.size()))
+        x = self.fc2(x)
+        if verbose:
+            print("Output size : {}".format(x.size()))
+        return x
+
+
+class SharmaEtAl(nn.Module):
+    """
+    HYPERSPECTRAL CNN FOR IMAGE CLASSIFICATION & BAND SELECTION, WITH APPLICATION
+    TO FACE RECOGNITION
+    Vivek Sharma, Ali Diba, Tinne Tuytelaars, Luc Van Gool
+    Technical Report, KU Leuven/ETH Zürich
+    """
+
+    @staticmethod
+    def weight_init(m):
+        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
+            init.kaiming_normal(m.weight.data)
+
+    def __init__(self, input_channels, n_classes, patch_size=64):
+        super(SharmaEtAl, self).__init__()
+        self.input_channels = input_channels
+        self.patch_size = patch_size
+
+        # An input image of size 263x263 pixels is fed to conv1
+        # with 96 kernels of size 6x6x96 with a stride of 2 pixels
+        self.conv1 = nn.Conv3d(1, 96, (input_channels, 6, 6), stride=(1,2,2))
+        self.conv1_bn = nn.BatchNorm3d(96)
+        self.pool1 = nn.MaxPool3d((1, 2, 2))
+        #  256 kernels of size 3x3x256 with a stride of 2 pixels
+        self.conv2 = nn.Conv3d(1, 256, (96, 3, 3), stride=(1,2,2))
+        self.conv2_bn = nn.BatchNorm3d(256)
+        self.pool2 = nn.MaxPool3d((1, 2, 2))
+        # 512 kernels of size 3x3x512 with a stride of 1 pixel
+        self.conv3 = nn.Conv3d(1, 512, (256, 3, 3), stride=(1,1,1))
+        # Considering those large kernel values, I assume they actually merge the
+        # 3D tensors at each step
+
+        self.features_size = self._get_final_flattened_size()
+
+        # The fc1 has 1024 outputs, where dropout was applied after
+        # fc1 with a rate of 0.5
+        self.fc1 = nn.Linear(self.features_size, 1024)
+        self.dropout = nn.Dropout(p=0.5)
+        self.fc2 = nn.Linear(1024, n_classes)
+
+        self.apply(self.weight_init)
+
+    def _get_final_flattened_size(self):
+        x = torch.zeros((1, 1, self.input_channels,
+                         self.patch_size, self.patch_size))
+        x = Variable(x)
+        x = F.relu(self.conv1_bn(self.conv1(x)))
+        x = self.pool1(x)
+        print(x.size())
+        b, t, c, w, h = x.size()
+        x = x.view(b, 1, t*c, w, h) 
+        x = F.relu(self.conv2_bn(self.conv2(x)))
+        x = self.pool2(x)
+        print(x.size())
+        b, t, c, w, h = x.size()
+        x = x.view(b, 1, t*c, w, h) 
+        x = F.relu(self.conv3(x))
+        print(x.size())
+        _, t, c, w, h = x.size()
+        return t * c * w * h
+
+    def forward(self, x, verbose=False):
+        if verbose:
+            print("Input size : {}".format(x.size()))
+        x = F.relu(self.conv1_bn(self.conv1(x)))
+        if verbose:
+            print("Conv1 size : {}".format(x.size()))
+        x = self.pool1(x)
+        b, t, c, w, h = x.size()
+        x = x.view(b, 1, t*c, w, h) 
+        x = F.relu(self.conv2_bn(self.conv2(x)))
+        if verbose:
+            print("Conv2 size : {}".format(x.size()))
+        x = self.pool2(x)
+        b, t, c, w, h = x.size()
+        x = x.view(b, 1, t*c, w, h) 
+        x = F.relu(self.conv3(x))
+        if verbose:
+            print("Conv3 size : {}".format(x.size()))
+        x = x.view(-1, self.features_size)
+        if verbose:
+            print("Flattened size : {}".format(x.size()))
+        x = self.fc1(x)
+        if verbose:
+            print("FC1 size : {}".format(x.size()))
+        x = self.dropout(x)
         x = self.fc2(x)
         if verbose:
             print("Output size : {}".format(x.size()))
