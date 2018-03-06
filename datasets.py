@@ -20,6 +20,7 @@ except ImportError:
 
 def open_file(dataset):
     _, ext = os.path.splitext(dataset)
+    ext = ext.lower()
     if ext == '.mat':
         # Load Matlab array
         return io.loadmat(dataset)
@@ -29,6 +30,8 @@ def open_file(dataset):
     elif ext == '.hdr':
         img = spectral.open_image(dataset)
         return img.load()
+    else:
+        raise ValueError("Unknown file format: {}".format(ext))
 
 class TqdmUpTo(tqdm):
     """Provides `update_to(n)` which uses `tqdm.update(delta_n)`."""
