@@ -95,8 +95,8 @@ def get_dataset(dataset_name, target_folder=None):
 
     dataset = datasets[dataset_name]
 
+    folder = target_folder + dataset_name + '/'
     if dataset.get('download', True):
-        folder = target_folder + dataset_name + '/'
         # Download the dataset if is not present
         if os.path.isdir(folder):
             for url in datasets[dataset_name].values():
