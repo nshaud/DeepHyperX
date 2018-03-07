@@ -113,11 +113,11 @@ def get_dataset(dataset_name, target_folder=None):
 
     if dataset_name == 'PaviaC':
         # Load the image
-        img = io.loadmat(folder + 'Pavia.mat')['pavia']
+        img = open_file(folder + 'Pavia.mat')['pavia']
 
         rgb_bands = (55, 41, 12)
 
-        gt = io.loadmat(folder + 'Pavia_gt.mat')['pavia_gt']
+        gt = open_file(folder + 'Pavia_gt.mat')['pavia_gt']
 
         label_values = ["Undefined", "Water", "Trees", "Asphalt",
                         "Self-Blocking Bricks", "Bitumen", "Tiles", "Shadows",
@@ -127,11 +127,11 @@ def get_dataset(dataset_name, target_folder=None):
 
     elif dataset_name == 'PaviaU':
         # Load the image
-        img = io.loadmat(folder + 'PaviaU.mat')['paviaU']
+        img = open_file(folder + 'PaviaU.mat')['paviaU']
 
         rgb_bands = (55, 41, 12)
 
-        gt = io.loadmat(folder + 'PaviaU_gt.mat')['paviaU_gt']
+        gt = open_file(folder + 'PaviaU_gt.mat')['paviaU_gt']
 
         label_values = ['Undefined', 'Asphalt', 'Meadows', 'Gravel', 'Trees',
                         'Painted metal sheets', 'Bare Soil', 'Bitumen',
@@ -141,12 +141,12 @@ def get_dataset(dataset_name, target_folder=None):
 
     elif dataset_name == 'IndianPines':
         # Load the image
-        img = io.loadmat(folder + 'Indian_pines_corrected.mat')
+        img = open_file(folder + 'Indian_pines_corrected.mat')
         img = img['indian_pines_corrected']
 
         rgb_bands = (43, 21, 11)  # AVIRIS sensor
 
-        gt = io.loadmat(folder + 'Indian_pines_gt.mat')['indian_pines_gt']
+        gt = open_file(folder + 'Indian_pines_gt.mat')['indian_pines_gt']
         label_values = ["Undefined", "Alfalfa", "Corn-notill", "Corn-mintill",
                         "Corn", "Grass-pasture", "Grass-trees",
                         "Grass-pasture-mowed", "Hay-windrowed", "Oats",
@@ -158,11 +158,11 @@ def get_dataset(dataset_name, target_folder=None):
 
     elif dataset_name == 'Botswana':
         # Load the image
-        img = io.loadmat(folder + 'Botswana.mat')['Botswana']
+        img = open_file(folder + 'Botswana.mat')['Botswana']
 
         rgb_bands = (75, 33, 15)
 
-        gt = io.loadmat(folder + 'Botswana_gt.mat')['Botswana_gt']
+        gt = open_file(folder + 'Botswana_gt.mat')['Botswana_gt']
         label_values = ["Undefined", "Water", "Hippo grass",
                         "Floodplain grasses 1", "Floodplain grasses 2",
                         "Reeds", "Riparian", "Firescar", "Island interior",
@@ -174,11 +174,11 @@ def get_dataset(dataset_name, target_folder=None):
 
     elif dataset_name == 'KSC':
         # Load the image
-        img = io.loadmat(folder + 'KSC.mat')['KSC']
+        img = open_file(folder + 'KSC.mat')['KSC']
 
         rgb_bands = (43, 21, 11)  # AVIRIS sensor
 
-        gt = io.loadmat(folder + 'KSC_gt.mat')['KSC_gt']
+        gt = open_file(folder + 'KSC_gt.mat')['KSC_gt']
         label_values = ["Undefined", "Scrub", "Willow swamp",
                         "Cabbage palm hammock", "Cabbage palm/oak hammock",
                         "Slash pine", "Oak/broadleaf hammock",
@@ -188,11 +188,11 @@ def get_dataset(dataset_name, target_folder=None):
         ignored_labels = [0]
     elif dataset_name == 'Mandji':
         # Load the image
-        img = io.loadmat(folder + 'Mandji.mat')['mandji']
+        img = open_file(folder + 'Mandji.mat')['mandji']
 
         rgb_bands = (60, 32, 10)
 
-        gt = io.loadmat(folder + 'Mandji_gt.mat')['mandji_gt']
+        gt = open_file(folder + 'Mandji_gt.mat')['mandji_gt']
         gt = gt.astype('uint8')
         label_values = ["non identifie", #0
                         "eau", #1
