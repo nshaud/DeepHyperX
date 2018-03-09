@@ -87,7 +87,12 @@ def get_dataset(dataset_name, target_folder=None):
             'img': 'Mandji.mat',
             'gt': 'Mandji_gt.mat',
             'download': False
-         }
+            },
+         'DFC2018_HSI': {
+            'img': '2018_IEEE_GRSS_DFC_HSI_TR.HDR',
+            'gt': '2018_IEEE_GRSS_DFC_GT_TR.tif',
+            'download': False
+            }
     }
     
     if dataset_name not in datasets.keys():
@@ -207,6 +212,35 @@ def get_dataset(dataset_name, target_folder=None):
                         "vegetation dense verte", #10
                         "végétation autre"] #11
 
+        ignored_labels = [0]
+    elif dataset_name == 'DFC2018_HSI':
+        img = open_file(folder + '2018_IEEE_GRSS_DFC_HSI_TR.HDR')
+        gt = open_file(folder + '2018_IEEE_GRSS_DFC_GT_TR.tif')
+        gt = gt.astype('uint8')
+
+        rgb_bands = (48, 32, 16)
+
+        label_values = ["Unclassified",
+                        "Healthy grass",
+                        "Stressed grass",
+                        "Artificial turf",
+                        "Evergreen trees",
+                        "Deciduous trees",
+                        "Bare earth",
+                        "Water",
+                        "Residential buildings",
+                        "Non-residential buildings",
+                        "Roads",
+                        "Sidewalks",
+                        "Crosswalks",
+                        "Major thoroughfares",
+                        "Highways",
+                        "Railways",
+                        "Paved parking lots",
+                        "Unpaved parking lots",
+                        "Cars",
+                        "Trains",
+                        "Stadium seats"]
         ignored_labels = [0]
 
     # Normalization
