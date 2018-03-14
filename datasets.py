@@ -123,6 +123,8 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
                           desc="Downloading {}".format(filename)) as t:
                     urlretrieve(url, filename=folder + filename,
                                 reporthook=t.update_to)
+    else:
+       print("WARNING: {} is not downloadable.")
 
     if dataset_name == 'PaviaC':
         # Load the image

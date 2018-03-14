@@ -30,20 +30,19 @@ import seaborn as sns
 from utils import metrics, convert_to_color_, convert_from_color_,\
     display_dataset, display_predictions, explore_spectrums, plot_spectrums,\
     sample_gt, build_dataset, show_results, compute_imf_weights
-from datasets import get_dataset, HyperX, open_file
+from datasets import get_dataset, HyperX, open_file, DATASETS_CONFIG
 from models import get_model, train, test
 
 import argparse
 
+dataset_names = [v['name'] if 'name' in v.keys() else k for k, v in DATASETS_CONFIG.items()]
+
 # Argument parser for CLI interaction
 parser = argparse.ArgumentParser(description="Run deep learning experiments on"
                                              " various hyperspectral datasets")
-parser.add_argument('--dataset', type=str, required=True,
-                    help="Dataset to use. Available:\n"
-                    "Pavia Center (PaviaC), Pavia University (PaviaU), "
-                    "Kennedy Space Center (KSC), Indian Pines (IndianPines), "
-                    "Botswana")
-parser.add_argument('--model', type=str, required=True,
+parser.add_argument('--dataset', type=str, default=None, choices=dataset_names,
+                    help="Dataset to use.")
+parser.add_argument('--model', type=str, default=None,
                     help="Model to train. Available:\n"
                     "SVM, SVM_grid, baseline (fully connected NN), "
                     "hu (1D CNN), "
@@ -85,6 +84,9 @@ parser.add_argument('--train_set', type=str, default=None,
 parser.add_argument('--test_set', type=str, default=None,
                     help="Path to the test set (optional, by default "
                     "the test_set is the entire ground truth minus the training)")
+parser.add_argument('--download', type=str, default=None, nargs='+',
+                    choices=dataset_names,
+                    help="Download the specified datasets and quits.")
 args = parser.parse_args()
 
 # Use GPU ?
@@ -121,6 +123,11 @@ CLASS_BALANCING = args.class_balancing
 TRAIN_GT = args.train_set
 # Testing ground truth file
 TEST_GT = args.test_set
+
+if len(args.download) > 0:
+    for dataset in args.download:
+        get_dataset(dataset, target_folder=FOLDER)
+    quit()
 
 if DISPLAY == 'visdom':
     try:
