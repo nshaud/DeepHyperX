@@ -52,7 +52,7 @@ parser.add_argument('--model', type=str, default=None,
                     "li (3D CNN)")
 parser.add_argument('--folder', type=str, help="Folder where to store the "
                     "datasets (defaults to the current working directory).",
-                    default="./")
+                    default="./Datasets/")
 parser.add_argument('--cuda', type=bool, const=True, nargs='?',
                     help="Use CUDA")
 parser.add_argument('--data_augmentation', type=bool, const=True, nargs='?',
