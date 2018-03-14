@@ -211,15 +211,19 @@ def get_dataset(dataset_name, target_folder=None):
                         "eau", #1
                         "laterite", #2
                         "sable gris", #3
-                        "béton", #4
-                        "ancien marigot sud", #5
-                        "ancien marigot nord",#6
-                        "", #7
+                        "sable sec", #4
+                        "sable humide", #5
+                        "béton", #6
+                        "cabane", #7
                         "végétation rase stressée", #8
-                        "pipeline/merlon", #9
-                        "vegetation dense verte", #10
-                        "végétation autre"] #11
-
+                        "végétation rase + sol nu", #9
+                        "végétation verte clairsemée", #10
+                        "végétation verte dense", #11
+                        "--", #12
+                        "ancien marigot sud", #13
+                        "marigot asséché", #14
+                        "ancien marigot nord",#15
+                       ]
         ignored_labels = [0]
     elif dataset_name == 'Mandji_Z4':
         # Load the image
@@ -230,24 +234,23 @@ def get_dataset(dataset_name, target_folder=None):
         # Extended SAM1 GT
         gt = open_file(folder + 'Mandji_zone4_VT_synthese.hdr')[:,:,1]
         gt = np.array(gt).squeeze().astype('uint8')
-        label_values = [
-            'non identifie',
-            'eau',
-            'laterite',
-            'sable gris',
-            'sable sec plage',
-            'sable humide plage',
-            'beton',
-            'cabane',
-            'vegetation stressee seule',
-            'vegetation stressee clairsemee et sol nu',
-            'vegetation eparse verte',
-            'vegetation dense verte',
-            'vegetation autre',
-            'ancien marigot',
-            'marigot asseche',
-            'hydrocarbure',
-        ]
+        label_values = ["non identifie", #0
+                        "eau", #1
+                        "laterite", #2
+                        "sable gris", #3
+                        "sable sec", #4
+                        "sable humide", #5
+                        "béton", #6
+                        "cabane", #7
+                        "végétation rase stressée", #8
+                        "végétation rase + sol nu", #9
+                        "végétation verte clairsemée", #10
+                        "végétation verte dense", #11
+                        "--", #12
+                        "ancien marigot sud", #13
+                        "marigot asséché", #14
+                        "hydrocarbure",#15
+                         ]
         ignored_labels = [0]
     elif dataset_name == 'DFC2018_HSI':
         img = open_file(folder + '2018_IEEE_GRSS_DFC_HSI_TR.HDR')
