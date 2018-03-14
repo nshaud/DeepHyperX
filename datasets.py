@@ -17,52 +17,7 @@ except ImportError:
     # Python 2
     from urllib import urlretrieve
 
-
-def open_file(dataset):
-    _, ext = os.path.splitext(dataset)
-    ext = ext.lower()
-    if ext == '.mat':
-        # Load Matlab array
-        return io.loadmat(dataset)
-    elif ext == '.tif' or ext == '.tiff':
-        # Load TIFF file
-        return misc.imread(dataset)
-    elif ext == '.hdr':
-        img = spectral.open_image(dataset)
-        return img.load()
-    else:
-        raise ValueError("Unknown file format: {}".format(ext))
-
-class TqdmUpTo(tqdm):
-    """Provides `update_to(n)` which uses `tqdm.update(delta_n)`."""
-    def update_to(self, b=1, bsize=1, tsize=None):
-        """
-        b  : int, optional
-            Number of blocks transferred so far [default: 1].
-        bsize  : int, optional
-            Size of each block (in tqdm units) [default: 1].
-        tsize  : int, optional
-            Total size (in tqdm units). If [default: None] remains unchanged.
-        """
-        if tsize is not None:
-            self.total = tsize
-        self.update(b * bsize - self.n)  # will also set self.n = b * bsize
-
-
-def get_dataset(dataset_name, target_folder=None):
-    """ Gets the dataset specified by name and return the related components.
-    Args:
-        dataset_name: string with the name of the dataset
-        target_folder: folder to store the datasets
-    Returns:
-        img: 3D hyperspectral image (WxHxB)
-        gt: 2D int array of labels
-        label_values: list of class names
-        ignored_labels: list of int classes to ignore
-        rgb_bands: int tuple that correspond to red, green and blue bands
-    """
-
-    datasets = {
+DATASETS_CONFIG = {
         'PaviaC': {
             'img': 'http://www.ehu.eus/ccwintco/uploads/e/e3/Pavia.mat',
             'gt': 'http://www.ehu.eus/ccwintco/uploads/5/53/Pavia_gt.mat'
@@ -101,6 +56,52 @@ def get_dataset(dataset_name, target_folder=None):
             'download': False
             }
     }
+
+def open_file(dataset):
+    _, ext = os.path.splitext(dataset)
+    ext = ext.lower()
+    if ext == '.mat':
+        # Load Matlab array
+        return io.loadmat(dataset)
+    elif ext == '.tif' or ext == '.tiff':
+        # Load TIFF file
+        return misc.imread(dataset)
+    elif ext == '.hdr':
+        img = spectral.open_image(dataset)
+        return img.load()
+    else:
+        raise ValueError("Unknown file format: {}".format(ext))
+
+class TqdmUpTo(tqdm):
+    """Provides `update_to(n)` which uses `tqdm.update(delta_n)`."""
+    def update_to(self, b=1, bsize=1, tsize=None):
+        """
+        b  : int, optional
+            Number of blocks transferred so far [default: 1].
+        bsize  : int, optional
+            Size of each block (in tqdm units) [default: 1].
+        tsize  : int, optional
+            Total size (in tqdm units). If [default: None] remains unchanged.
+        """
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)  # will also set self.n = b * bsize
+
+
+def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
+    """ Gets the dataset specified by name and return the related components.
+    Args:
+        dataset_name: string with the name of the dataset
+        target_folder (optional): folder to store the datasets, defaults to ./
+        datasets (optional): dataset configuration dictionary, defaults to prebuilt one
+    Returns:
+        img: 3D hyperspectral image (WxHxB)
+        gt: 2D int array of labels
+        label_values: list of class names
+        ignored_labels: list of int classes to ignore
+        rgb_bands: int tuple that correspond to red, green and blue bands
+    """
+
     
     if dataset_name not in datasets.keys():
         raise ValueError("{} dataset is unknown.".format(dataset_name))
