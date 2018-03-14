@@ -83,9 +83,16 @@ def get_dataset(dataset_name, target_folder=None):
             'img': 'http://www.ehu.es/ccwintco/uploads/7/72/Botswana.mat',
             'gt': 'http://www.ehu.es/ccwintco/uploads/5/58/Botswana_gt.mat'
             },
-         'Mandji': {
-            'img': 'Mandji.mat',
-            'gt': 'Mandji_gt.mat',
+         'Mandji_Z2': {
+            'folder': 'Mandji/',
+            'img': 'img_Mandji_ZONE2_hyper.hdr',
+            'gt': 'Mandji_zone2_VT_synthese.hdr',
+            'download': False
+            },
+         'Mandji_Z4': {
+            'folder': 'Mandji/',
+            'img': 'img_Mandji_ZONE4_hyper.hdr',
+            'gt': 'Mandji_zone4_VT_synthese.hdr',
             'download': False
             },
          'DFC2018_HSI': {
@@ -100,7 +107,7 @@ def get_dataset(dataset_name, target_folder=None):
 
     dataset = datasets[dataset_name]
 
-    folder = target_folder + dataset_name + '/'
+    folder = datasets[dataset_name].get('folder', target_folder + dataset_name + '/')
     if dataset.get('download', True):
         # Download the dataset if is not present
         if os.path.isdir(folder):
@@ -191,14 +198,15 @@ def get_dataset(dataset_name, target_folder=None):
                         "Cattail marsh", "Salt marsh", "Mud flats", "Wate"]
 
         ignored_labels = [0]
-    elif dataset_name == 'Mandji':
+    elif dataset_name == 'Mandji_Z2':
         # Load the image
-        img = open_file(folder + 'Mandji.mat')['mandji']
+        img = open_file(folder + 'img_Mandji_ZONE2_hyper.hdr')
 
         rgb_bands = (60, 32, 10)
 
-        gt = open_file(folder + 'Mandji_gt.mat')['mandji_gt']
-        gt = gt.astype('uint8')
+        # Extended SAM1 GT
+        gt = open_file(folder + 'Mandji_zone2_VT_synthese.hdr')[:,:,1]
+        gt = np.array(gt).squeeze().astype('uint8')
         label_values = ["non identifie", #0
                         "eau", #1
                         "laterite", #2
@@ -212,6 +220,34 @@ def get_dataset(dataset_name, target_folder=None):
                         "vegetation dense verte", #10
                         "végétation autre"] #11
 
+        ignored_labels = [0]
+    elif dataset_name == 'Mandji_Z4':
+        # Load the image
+        img = open_file(folder + 'img_Mandji_ZONE4_hyper.hdr')
+
+        rgb_bands = (60, 32, 10)
+
+        # Extended SAM1 GT
+        gt = open_file(folder + 'Mandji_zone4_VT_synthese.hdr')[:,:,1]
+        gt = np.array(gt).squeeze().astype('uint8')
+        label_values = [
+            'non identifie',
+            'eau',
+            'laterite',
+            'sable gris',
+            'sable sec plage',
+            'sable humide plage',
+            'beton',
+            'cabane',
+            'vegetation stressee seule',
+            'vegetation stressee clairsemee et sol nu',
+            'vegetation eparse verte',
+            'vegetation dense verte',
+            'vegetation autre',
+            'ancien marigot',
+            'marigot asseche',
+            'hydrocarbure',
+        ]
         ignored_labels = [0]
     elif dataset_name == 'DFC2018_HSI':
         img = open_file(folder + '2018_IEEE_GRSS_DFC_HSI_TR.HDR')
