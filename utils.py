@@ -315,13 +315,14 @@ def grouper(n, iterable):
         yield chunk
 
 
-def metrics(prediction, target, ignored_labels=[]):
+def metrics(prediction, target, ignored_labels=[], n_classes=None):
     """Compute and print metrics (accuracy, confusion matrix and F1 scores).
 
     Args:
         prediction: list of predicted labels
         target: list of target labels
         ignored_labels (optional): list of labels to ignore, e.g. 0 for undef
+        n_classes (optional): number of classes, max(target) by default
     Returns:
         accuracy, F1 score by class, confusion matrix
     """
@@ -334,10 +335,13 @@ def metrics(prediction, target, ignored_labels=[]):
 
     results = {}
 
+    if n_classes is None:
+        n_classes = np.max(target) + 1
+
     cm = confusion_matrix(
         target,
         prediction,
-        labels=range(np.max(target) + 1))
+        labels=range(n_classes))
 
     results["Confusion matrix"] = cm
 

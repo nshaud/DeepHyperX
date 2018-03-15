@@ -277,7 +277,7 @@ for run in range(N_RUNS):
     color_prediction = convert_to_color(prediction)
     display_predictions(color_prediction, color_gt, display=viz)
 
-    run_results = metrics(prediction, test_gt, ignored_labels=IGNORED_LABELS)
+    run_results = metrics(prediction, test_gt, ignored_labels=IGNORED_LABELS, n_classes=N_CLASSES)
     results.append(run_results)
     show_results(run_results, label_values=LABEL_VALUES, display=viz)
 
