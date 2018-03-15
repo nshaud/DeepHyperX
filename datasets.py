@@ -108,7 +108,7 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
 
     dataset = datasets[dataset_name]
 
-    folder = datasets[dataset_name].get('folder', target_folder + dataset_name + '/')
+    folder = target_folder + datasets[dataset_name].get('folder', dataset_name + '/')
     if dataset.get('download', True):
         # Download the dataset if is not present
         if os.path.isdir(folder):
@@ -123,8 +123,8 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
                           desc="Downloading {}".format(filename)) as t:
                     urlretrieve(url, filename=folder + filename,
                                 reporthook=t.update_to)
-    else:
-       print("WARNING: {} is not downloadable.")
+    elif not os.path.isdir(folder):
+       print("WARNING: {} is not downloadable.".format(dataset_name))
 
     if dataset_name == 'PaviaC':
         # Load the image

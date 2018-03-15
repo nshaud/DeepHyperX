@@ -124,7 +124,7 @@ TRAIN_GT = args.train_set
 # Testing ground truth file
 TEST_GT = args.test_set
 
-if len(args.download) > 0:
+if args.download is not None and len(args.download) > 0:
     for dataset in args.download:
         get_dataset(dataset, target_folder=FOLDER)
     quit()
