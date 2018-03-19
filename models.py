@@ -135,12 +135,13 @@ def get_model(name, **kwargs):
         model = SharmaEtAl(n_bands, n_classes, patch_size=kwargs['patch_size'])
         optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=0.0005)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
-        #scheduler = 15th and 25th / 10
+        kwargs.setdefault('scheduler', optim.lr_scheduler.MultiStepLR(optimizer, milestones=[15, 25], gamma=0.1))
     else:
         raise KeyError("{} model is unknown.".format(name))
 
     if cuda:
         model = model.cuda()
+    kwargs.setdefault('scheduler', optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5))
     kwargs.setdefault('data_augmentation', False)
     kwargs.setdefault('epoch', 100)
     kwargs.setdefault('batch_size', 100)
@@ -821,7 +822,7 @@ class SharmaEtAl(nn.Module):
             print("Output size : {}".format(x.size()))
         return x
 
-def train(net, optimizer, criterion, data_loader, epoch,
+def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
           save_epoch=5, display_iter=50, cuda=True, display=None):
     """
     Training loop to optimize a network for several epochs and a specified loss
@@ -835,6 +836,7 @@ def train(net, optimizer, criterion, data_loader, epoch,
         cuda (optional): bool set to True to use CUDA/CUDNN
         display_iter (optional): number of iterations before refreshing the
         display (False/None to switch off).
+        scheduler (optional): PyTorch scheduler
     """
 
     if criterion is None:
@@ -857,6 +859,7 @@ def train(net, optimizer, criterion, data_loader, epoch,
         display_iter = 1
 
     for e in tqdm(range(1, epoch + 1), desc="Training the network"):
+        avg_loss = torch.zeros((1,)).cuda()
 
         # Save the weights
         if e % save_epoch == 0:
@@ -876,6 +879,8 @@ def train(net, optimizer, criterion, data_loader, epoch,
             loss = criterion(output, target)
             loss.backward()
             optimizer.step()
+
+            avg_loss += loss.data
 
             losses[iter_] = loss.data[0]
             mean_losses[iter_] = np.mean(losses[max(0, iter_ - 100):iter_ + 1])
@@ -907,6 +912,12 @@ def train(net, optimizer, criterion, data_loader, epoch,
                     tqdm.write(string)
             iter_ += 1
             del(data, target, loss)
+
+        avg_loss /= len(data_loader)
+        if isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau):
+            scheduler.step(avg_loss.cpu()[0])
+        elif scheduler is not None:
+            scheduler.step()
 
 
 def test(net, img, hyperparams, patch_size=3,

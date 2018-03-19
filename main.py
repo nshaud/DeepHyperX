@@ -261,7 +261,8 @@ for run in range(N_RUNS):
 
         try:
             train(model, optimizer, loss, train_loader, hyperparams['epoch'],
-                  cuda=hyperparams['cuda'], display=viz)
+                  scheduler=hyperparams['scheduler'], cuda=hyperparams['cuda'],
+                  display=viz)
         except KeyboardInterrupt:
             # Allow the user to stop the training
             pass
