@@ -212,6 +212,7 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
     elif dataset_name == 'Mandji_Z2':
         # Load the image
         img = open_file(folder + 'img_Mandji_ZONE2_hyper.hdr')
+        img[np.isnan(img)] = 0.
 
         rgb_bands = (60, 32, 10)
 
@@ -222,18 +223,14 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
                         "eau", #1
                         "laterite", #2
                         "sable gris", #3
-                        "sable sec", #4
-                        "sable humide", #5
+                        "ancien marigot (nord)", #4
+                        "ancien marigot (sud)", #5
                         "béton", #6
-                        "cabane", #7
+                        "--", #7
                         "végétation rase stressée", #8
                         "végétation rase + sol nu", #9
                         "végétation verte clairsemée", #10
                         "végétation verte dense", #11
-                        "--", #12
-                        "ancien marigot sud", #13
-                        "marigot asséché", #14
-                        "ancien marigot nord",#15
                        ]
         ignored_labels = [0]
 
