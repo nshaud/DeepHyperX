@@ -19,24 +19,34 @@ except ImportError:
 
 DATASETS_CONFIG = {
         'PaviaC': {
-            'img': 'http://www.ehu.eus/ccwintco/uploads/e/e3/Pavia.mat',
-            'gt': 'http://www.ehu.eus/ccwintco/uploads/5/53/Pavia_gt.mat'
+            'urls': ['http://www.ehu.eus/ccwintco/uploads/e/e3/Pavia.mat', 
+                     'http://www.ehu.eus/ccwintco/uploads/5/53/Pavia_gt.mat'],
+            'img': 'Pavia.mat',
+            'gt': 'Pavia_gt.mat'
             },
         'PaviaU': {
-            'img': 'http://www.ehu.eus/ccwintco/uploads/e/ee/PaviaU.mat',
-            'gt': 'http://www.ehu.eus/ccwintco/uploads/5/50/PaviaU_gt.mat'
+            'urls': ['http://www.ehu.eus/ccwintco/uploads/e/ee/PaviaU.mat',
+                     'http://www.ehu.eus/ccwintco/uploads/5/50/PaviaU_gt.mat'],
+            'img': 'PaviaU.mat',
+            'gt': 'PaviaU_gt.mat'
             },
         'KSC': {
-            'img': 'http://www.ehu.es/ccwintco/uploads/2/26/KSC.mat',
-            'gt': 'http://www.ehu.es/ccwintco/uploads/a/a6/KSC_gt.mat'
+            'urls': ['http://www.ehu.es/ccwintco/uploads/2/26/KSC.mat',
+                     'http://www.ehu.es/ccwintco/uploads/a/a6/KSC_gt.mat'],
+            'img': 'KSC.mat',
+            'gt': 'KSC_gt.mat'
             },
         'IndianPines': {
-            'img': 'http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat',
-            'gt': 'http://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat'
+            'urls': ['http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat',
+                     'http://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat'],
+            'img': 'Indian_pines_corrected.mat',
+            'gt': 'Indian_pines_gt.mat'
             },
         'Botswana': {
-            'img': 'http://www.ehu.es/ccwintco/uploads/7/72/Botswana.mat',
-            'gt': 'http://www.ehu.es/ccwintco/uploads/5/58/Botswana_gt.mat'
+            'urls': ['http://www.ehu.es/ccwintco/uploads/7/72/Botswana.mat',
+                     'http://www.ehu.es/ccwintco/uploads/5/58/Botswana_gt.mat'],
+            'img': 'Botswana.mat',
+            'url': 'Botswana_gt.mat',
             },
          'Mandji_Z2': {
             'folder': 'Mandji/',
@@ -111,18 +121,16 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
     folder = target_folder + datasets[dataset_name].get('folder', dataset_name + '/')
     if dataset.get('download', True):
         # Download the dataset if is not present
-        if os.path.isdir(folder):
-            for url in datasets[dataset_name].values():
-                filename = url.split('/')[-1]
         if not os.path.isdir(folder):
             os.mkdir(folder)
-            for url in datasets[dataset_name].values():
-                # download the files
-                filename = url.split('/')[-1]
+        for url in datasets[dataset_name]['urls']:
+            # download the files
+            filename = url.split('/')[-1]
+            if not os.path.exists(folder + filename):
                 with TqdmUpTo(unit='B', unit_scale=True, miniters=1,
                           desc="Downloading {}".format(filename)) as t:
                     urlretrieve(url, filename=folder + filename,
-                                reporthook=t.update_to)
+                                     reporthook=t.update_to)
     elif not os.path.isdir(folder):
        print("WARNING: {} is not downloadable.".format(dataset_name))
 
