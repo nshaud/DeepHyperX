@@ -150,7 +150,7 @@ else:
     print("Not using CUDA, will run on CPU.")
 
 # Load the dataset
-img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS = get_dataset(DATASET,
+img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS, palette = get_dataset(DATASET,
                                                                FOLDER)
 # Number of classes
 N_CLASSES = len(LABEL_VALUES)
@@ -162,11 +162,13 @@ SVM_GRID_PARAMS = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4],
                                        'C': [1, 10, 100, 1000]},
                    {'kernel': ['linear'], 'C': [0.1, 1, 10, 100, 1000]}]
 
-# Generate color palette
-palette = {0: (0, 0, 0)}
-for k, color in enumerate(sns.color_palette("hls", len(LABEL_VALUES) - 1)):
-    palette[k + 1] = tuple(np.asarray(255 * np.array(color), dtype='uint8'))
+if palette is None:
+    # Generate color palette
+    palette = {0: (0, 0, 0)}
+    for k, color in enumerate(sns.color_palette("hls", len(LABEL_VALUES) - 1)):
+        palette[k + 1] = tuple(np.asarray(255 * np.array(color), dtype='uint8'))
 invert_palette = {v: k for k, v in palette.items()}
+
 def convert_to_color(x):
     return convert_to_color_(x, palette=palette)
 def convert_from_color(x):

@@ -111,7 +111,7 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
         ignored_labels: list of int classes to ignore
         rgb_bands: int tuple that correspond to red, green and blue bands
     """
-
+    palette = None
     
     if dataset_name not in datasets.keys():
         raise ValueError("{} dataset is unknown.".format(dataset_name))
@@ -236,6 +236,19 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
                         "ancien marigot nord",#15
                        ]
         ignored_labels = [0]
+
+        palette = {0: (0,0,0),
+                   1: (0, 112, 192),
+                   2: (247, 150, 70),
+                   3: (166, 166, 166),
+                   4: (112, 48, 160),
+                   5: (254, 0, 236),
+                   6: (255, 0, 0),
+                   8: (255, 255, 0),
+                   9: (153, 51, 0),
+                   10: (0, 176, 80),
+                   11: (0, 255, 0) 
+                  }
     elif dataset_name == 'Mandji_Z4':
         # Load the image
         img = open_file(folder + 'img_Mandji_ZONE4_hyper.hdr')
@@ -297,7 +310,7 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
     img = np.asarray(img, dtype='float32')
     img /= np.max(img)
 
-    return img, gt, label_values, ignored_labels, rgb_bands
+    return img, gt, label_values, ignored_labels, rgb_bands, palette
 
 
 class HyperX(torch.utils.data.Dataset):
