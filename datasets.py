@@ -274,11 +274,11 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
                          ]
         ignored_labels = [0]
     elif dataset_name == 'DFC2018_HSI':
-        img = open_file(folder + '2018_IEEE_GRSS_DFC_HSI_TR.HDR')
+        img = open_file(folder + '2018_IEEE_GRSS_DFC_HSI_TR.HDR')[:,:,:-2]
         gt = open_file(folder + '2018_IEEE_GRSS_DFC_GT_TR.tif')
         gt = gt.astype('uint8')
 
-        rgb_bands = (48, 32, 16)
+        rgb_bands = (47, 31, 15)
 
         label_values = ["Unclassified",
                         "Healthy grass",
