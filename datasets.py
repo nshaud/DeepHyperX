@@ -305,7 +305,7 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
 
     # Normalization
     img = np.asarray(img, dtype='float32')
-    img /= np.max(img)
+    img = (img - np.min(img)) / (np.max(img) - np.min(img))
 
     return img, gt, label_values, ignored_labels, rgb_bands, palette
 
