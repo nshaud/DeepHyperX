@@ -53,8 +53,9 @@ def get_model(name, **kwargs):
         patch_size = kwargs.setdefault('patch_size', 5)
         center_pixel = True
         model = HamidaEtAl(n_bands, n_classes, patch_size=patch_size)
-        lr = kwargs.setdefault('learning_rate', 0.0001)
-        optimizer = optim.SGD(model.parameters(), lr=lr)
+        lr = kwargs.setdefault('learning_rate', 0.01)
+        optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=0.0005)
+        kwargs.setdefault('batch_size', 100)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
     elif name == 'lee':
         kwargs.setdefault('epoch', 200)
@@ -71,27 +72,28 @@ def get_model(name, **kwargs):
         center_pixel = True
         model = ChenEtAl(n_bands, n_classes, patch_size=patch_size)
         lr = kwargs.setdefault('learning_rate', 0.003)
-        optimizer = optim.Adam(model.parameters(), lr=lr)
+        optimizer = optim.SGD(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
         kwargs.setdefault('epoch', 400)
         kwargs.setdefault('batch_size', 100)
     elif name == 'li':
         patch_size = kwargs.setdefault('patch_size', 5)
         center_pixel = True
-        model = LiEtAl(n_bands, n_classes, n_planes=4, patch_size=patch_size)
-        lr = kwargs.setdefault('learning_rate', 0.001)
+        model = LiEtAl(n_bands, n_classes, n_planes=16, patch_size=patch_size)
+        lr = kwargs.setdefault('learning_rate', 0.01)
         optimizer = optim.SGD(model.parameters(),
                               lr=lr, momentum=0.9, weight_decay=0.0005)
-        kwargs.setdefault('epoch', 200)
+        epoch = kwargs.setdefault('epoch', 200)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
+        #kwargs.setdefault('scheduler', optim.lr_scheduler.MultiStepLR(optimizer, milestones=[epoch // 2, (5 * epoch) // 6], gamma=0.1))
     elif name == 'hu':
         kwargs.setdefault('patch_size', 1)
         center_pixel = True
         model = HuEtAl(n_bands, n_classes)
-        lr = kwargs.setdefault('learning_rate', 0.001)
-        optimizer = optim.SGD(model.parameters(), lr=lr)
+        lr = kwargs.setdefault('learning_rate', 0.01)
+        optimizer = optim.Adam(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
-        kwargs.setdefault('epoch', 1000)
+        kwargs.setdefault('epoch', 100)
         kwargs.setdefault('batch_size', 100)
     elif name == 'he':
         # We train our model by AdaGrad [18] algorithm, in which
@@ -127,7 +129,7 @@ def get_model(name, **kwargs):
         # reduced two times at 15th and 25th epoch. [...]
         # We trained the network for 30 epochs
         kwargs.setdefault('batch_size', 60)
-        kwargs.setdefault('epoch', 30)
+        epoch = kwargs.setdefault('epoch', 30)
         lr = kwargs.setdefault('lr', 0.05)
         center_pixel = True
         # We assume patch_size = 64
@@ -135,16 +137,52 @@ def get_model(name, **kwargs):
         model = SharmaEtAl(n_bands, n_classes, patch_size=kwargs['patch_size'])
         optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=0.0005)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
-        kwargs.setdefault('scheduler', optim.lr_scheduler.MultiStepLR(optimizer, milestones=[15, 25], gamma=0.1))
+        kwargs.setdefault('scheduler', optim.lr_scheduler.MultiStepLR(optimizer, milestones=[epoch // 2, (5 * epoch) // 6], gamma=0.1))
+    elif name == 'liu':
+        kwargs['supervision'] = 'semi'
+        # "The learning rate is set to 0.001 empirically. The number of epochs is set to be 40."
+        kwargs.setdefault('epoch', 40)
+        lr = kwargs.setdefault('lr', 0.001)
+        center_pixel = True 
+        patch_size = kwargs.setdefault('patch_size', 9)
+        model = LiuEtAl(n_bands, n_classes, patch_size)
+        optimizer = optim.SGD(model.parameters(), lr=lr)
+        # "The unsupervised cost is the squared error of the difference"
+        criterion = (nn.CrossEntropyLoss(weight=kwargs['weights']), lambda rec, data: F.mse_loss(rec, data[:,:,:,patch_size//2,patch_size//2].squeeze()))
+    elif name == 'boulch':
+        kwargs['supervision'] = 'semi'
+        kwargs.setdefault('patch_size', 1)
+        kwargs.setdefault('epoch', 100)
+        lr = kwargs.setdefault('lr', 0.001)
+        center_pixel = True
+        model = BoulchEtAl(n_bands, n_classes)
+        optimizer = optim.SGD(model.parameters(), lr=lr)
+        criterion = (nn.CrossEntropyLoss(weight=kwargs['weights']), lambda rec, data: F.mse_loss(rec, data.squeeze()))
+    elif name == 'mou':
+        kwargs.setdefault('patch_size', 1)
+        center_pixel = True
+        kwargs.setdefault('epoch', 100)
+        # "The RNN was trained with the Adadelta algorithm [...] We made use of a
+        # fairly  high  learning  rate  of  1.0  instead  of  the  relatively  low
+        # default of  0.002 to  train the  network"
+        lr = kwargs.setdefault('lr', 1.0)
+        model = MouEtAl(n_bands, n_classes)
+        # For Adadelta, we need to load the model on GPU before creating the optimizer
+        if cuda:
+            model = model.cuda()
+        optimizer = optim.Adadelta(model.parameters(), lr=lr)
+        criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
     else:
         raise KeyError("{} model is unknown.".format(name))
 
     if cuda:
         model = model.cuda()
-    kwargs.setdefault('scheduler', optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5))
+    epoch = kwargs.setdefault('epoch', 100)
+    kwargs.setdefault('scheduler', optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=epoch//4, verbose=True))
+    #kwargs.setdefault('scheduler', None)
     kwargs.setdefault('data_augmentation', False)
-    kwargs.setdefault('epoch', 100)
     kwargs.setdefault('batch_size', 100)
+    kwargs.setdefault('supervision', 'full')
     kwargs['center_pixel'] = center_pixel
     return model, optimizer, criterion, kwargs
 
@@ -203,9 +241,8 @@ class HuEtAl(nn.Module):
     """
     @staticmethod
     def weight_init(m):
-        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
-            init.kaiming_normal(m.weight.data)
-        
+        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv1d):
+            init.uniform(m.weight.data, -0.05, 0.05)
 
     def _get_final_flattened_size(self):
         x = torch.zeros(1, 1, self.input_channels)
@@ -229,6 +266,7 @@ class HuEtAl(nn.Module):
         self.apply(self.weight_init)
 
     def forward(self, x, verbose=False):
+        x = x.squeeze()
         x = x.unsqueeze(1)
         if verbose:
             print(x.size())
@@ -242,7 +280,7 @@ class HuEtAl(nn.Module):
         x = F.relu(self.fc1(x))
         if verbose:
             print(x.size())
-        x = F.relu(self.fc2(x))
+        x = self.fc2(x)
         if verbose:
             print(x.size())
         return x
@@ -256,40 +294,43 @@ class HamidaEtAl(nn.Module):
     @staticmethod
     def weight_init(m):
         if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
-            init.xavier_uniform(m.weight.data)
+            init.kaiming_normal(m.weight.data)
 
-    def __init__(self, input_channels, n_classes, patch_size=5):
+    def __init__(self, input_channels, n_classes, patch_size=5, dilation=1):
         super(HamidaEtAl, self).__init__()
         # The first layer is a (3,3,3) kernel sized Conv characterized
         # by a stride equal to 1 and number of neurons equal to 20
         self.patch_size = patch_size
         self.input_channels = input_channels
+        dilation = (dilation, 1, 1)
 
         if patch_size == 3:
             self.conv1 = nn.Conv3d(
-                1, 20, (3, 3, 3), stride=(1, 1, 1), padding=1)
+                1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=1)
         else:
             self.conv1 = nn.Conv3d(
-                1, 20, (3, 3, 3), stride=(1, 1, 1), padding=0)
+                1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=0)
         # Next pooling is applied using a layer identical to the previous one
         # with the difference of a 1D kernel size (1,1,3) and a larger stride
         # equal to 2 in order to reduce the spectral dimension
         self.pool1 = nn.Conv3d(
-            20, 20, (3, 1, 1), stride=(2, 1, 1), padding=(1, 0, 0))
+            20, 20, (3, 1, 1), dilation=dilation, stride=(2, 1, 1), padding=(1, 0, 0))
         # Then, a duplicate of the first and second layers is created with
         # 35 hidden neurons per layer.
         self.conv2 = nn.Conv3d(
-            20, 35, (3, 3, 3), stride=(1, 1, 1), padding=(1, 0, 0))
+            20, 35, (3, 3, 3), dilation=dilation, stride=(1, 1, 1), padding=(1, 0, 0))
         self.pool2 = nn.Conv3d(
-            35, 35, (3, 1, 1), stride=(2, 1, 1), padding=(1, 0, 0))
+            35, 35, (3, 1, 1), dilation=dilation, stride=(2, 1, 1), padding=(1, 0, 0))
         # Finally, the 1D spatial dimension is progressively reduced
         # thanks to the use of two Conv layers, 35 neurons each,
         # with respective kernel sizes of (1,1,3) and (1,1,2) and strides
         # respectively equal to (1,1,1) and (1,1,2)
         self.conv3 = nn.Conv3d(
-            35, 35, (3, 1, 1), stride=(1, 1, 1), padding=(1, 0, 0))
+            35, 35, (3, 1, 1), dilation=dilation, stride=(1, 1, 1), padding=(1, 0, 0))
         self.conv4 = nn.Conv3d(
-            35, 35, (2, 1, 1), stride=(2, 1, 1), padding=(1, 0, 0))
+            35, 35, (2, 1, 1), dilation=dilation, stride=(2, 1, 1), padding=(1, 0, 0))
+
+        #self.dropout = nn.Dropout(p=0.5)
 
         self.features_size = self._get_final_flattened_size()
         # The architecture ends with a fully connected layer where the number
@@ -333,6 +374,7 @@ class HamidaEtAl(nn.Module):
         x = x.view(-1, self.features_size)
         if verbose:
             print("Flatten size : {}".format(x.size()))
+        #x = self.dropout(x)
         x = self.fc(x)
         if verbose:
             print("Output size : {}".format(x.size()))
@@ -530,12 +572,14 @@ class LiEtAl(nn.Module):
         # and a fully-connected layer (F1)
         # we fix the spatial size of the 3D convolution kernels to 3 × 3
         # while only slightly varying the spectral depth of the kernels
+        # for the Pavia University and Indian Pines scenes, those in C1 and C2
+        # were set to seven and three, respectively
         self.conv1 = nn.Conv3d(1, n_planes, (7, 3, 3), padding=(1, 0, 0))
         # the number of kernels in the second convolution layer is set to be
         # twice as many as that in the first convolution layer
         self.conv2 = nn.Conv3d(n_planes, 2 * n_planes,
                                (3, 3, 3), padding=(1, 0, 0))
-
+        #self.dropout = nn.Dropout(p=0.5)
         self.features_size = self._get_final_flattened_size()
 
         self.fc = nn.Linear(self.features_size, n_classes)
@@ -563,6 +607,7 @@ class LiEtAl(nn.Module):
         x = x.view(-1, self.features_size)
         if verbose:
             print("Flattened size : {}".format(x.size()))
+        #x = self.dropout(x)
         x = self.fc(x)
         if verbose:
             print("Output size : {}".format(x.size()))
@@ -611,12 +656,10 @@ class HeEtAl(nn.Module):
                          self.patch_size, self.patch_size))
         x = Variable(x)
         x = self.conv1(x)
-        print(x.size())
         x2_1 = self.conv2_1(x)
         x2_2 = self.conv2_2(x)
         x2_3 = self.conv2_3(x)
         x2_4 = self.conv2_4(x)
-        print(x2_1.size(), x2_2.size(), x2_3.size(), x2_4.size())
         x = x2_1 + x2_2 + x2_3 + x2_4
         x3_1 = self.conv3_1(x)
         x3_2 = self.conv3_2(x)
