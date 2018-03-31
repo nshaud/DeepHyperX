@@ -865,6 +865,214 @@ class SharmaEtAl(nn.Module):
             print("Output size : {}".format(x.size()))
         return x
 
+
+class LiuEtAl(nn.Module):
+    """
+    A semi-supervised convolutional neural network for hyperspectral image classification
+    Bing Liu, Xuchu Yu, Pengqiang Zhang, Xiong Tan, Anzhu Yu, Zhixiang Xue
+    Remote Sensing Letters, 2017
+    """
+
+    @staticmethod
+    def weight_init(m):
+        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
+            init.kaiming_normal(m.weight.data)
+
+    def __init__(self, input_channels, n_classes, patch_size=9):
+        super(LiuEtAl, self).__init__()
+        self.input_channels = input_channels
+        self.patch_size = patch_size
+        self.aux_loss_weight = 1
+        
+        # "W1 is a 3x3xB1 kernel [...] B1 is the number of the output bands for the convolutional
+        # "and pooling layer" -> actually 3x3 2D convolutions with B1 outputs
+        # "the value of B1 is set to be 80"
+        self.conv1 = nn.Conv2d(input_channels, 80, (3, 3), stride=(1,1))
+        self.pool1 = nn.MaxPool2d((2, 2))
+        self.conv1_bn = nn.BatchNorm2d(80)
+
+        self.features_sizes = self._get_sizes()
+
+        self.fc_enc = nn.Linear(self.features_sizes[2], n_classes)
+
+        # Decoder
+        self.fc1_dec = nn.Linear(self.features_sizes[2], self.features_sizes[2])
+        self.fc1_dec_bn = nn.BatchNorm1d(self.features_sizes[2])
+        self.fc2_dec = nn.Linear(self.features_sizes[2], self.features_sizes[1])
+        self.fc2_dec_bn = nn.BatchNorm1d(self.features_sizes[1])
+        self.fc3_dec = nn.Linear(self.features_sizes[1], self.features_sizes[0])
+        self.fc3_dec_bn = nn.BatchNorm1d(self.features_sizes[0])
+        self.fc4_dec = nn.Linear(self.features_sizes[0], input_channels)
+
+        self.apply(self.weight_init)
+
+    def _get_sizes(self):
+        x = torch.zeros((1, self.input_channels,
+                         self.patch_size, self.patch_size))
+        x = Variable(x)
+        x = F.relu(self.conv1_bn(self.conv1(x)))
+        _, c, w, h = x.size()
+        size0 = c * w * h
+
+        x = self.pool1(x)
+        _, c, w, h = x.size()
+        size1 = c * w * h
+
+        x = self.conv1_bn(x)
+        _, c, w, h = x.size()
+        size2 = c * w * h
+
+        return size0, size1, size2
+
+    def forward(self, x, verbose=False):
+        x = x.squeeze()
+        x = x.unsqueeze(1)
+        if verbose:
+            print("Input size : {}".format(x.size()))
+        x_conv1 = self.conv1_bn(self.conv1(x))
+        x = x_conv1
+        if verbose:
+            print("Conv1 size : {}".format(x.size()))
+        x_pool1 = self.pool1(x)
+        x = x_pool1
+        if verbose:
+            print("Pool1 size : {}".format(x.size()))
+        x_enc = F.relu(x).view(-1, self.features_sizes[2])
+        x = x_enc
+        if verbose:
+            print("Flattened size : {}".format(x.size()))
+
+        x_classif = self.fc_enc(x)
+        if verbose:
+            print("Output size : {}".format(x_classif.size()))
+
+        #x = F.relu(self.fc1_dec_bn(self.fc1_dec(x) + x_enc))
+        x = F.relu(self.fc1_dec(x))
+        if verbose:
+            print("Decoder FC1 size : {}".format(x.size()))
+        x = F.relu(self.fc2_dec_bn(self.fc2_dec(x) + x_pool1.view(-1, self.features_sizes[1])))
+        if verbose:
+            print("Decoder FC2 size : {}".format(x.size()))
+        x = F.relu(self.fc3_dec_bn(self.fc3_dec(x) +x_conv1.view(-1, self.features_sizes[0])))
+        if verbose:
+            print("Decoder FC3 size : {}".format(x.size()))
+        x = self.fc4_dec(x)
+        if verbose:
+            print("Decoder output size : {}".format(x.size()))
+        return x_classif, x
+
+
+class BoulchEtAl(nn.Module):
+    """
+    Autoencodeurs pour la visualisation d'images hyperspectrales
+    A.Boulch, N. Audebert, D. Dubucq
+    GRETSI 2017
+    """
+
+    @staticmethod
+    def weight_init(m):
+        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv1d):
+            init.kaiming_normal(m.weight.data)
+
+    def __init__(self, input_channels, n_classes, planes=16):
+        super(BoulchEtAl, self).__init__()
+        self.input_channels = input_channels
+        self.aux_loss_weight = 0.1
+        
+        encoder_modules = []
+        n = input_channels
+        x = Variable(torch.zeros((10, 1, self.input_channels)))
+        print(x.size())
+        while(n > 1):
+            print("---------- {} ---------".format(n))
+            if n == input_channels:
+                p1, p2 = 1, 2 * planes
+            elif n == input_channels // 2:
+                p1, p2 = 2 * planes, planes
+            else:
+                p1, p2 = planes, planes
+            encoder_modules.append(nn.Conv1d(p1, p2, 3, padding=1))
+            x = encoder_modules[-1](x)
+            print(x.size())
+            encoder_modules.append(nn.MaxPool1d(2))
+            x = encoder_modules[-1](x)
+            print(x.size())
+            encoder_modules.append(nn.ReLU(inplace=True))
+            x = encoder_modules[-1](x)
+            print(x.size())
+            encoder_modules.append(nn.BatchNorm1d(p2))
+            x = encoder_modules[-1](x)
+            print(x.size())
+            n = n // 2
+
+        encoder_modules.append(nn.Conv1d(planes, 3, 3, padding=1))
+        encoder_modules.append(nn.Tanh())
+        self.encoder = nn.Sequential(*encoder_modules)
+        self.features_sizes = self._get_sizes()
+
+        self.classifier = nn.Linear(self.features_sizes, n_classes)
+        self.regressor = nn.Linear(self.features_sizes, input_channels)
+        self.apply(self.weight_init)
+
+    def _get_sizes(self):
+        x = torch.zeros((10, 1, self.input_channels))
+        x = Variable(x)
+        x = self.encoder(x)
+        _, c, w = x.size()
+        return c*w
+
+    def forward(self, x, verbose=False):
+        x = x.unsqueeze(1)
+        if verbose:
+            print("Input size : {}".format(x.size()))
+        x = self.encoder(x)
+        if verbose:
+            print("Encoded size : {}".format(x.size()))
+        x = x.view(-1, self.features_sizes)
+        x_classif = self.classifier(x)
+        if verbose:
+            print("Output size : {}".format(x_classif.size()))
+        x = self.regressor(x)
+        if verbose:
+            print("Decoded size : {}".format(x.size()))
+        return x_classif, x
+
+
+class MouEtAl(nn.Module):
+    @staticmethod
+    def weight_init(m):
+        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv1d):
+            init.uniform(m.weight.data, -0.1, 0.1)
+
+    def __init__(self, input_channels, n_classes):
+        super(MouEtAl, self).__init__()
+        self.input_channels = input_channels
+        self.gru = nn.GRU(1, 64, 1, bidirectional=False) # TODO: try to change this ?
+        self.gru_bn = nn.BatchNorm1d(64*input_channels)
+        self.tanh = nn.Tanh()
+        self.fc = nn.Linear(64*input_channels, n_classes)
+
+    def forward(self, x, verbose=False):
+        x = x.squeeze()
+        x = x.unsqueeze(0)
+        # x is in 1, N, C but we expect C, N, 1 for GRU layer
+        x = x.permute(2, 1,0)
+        if verbose:
+            print("Input size : {}".format(x.size()))
+        x = self.gru(x)[0]
+        # x is in C, N, 64, we permute back
+        if verbose:
+            print("Hidden recurrent state : {}".format(x.size()))
+        x = x.permute(1,2,0).contiguous()
+        x = x.view(x.size(0), -1)
+        x = self.gru_bn(x)
+        x = self.tanh(x)
+        x = self.fc(x)
+        if verbose:
+            print("Output size : {}".format(x.size()))
+        return x
+
+
 def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
           save_epoch=5, display_iter=50, cuda=True, display=None):
     """
