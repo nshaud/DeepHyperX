@@ -1074,7 +1074,8 @@ class MouEtAl(nn.Module):
 
 
 def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
-          save_epoch=5, display_iter=50, cuda=True, display=None):
+          display_iter=50, cuda=True, display=None,
+          val_loader=None, supervision='full'):
     """
     Training loop to optimize a network for several epochs and a specified loss
 
@@ -1088,6 +1089,8 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
         display_iter (optional): number of iterations before refreshing the
         display (False/None to switch off).
         scheduler (optional): PyTorch scheduler
+        val_loader (optional): validation dataset
+        supervision (optional): 'full' or 'semi'
     """
 
     if criterion is None:
@@ -1096,7 +1099,7 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
     if cuda:
         net.cuda()
 
-    model_name = str(datetime.datetime.now()) + "_{}.pth"
+    save_epoch = epoch // 20 if epoch > 20 else 1
 
     # Set the network to training mode
     net.train()
@@ -1104,19 +1107,14 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
     losses = np.zeros(1000000)
     mean_losses = np.zeros(100000000)
     iter_ = 1
-    win = None
+    loss_win, val_win = None, None
+    val_accuracies = []
     d_type = get_display_type(display)
     if d_type == 'visdom':
         display_iter = 1
 
     for e in tqdm(range(1, epoch + 1), desc="Training the network"):
-        avg_loss = torch.zeros((1,)).cuda()
-
-        # Save the weights
-        if e % save_epoch == 0:
-            if not os.path.isdir('./checkpoints/'):
-                os.mkdir('./checkpoints/')
-            torch.save(net.state_dict(), './checkpoints/' + model_name.format(e))
+        avg_loss = torch.zeros((1,))
 
         # Run the training loop for one epoch
         for batch_idx, (data, target) in enumerate(data_loader):
@@ -1126,8 +1124,15 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
 
             data, target = Variable(data), Variable(target)
             optimizer.zero_grad()
-            output = net(data)
-            loss = criterion(output, target)
+            if supervision == 'full':
+                output = net(data)
+                loss = criterion(output, target)
+            elif supervision == 'semi':
+                outs = net(data)
+                output, rec = outs
+                loss = criterion[0](output, target) + net.aux_loss_weight * criterion[1](rec, data)
+            else:
+                raise ValueError("supervision mode \"{}\" is unknown.".format(supervision))
             loss.backward()
             optimizer.step()
 
@@ -1142,15 +1147,15 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
                     len(data), len(data) * len(data_loader),
                     100. * batch_idx / len(data_loader), mean_losses[iter_])
 
-                if d_type == 'visdom' and win:
+                if d_type == 'visdom' and loss_win:
                     display.line(
                         X=np.arange(iter_ - display_iter, iter_),
                         Y=mean_losses[iter_ - display_iter:iter_],
-                        win=win,
+                        win=loss_win,
                         update='append'
                     )
                 elif d_type == 'visdom':
-                    win = display.line(
+                    loss_win = display.line(
                         X=np.arange(0, iter_),
                         Y=mean_losses[:iter_],
                     )
@@ -1161,18 +1166,54 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
                     plt.plot(mean_losses[:iter_]) and plt.show()
                 else:
                     tqdm.write(string)
+
+                if d_type == 'visdom' and val_win and len(val_accuracies) > 0:
+                    display.line(
+                        Y=np.array(val_accuracies),
+                        X=np.arange(len(val_accuracies)),
+                        win=val_win,
+                    )
+                elif d_type == 'visdom' and len(val_accuracies) > 0:
+                    val_win = display.line(
+                        Y=np.array(val_accuracies),
+                        X=np.arange(len(val_accuracies)),
+                    )
             iter_ += 1
-            del(data, target, loss)
+            del(data, target, loss, output)
 
         avg_loss /= len(data_loader)
+        if val_loader is not None:
+            val_acc = val(net, val_loader, cuda=cuda, supervision=supervision)
+            val_accuracies.append(val_acc)
+            metric = -val_acc
+        else:
+            metric = avg_loss
+
         if isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau):
-            scheduler.step(avg_loss.cpu()[0])
+            scheduler.step(metric)
         elif scheduler is not None:
             scheduler.step()
 
+        # Save the weights
+        if e % save_epoch == 0:
+            save_model(net, camel_to_snake(str(net.__class__.__name__)), data_loader.dataset.name, epoch=e, metric=abs(metric))
 
-def test(net, img, hyperparams, patch_size=3,
-         center_pixel=True, batch_size=25, cuda=True):
+def save_model(model, model_name, dataset_name, **kwargs):
+     print("Saving model")
+     model_dir = './checkpoints/' + model_name + "/" + dataset_name + "/"
+     if not os.path.isdir(model_dir):
+         os.makedirs(model_dir, exist_ok=True)
+     if isinstance(model, torch.nn.Module):
+         print("saving nn")
+         filename = str(datetime.datetime.now()) + "_epoch{epoch}_{metric:.2f}".format(**kwargs)
+         print(filename)
+         torch.save(model.state_dict(), model_dir + filename + '.pth')
+     else:
+         filename = str(datetime.datetime.now())
+         joblib.dump(model, model_dir + filename + '.pkl')
+
+
+def test(net, img, hyperparams):
     """
     Test a model on a specific image
     """
@@ -1182,7 +1223,7 @@ def test(net, img, hyperparams, patch_size=3,
     batch_size, cuda = hyperparams['batch_size'], hyperparams['cuda']
     n_classes = hyperparams['n_classes']
 
-    kwargs = {'step': 1, 'window_size': (patch_size, patch_size)}
+    kwargs = {'step': hyperparams['test_stride'], 'window_size': (patch_size, patch_size)}
     probs = np.zeros(img.shape[:2] + (n_classes,))
 
     iterations = count_sliding_window(img, **kwargs) // batch_size
@@ -1205,9 +1246,13 @@ def test(net, img, hyperparams, patch_size=3,
         data = Variable(data, volatile=True)
         if cuda:
             data = data.cuda()
-            output = net(data).data.cpu()
+        output = net(data)
+        if isinstance(output, tuple):
+            output = output[0]
+        if cuda:
+            output = output.data.cpu()
         else:
-            output = net(data).data
+            output = output.data
 
         if patch_size == 1 or center_pixel:
             output = output.numpy()
@@ -1219,3 +1264,26 @@ def test(net, img, hyperparams, patch_size=3,
             else:
                 probs[x:x + w, y:y + h] += out
     return probs
+
+def val(net, data_loader, cuda=True, supervision='full'):
+# TODO : fix me using metrics()
+    accuracy, total = 0., 0.
+    ignored_labels = data_loader.dataset.ignored_labels
+    for batch_idx, (data, target) in enumerate(data_loader):
+        # Load the data into the GPU if required
+        if cuda:
+            data, target = data.cuda(), target.cuda()
+        data, target = Variable(data, volatile=True), Variable(target, volatile=True)
+        if supervision == 'full':
+            output = net(data)
+        elif supervision == 'semi':
+            outs = net(data)
+            output, rec = outs
+        _, output = torch.max(output, dim=1)
+        for out, pred in zip(output.view(-1), target.view(-1)):
+            if out.data[0] in ignored_labels:
+                continue
+            else:
+                accuracy += out.data[0] == pred.data[0]
+                total += 1
+    return accuracy / total
