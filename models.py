@@ -11,10 +11,12 @@ import os
 import datetime
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.externals import joblib
 from tqdm import tqdm
 from IPython.display import clear_output
 from utils import grouper, SpatialCrossMapLRN, CrossEntropy2d,\
-                  sliding_window, count_sliding_window, get_display_type
+                  sliding_window, count_sliding_window, get_display_type,\
+                  camel_to_snake
 
 
 def get_model(name, **kwargs):
