@@ -335,8 +335,7 @@ def metrics(prediction, target, ignored_labels=[], n_classes=None):
 
     results = {}
 
-    if n_classes is None:
-        n_classes = np.max(target) + 1
+    n_classes = np.max(target) + 1 if n_classes is None else n_classes
 
     cm = confusion_matrix(
         target,
@@ -431,7 +430,7 @@ def show_results(results, label_values=None,
     if agregated:
         for label, score, std in zip(label_values, F1_scores_mean,
                                      F1_scores_std):
-            text += "\t{}: {} +- {}\n".format(label, score, std)
+            text += "\t{}: {:.03f} +- {:.03f}\n".format(label, score, std)
     else:
         for label, score in zip(label_values, F1scores):
             text += "\t{}: {:.03f}\n".format(label, score)
