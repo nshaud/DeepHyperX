@@ -10,7 +10,6 @@ from torch.nn import init
 import os
 import datetime
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.externals import joblib
 from tqdm import tqdm
 from IPython.display import clear_output
@@ -1161,11 +1160,6 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
                         X=np.arange(0, iter_),
                         Y=mean_losses[:iter_],
                     )
-                elif d_type == 'plt':
-                    # Refresh the Jupyter cell output
-                    clear_output()
-                    print(string)
-                    plt.plot(mean_losses[:iter_]) and plt.show()
                 else:
                     tqdm.write(string)
 

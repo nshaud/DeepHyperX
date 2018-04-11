@@ -23,15 +23,15 @@ from torch.autograd import Variable
 import numpy as np
 import sklearn.svm
 import sklearn.model_selection
+from skimage import io
 # Visualization
-import matplotlib.pyplot as plt
 import seaborn as sns
 
 from utils import metrics, convert_to_color_, convert_from_color_,\
     display_dataset, display_predictions, explore_spectrums, plot_spectrums,\
     sample_gt, build_dataset, show_results, compute_imf_weights
 from datasets import get_dataset, HyperX, open_file, DATASETS_CONFIG
-from models import get_model, train, test
+from models import get_model, train, test, save_model
 
 import argparse
 
@@ -57,7 +57,7 @@ parser.add_argument('--cuda', type=bool, const=True, nargs='?',
                     help="Use CUDA")
 parser.add_argument('--data_augmentation', type=bool, const=True, nargs='?',
                     help="Random flips (if patch_size > 1)")
-parser.add_argument('--with_exploration', type=bool, default=False,
+parser.add_argument('--with_exploration', type=bool, const=True, nargs='?',
                     help="See data exploration visualization")
 parser.add_argument('--training_sample', type=float, default=0.10,
                     help="Percentage of samples to use for training")
@@ -74,8 +74,6 @@ parser.add_argument('--sampling_mode', type=str, help="Sampling mode"
                     " (random sampling or disjoint, default: random)",
                     default='random')
 parser.add_argument('--runs', type=int, default=1, help="Number of runs")
-parser.add_argument('--display', type=str, default='visdom',
-                    help="Display type (either 'visdom' or 'matplotlib')")
 parser.add_argument('--restore', type=str, default=None,
                     help="Weights to use for initialization, e.g. a checkpoint")
 parser.add_argument('--train_set', type=str, default=None,
@@ -109,8 +107,6 @@ DATAVIZ = args.with_exploration
 FOLDER = args.folder
 # Number of epochs to run
 EPOCH = args.epoch
-# Display mode, e.g. matplotlib
-DISPLAY = args.display
 # Sampling mode, e.g random sampling
 SAMPLING_MODE = args.sampling_mode
 # Pre-computed weights to restore
@@ -138,9 +134,6 @@ if DISPLAY == 'visdom':
     else:
         # Open connection to Visdom server
         viz = visdom.Visdom()
-elif DISPLAY == 'matplotlib':
-    plt.rcParams['figure.figsize'] = (8, 8)
-    viz = 'plt'
 else:
     viz = None
 

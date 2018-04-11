@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import random
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import itertools
@@ -70,19 +69,6 @@ def display_predictions(pred, gt, display=None):
                         np.transpose(gt, (2, 0, 1))],
                        nrow=2,
                        opts={'caption': "Prediction vs. ground truth"})
-    elif d_type == 'plt':
-        # Plot the results
-        fig = plt.figure()
-        fig.add_subplot(1, 2, 1)
-        plt.imshow(pred)
-        plt.title("Prediction")
-        plt.axis('off')
-        fig.add_subplot(1, 2, 2)
-        plt.imshow(gt)
-        plt.title("Ground truth")
-        plt.axis('off')
-        plt.show()
-
 
 def display_dataset(img, gt, bands, labels, palette, display=None):
     """Display the specified dataset.
@@ -112,25 +98,6 @@ def display_dataset(img, gt, bands, labels, palette, display=None):
                         ],
                        nrow=2,
                        opts={'caption': caption})
-    elif d_type == 'plt':
-        print("plotting with matplotlib")
-        # use Matplotlib
-        fig = plt.figure()
-        fig.add_subplot(121)
-        plt.imshow(rgb)
-        plt.title("RGB composite image (bands {}, {}, {})".format(*bands))
-        plt.axis('off')
-        fig.add_subplot(122)
-        # Display the colorized ground truth
-        plt.imshow(convert_to_color_(gt, palette=palette))
-        for color, label in zip(palette.values(), labels):
-            color = tuple(np.asarray(color, dtype='float') / 255)
-            plt.plot(0, 0, "-", c=color, label=label)
-        plt.legend(labels, loc=9, bbox_to_anchor=(0.5, 0.), ncol=3)
-        plt.title("Ground truth")
-        plt.axis('off')
-        plt.show()
-
 
 def explore_spectrums(img, complete_gt, class_names,
                       ignored_labels=None, display=None):
