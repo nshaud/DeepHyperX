@@ -85,6 +85,10 @@ parser.add_argument('--test_set', type=str, default=None,
 parser.add_argument('--download', type=str, default=None, nargs='+',
                     choices=dataset_names,
                     help="Download the specified datasets and quits.")
+parser.add_argument('--inference', type=str, default=None, nargs='?')
+parser.add_argument('--test_stride', type=int, default=1,
+                     help="Sliding window step stride during inference (default = 1)")
+
 args = parser.parse_args()
 
 # Use GPU ?
@@ -119,6 +123,9 @@ CLASS_BALANCING = args.class_balancing
 TRAIN_GT = args.train_set
 # Testing ground truth file
 TEST_GT = args.test_set
+
+INFERENCE = args.inference
+TEST_STRIDE = args.test_stride
 
 if args.download is not None and len(args.download) > 0:
     for dataset in args.download:
@@ -172,7 +179,7 @@ def convert_from_color(x):
 kwargs = {'cuda': CUDA, 'n_classes': N_CLASSES, 'n_bands': N_BANDS,
           'epoch': EPOCH, 'ignored_labels': IGNORED_LABELS,
           'data_augmentation': DATA_AUGMENTATION, 'patch_size': PATCH_SIZE,
-          'learning_rate': LEARNING_RATE}
+          'learning_rate': LEARNING_RATE, 'test_stride': TEST_STRIDE}
 kwargs = dict((k, v) for k, v in kwargs.items() if v is not None)
 
 # Show the image and the ground truth
@@ -204,7 +211,6 @@ for run in range(N_RUNS):
         train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
     print("{} samples selected (over {})".format(np.count_nonzero(train_gt),
                                                  np.count_nonzero(gt)))
-
     print("Running an experiment with the {} model".format(MODEL),
           "run {}/{}".format(run + 1, N_RUNS))
 
