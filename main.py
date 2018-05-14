@@ -158,9 +158,10 @@ N_CLASSES = len(LABEL_VALUES)
 N_BANDS = img.shape[-1]
 
 # Parameters for the SVM grid search
-SVM_GRID_PARAMS = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4],
+SVM_GRID_PARAMS = [{'kernel': ['rbf'], 'gamma': [1e-1, 1e-2, 1e-3],
                                        'C': [1, 10, 100, 1000]},
-                   {'kernel': ['linear'], 'C': [0.1, 1, 10, 100, 1000]}]
+                   {'kernel': ['linear'], 'C': [0.1, 1, 10, 100, 1000]},
+                   {'kernel': ['poly'], 'degree': [3], 'gamma': [1e-1, 1e-2, 1e-3]}]
 
 if palette is None:
     # Generate color palette
