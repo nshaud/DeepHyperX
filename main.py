@@ -255,15 +255,25 @@ for run in range(N_RUNS):
         if CLASS_BALANCING:
             weights = compute_imf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
             hyperparams['weights'] = torch.from_numpy(weights)
+        # Split train set in train/val
+        train_gt, val_gt = sample_gt(train_gt, 0.95, mode='random')
         # Generate the dataset
         train_dataset = HyperX(img, train_gt, ignored_labels=IGNORED_LABELS,
                                patch_size=hyperparams['patch_size'],
                                data_augmentation=hyperparams['data_augmentation'],
-                               center_pixel=hyperparams['center_pixel'])
+                               center_pixel=hyperparams['center_pixel'],
+                               supervision=hyperparams['supervision'],
+                               name=DATASET)
         train_loader = data.DataLoader(train_dataset,
                                        batch_size=hyperparams['batch_size'],
                                        pin_memory=hyperparams['cuda'],
                                        shuffle=True)
+        val_dataset = HyperX(img, val_gt, ignored_labels=IGNORED_LABELS,
+                               patch_size=hyperparams['patch_size'],
+                               center_pixel=hyperparams['center_pixel'])
+        val_loader = data.DataLoader(val_dataset,
+                                     batch_size=hyperparams['batch_size'],
+                                     pin_memory=hyperparams['cuda'])
 
         print("Network :")
         for input, _ in train_loader:
@@ -280,6 +290,7 @@ for run in range(N_RUNS):
         try:
             train(model, optimizer, loss, train_loader, hyperparams['epoch'],
                   scheduler=hyperparams['scheduler'], cuda=hyperparams['cuda'],
+                  supervision=hyperparams['supervision'], val_loader=val_loader,
                   display=viz)
         except KeyboardInterrupt:
             # Allow the user to stop the training
