@@ -220,18 +220,34 @@ for run in range(N_RUNS):
         # Grid search SVM (linear and RBF)
         X_train, y_train = build_dataset(img, train_gt,
                                          ignored_labels=IGNORED_LABELS)
-        clf = sklearn.svm.SVC()
-        clf = sklearn.model_selection.GridSearchCV(clf, SVM_GRID_PARAMS)
+        class_weight = 'balanced' if CLASS_BALANCING else None
+        clf = sklearn.svm.SVC(class_weight=class_weight)
+        clf = sklearn.model_selection.GridSearchCV(clf, SVM_GRID_PARAMS, verbose=5, n_jobs=4)
         clf.fit(X_train, y_train)
         print("SVM best parameters : {}".format(clf.best_params_))
         prediction = clf.predict(img.reshape(-1, N_BANDS))
+        save_model(clf, MODEL, DATASET)
         prediction = prediction.reshape(img.shape[:2])
     elif MODEL == 'SVM':
         X_train, y_train = build_dataset(img, train_gt,
                                          ignored_labels=IGNORED_LABELS)
-        clf = sklearn.svm.SVC()
+        class_weight = 'balanced' if CLASS_BALANCING else None
+        clf = sklearn.svm.SVC(class_weight=class_weight)
         clf.fit(X_train, y_train)
+        save_model(clf, MODEL, DATASET)
         prediction = clf.predict(img.reshape(-1, N_BANDS))
+        prediction = prediction.reshape(img.shape[:2])
+    elif MODEL == 'SGD':
+        X_train, y_train = build_dataset(img, train_gt,
+                                         ignored_labels=IGNORED_LABELS)
+        X_train, y_train = sklearn.utils.shuffle(X_train, y_train)
+        scaler = sklearn.preprocessing.StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        class_weight = 'balanced' if CLASS_BALANCING else None
+        clf = sklearn.linear_model.SGDClassifier(class_weight=class_weight, learning_rate='optimal', tol=1e-3, average=10)
+        clf.fit(X_train, y_train)
+        save_model(clf, MODEL, DATASET)
+        prediction = clf.predict(scaler.transform(img.reshape(-1, N_BANDS)))
         prediction = prediction.reshape(img.shape[:2])
     else:
         # Neural network
