@@ -46,7 +46,7 @@ DATASETS_CONFIG = {
             'urls': ['http://www.ehu.es/ccwintco/uploads/7/72/Botswana.mat',
                      'http://www.ehu.es/ccwintco/uploads/5/58/Botswana_gt.mat'],
             'img': 'Botswana.mat',
-            'url': 'Botswana_gt.mat',
+            'gt': 'Botswana_gt.mat',
             },
          'Mandji_Z2': {
             'folder': 'Mandji/',
