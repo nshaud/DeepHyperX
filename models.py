@@ -1110,9 +1110,6 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
     iter_ = 1
     loss_win, val_win = None, None
     val_accuracies = []
-    d_type = get_display_type(display)
-    if d_type == 'visdom':
-        display_iter = 1
 
     for e in tqdm(range(1, epoch + 1), desc="Training the network"):
         avg_loss = torch.zeros((1,))
@@ -1138,9 +1135,9 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
             optimizer.step()
 
             avg_loss += loss.data
-
             losses[iter_] = loss.data[0]
             mean_losses[iter_] = np.mean(losses[max(0, iter_ - 100):iter_ + 1])
+
             if display_iter and iter_ % display_iter == 0:
                 string = 'Train (epoch {}/{}) [{}/{} ({:.0f}%)]\tLoss: {:.6f}'
                 string = string.format(
@@ -1148,35 +1145,22 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
                     len(data), len(data) * len(data_loader),
                     100. * batch_idx / len(data_loader), mean_losses[iter_])
 
-                if d_type == 'visdom' and loss_win:
-                    display.line(
-                        X=np.arange(iter_ - display_iter, iter_),
-                        Y=mean_losses[iter_ - display_iter:iter_],
-                        win=loss_win,
-                        update='append'
-                    )
-                elif d_type == 'visdom':
-                    loss_win = display.line(
-                        X=np.arange(0, iter_),
-                        Y=mean_losses[:iter_],
-                    )
-                else:
-                    tqdm.write(string)
+                #loss_win = display.line(
+                #    X=np.arange(iter_ - display_iter, iter_),
+                #    Y=mean_losses[iter_ - display_iter:iter_],
+                #    win=loss_win
+                #    #update='append' if loss_win else False
+                #)
+                tqdm.write(string)
 
-                if d_type == 'visdom' and val_win and len(val_accuracies) > 0:
-                    display.line(
-                        Y=np.array(val_accuracies),
-                        X=np.arange(len(val_accuracies)),
-                        win=val_win,
-                    )
-                elif d_type == 'visdom' and len(val_accuracies) > 0:
-                    val_win = display.line(
-                        Y=np.array(val_accuracies),
-                        X=np.arange(len(val_accuracies)),
-                    )
+                #if len(val_accuracies) > 0:
+                #    val_win = display.line(Y=np.array(val_accuracies),
+                #                           X=np.arange(len(val_accuracies)),
+                #                           win=val_win)
             iter_ += 1
             del(data, target, loss, output)
 
+        # Update the scheduler
         avg_loss /= len(data_loader)
         if val_loader is not None:
             val_acc = val(net, val_loader, cuda=cuda, supervision=supervision)

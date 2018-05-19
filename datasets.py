@@ -328,14 +328,8 @@ class HyperX(torch.utils.data.Dataset):
         """
         super(HyperX, self).__init__()
         self.name = name
-        #offset = patch_size // 2
-        offset = 0
-        self.data = np.pad(data,
-                           ((offset, offset), (offset, offset), (0, 0)),
-                           'constant')
-        self.label = np.pad(gt,
-                            ((offset, offset), (offset, offset)),
-                            'constant')
+        self.data = data
+        self.label = gt
         self.patch_size = patch_size
         self.ignored_labels = set(ignored_labels)
         self.data_augmentation = data_augmentation
@@ -348,9 +342,7 @@ class HyperX(torch.utils.data.Dataset):
         # Semi-supervised : use all pixels, except padding
         elif supervision == 'semi':
             mask = np.ones_like(gt)
-        positions = np.nonzero(mask)
-        x_pos = positions[0] + offset
-        y_pos = positions[1] + offset
+        x_pos, y_pos = np.nonzero(mask)
         self.indices = np.array([(x,y) for x,y in zip(x_pos, y_pos) if x > patch_size // 2 and x < data.shape[0] - patch_size//2 and y > patch_size // 2 and y < data.shape[1] - patch_size//2])
         self.labels = [self.label[x,y] for x,y in self.indices]
         np.random.shuffle(self.indices)

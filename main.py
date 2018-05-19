@@ -26,6 +26,7 @@ import sklearn.model_selection
 from skimage import io
 # Visualization
 import seaborn as sns
+import visdom
 
 import os
 from utils import metrics, convert_to_color_, convert_from_color_,\
@@ -133,17 +134,10 @@ if args.download is not None and len(args.download) > 0:
         get_dataset(dataset, target_folder=FOLDER)
     quit()
 
-if DISPLAY == 'visdom':
-    try:
-        import visdom
-    except ImportError:
-        print("visdom not available, fallback on Matplotlib")
-        viz = 'plt'
-    else:
-        # Open connection to Visdom server
-        viz = visdom.Visdom()
-else:
-    viz = None
+viz = visdom.Visdom()
+if not viz.check_connection:
+    print("Visdom is not connected. Did you run 'python -m visdom.server' ?")
+
 
 if CUDA:
     print("Using CUDA")
