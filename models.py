@@ -1040,6 +1040,11 @@ class BoulchEtAl(nn.Module):
 
 
 class MouEtAl(nn.Module):
+    """
+    Deep recurrent neural networks for hyperspectral image classification
+    Lichao Mou, Pedram Ghamisi, Xiao Xang Zhu
+    https://ieeexplore.ieee.org/document/7914752/
+    """
     @staticmethod
     def weight_init(m):
         if isinstance(m, nn.Linear) or isinstance(m, nn.Conv1d):
