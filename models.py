@@ -1080,7 +1080,7 @@ class MouEtAl(nn.Module):
 
 
 def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
-          display_iter=50, cuda=True, display=None,
+          display_iter=100, cuda=True, display=None,
           val_loader=None, supervision='full'):
     """
     Training loop to optimize a network for several epochs and a specified loss
