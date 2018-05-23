@@ -243,12 +243,12 @@ class HuEtAl(nn.Module):
     @staticmethod
     def weight_init(m):
         if isinstance(m, nn.Linear) or isinstance(m, nn.Conv1d):
-            init.uniform(m.weight.data, -0.05, 0.05)
+            init.uniform_(m.weight.data, -0.05, 0.05)
 
     def _get_final_flattened_size(self):
-        x = torch.zeros(1, 1, self.input_channels)
-        x = Variable(x, volatile=True)
-        x = self.pool(self.conv(x))
+        with torch.no_grad():
+            x = torch.zeros(1, 1, self.input_channels)
+            x = self.pool(self.conv(x))
         return x.numel() 
 
     def __init__(self, input_channels, n_classes, kernel_size=None, pool_size=None):
@@ -341,14 +341,14 @@ class HamidaEtAl(nn.Module):
         self.apply(self.weight_init)
 
     def _get_final_flattened_size(self):
-        x = torch.zeros((1, 1, self.input_channels,
-                         self.patch_size, self.patch_size))
-        x = Variable(x)
-        x = self.pool1(self.conv1(x))
-        x = self.pool2(self.conv2(x))
-        x = self.conv3(x)
-        x = self.conv4(x)
-        _, t, c, w, h = x.size()
+        with torch.no_grad():
+            x = torch.zeros((1, 1, self.input_channels,
+                             self.patch_size, self.patch_size))
+            x = self.pool1(self.conv1(x))
+            x = self.pool2(self.conv2(x))
+            x = self.conv3(x)
+            x = self.conv4(x)
+            _, t, c, w, h = x.size()
         return t * c * w * h
 
     def forward(self, x, verbose=False):
@@ -512,13 +512,13 @@ class ChenEtAl(nn.Module):
         self.apply(self.weight_init)
 
     def _get_final_flattened_size(self):
-        x = torch.zeros((1, 1, self.input_channels,
-                         self.patch_size, self.patch_size))
-        x = Variable(x)
-        x = self.pool1(self.conv1(x))
-        x = self.pool2(self.conv2(x))
-        x = self.conv3(x)
-        _, t, c, w, h = x.size()
+        with torch.no_grad():
+            x = torch.zeros((1, 1, self.input_channels,
+                             self.patch_size, self.patch_size))
+            x = self.pool1(self.conv1(x))
+            x = self.pool2(self.conv2(x))
+            x = self.conv3(x)
+            _, t, c, w, h = x.size()
         return t * c * w * h
 
     def forward(self, x, verbose=False):
@@ -588,12 +588,12 @@ class LiEtAl(nn.Module):
         self.apply(self.weight_init)
 
     def _get_final_flattened_size(self):
-        x = torch.zeros((1, 1, self.input_channels,
-                         self.patch_size, self.patch_size))
-        x = Variable(x)
-        x = self.conv1(x)
-        x = self.conv2(x)
-        _, t, c, w, h = x.size()
+        with torch.no_grad():
+            x = torch.zeros((1, 1, self.input_channels,
+                             self.patch_size, self.patch_size))
+            x = self.conv1(x)
+            x = self.conv2(x)
+            _, t, c, w, h = x.size()
         return t * c * w * h
 
     def forward(self, x, verbose=False):
@@ -653,22 +653,22 @@ class HeEtAl(nn.Module):
         self.apply(self.weight_init)
 
     def _get_final_flattened_size(self):
-        x = torch.zeros((1, 1, self.input_channels,
-                         self.patch_size, self.patch_size))
-        x = Variable(x)
-        x = self.conv1(x)
-        x2_1 = self.conv2_1(x)
-        x2_2 = self.conv2_2(x)
-        x2_3 = self.conv2_3(x)
-        x2_4 = self.conv2_4(x)
-        x = x2_1 + x2_2 + x2_3 + x2_4
-        x3_1 = self.conv3_1(x)
-        x3_2 = self.conv3_2(x)
-        x3_3 = self.conv3_3(x)
-        x3_4 = self.conv3_4(x)
-        x = x3_1 + x3_2 + x3_3 + x3_4
-        x = self.conv4(x)
-        _, t, c, w, h = x.size()
+        with torch.no_grad():
+            x = torch.zeros((1, 1, self.input_channels,
+                             self.patch_size, self.patch_size))
+            x = self.conv1(x)
+            x2_1 = self.conv2_1(x)
+            x2_2 = self.conv2_2(x)
+            x2_3 = self.conv2_3(x)
+            x2_4 = self.conv2_4(x)
+            x = x2_1 + x2_2 + x2_3 + x2_4
+            x3_1 = self.conv3_1(x)
+            x3_2 = self.conv3_2(x)
+            x3_3 = self.conv3_3(x)
+            x3_4 = self.conv3_4(x)
+            x = x3_1 + x3_2 + x3_3 + x3_4
+            x = self.conv4(x)
+            _, t, c, w, h = x.size()
         return t * c * w * h
 
     def forward(self, x, verbose=False):
@@ -742,14 +742,14 @@ class LuoEtAl(nn.Module):
         self.apply(self.weight_init)
 
     def _get_final_flattened_size(self):
-        x = torch.zeros((1, 1, self.input_channels,
-                         self.patch_size, self.patch_size))
-        x = Variable(x)
-        x = self.conv1(x)
-        b = x.size(0)
-        x = x.view(b, 1, -1, self.n_planes)
-        x = self.conv2(x)
-        _, c, w, h = x.size()
+        with torch.no_grad():
+            x = torch.zeros((1, 1, self.input_channels,
+                             self.patch_size, self.patch_size))
+            x = self.conv1(x)
+            b = x.size(0)
+            x = x.view(b, 1, -1, self.n_planes)
+            x = self.conv2(x)
+            _, c, w, h = x.size()
         return c * w * h
 
     def forward(self, x, verbose=False):
@@ -818,22 +818,22 @@ class SharmaEtAl(nn.Module):
         self.apply(self.weight_init)
 
     def _get_final_flattened_size(self):
-        x = torch.zeros((1, 1, self.input_channels,
-                         self.patch_size, self.patch_size))
-        x = Variable(x)
-        x = F.relu(self.conv1_bn(self.conv1(x)))
-        x = self.pool1(x)
-        print(x.size())
-        b, t, c, w, h = x.size()
-        x = x.view(b, 1, t*c, w, h) 
-        x = F.relu(self.conv2_bn(self.conv2(x)))
-        x = self.pool2(x)
-        print(x.size())
-        b, t, c, w, h = x.size()
-        x = x.view(b, 1, t*c, w, h) 
-        x = F.relu(self.conv3(x))
-        print(x.size())
-        _, t, c, w, h = x.size()
+        with torch.no_grad():
+            x = torch.zeros((1, 1, self.input_channels,
+                             self.patch_size, self.patch_size))
+            x = F.relu(self.conv1_bn(self.conv1(x)))
+            x = self.pool1(x)
+            print(x.size())
+            b, t, c, w, h = x.size()
+            x = x.view(b, 1, t*c, w, h) 
+            x = F.relu(self.conv2_bn(self.conv2(x)))
+            x = self.pool2(x)
+            print(x.size())
+            b, t, c, w, h = x.size()
+            x = x.view(b, 1, t*c, w, h) 
+            x = F.relu(self.conv3(x))
+            print(x.size())
+            _, t, c, w, h = x.size()
         return t * c * w * h
 
     def forward(self, x, verbose=False):
@@ -1048,7 +1048,7 @@ class MouEtAl(nn.Module):
     @staticmethod
     def weight_init(m):
         if isinstance(m, nn.Linear) or isinstance(m, nn.Conv1d):
-            init.uniform(m.weight.data, -0.1, 0.1)
+            init.uniform_(m.weight.data, -0.1, 0.1)
 
     def __init__(self, input_channels, n_classes):
         super(MouEtAl, self).__init__()
@@ -1117,7 +1117,7 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
     val_accuracies = []
 
     for e in tqdm(range(1, epoch + 1), desc="Training the network"):
-        avg_loss = torch.zeros((1,))
+        avg_loss = 0.
 
         # Run the training loop for one epoch
         for batch_idx, (data, target) in enumerate(data_loader):
@@ -1139,8 +1139,8 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
             loss.backward()
             optimizer.step()
 
-            avg_loss += loss.data
-            losses[iter_] = loss.data[0]
+            avg_loss += loss.item()
+            losses[iter_] = loss.item()
             mean_losses[iter_] = np.mean(losses[max(0, iter_ - 100):iter_ + 1])
 
             if display_iter and iter_ % display_iter == 0:
@@ -1216,38 +1216,38 @@ def test(net, img, hyperparams):
                       total=(iterations),
                       desc="Inference on the image"
                       ):
-        if patch_size == 1:
-            data = [b[0][0, 0] for b in batch]
-            data = np.copy(data)
-            data = torch.from_numpy(data)
-        else:
-            data = [b[0] for b in batch]
-            data = np.copy(data)
-            data = data.transpose(0, 3, 1, 2)
-            data = torch.from_numpy(data)
-            data = data.unsqueeze(1)
-
-        indices = [b[1:] for b in batch]
-        data = Variable(data, volatile=True)
-        if cuda:
-            data = data.cuda()
-        output = net(data)
-        if isinstance(output, tuple):
-            output = output[0]
-        if cuda:
-            output = output.data.cpu()
-        else:
-            output = output.data
-
-        if patch_size == 1 or center_pixel:
-            output = output.numpy()
-        else:
-            output = np.transpose(output.numpy(), (0, 2, 3, 1))
-        for (x, y, w, h), out in zip(indices, output):
-            if center_pixel:
-                probs[x + w // 2, y + h // 2] += out
+        with torch.no_grad():
+            if patch_size == 1:
+                data = [b[0][0, 0] for b in batch]
+                data = np.copy(data)
+                data = torch.from_numpy(data)
             else:
-                probs[x:x + w, y:y + h] += out
+                data = [b[0] for b in batch]
+                data = np.copy(data)
+                data = data.transpose(0, 3, 1, 2)
+                data = torch.from_numpy(data)
+                data = data.unsqueeze(1)
+
+            indices = [b[1:] for b in batch]
+            if cuda:
+                data = data.cuda()
+            output = net(data)
+            if isinstance(output, tuple):
+                output = output[0]
+            if cuda:
+                output = output.data.cpu()
+            else:
+                output = output.data
+
+            if patch_size == 1 or center_pixel:
+                output = output.numpy()
+            else:
+                output = np.transpose(output.numpy(), (0, 2, 3, 1))
+            for (x, y, w, h), out in zip(indices, output):
+                if center_pixel:
+                    probs[x + w // 2, y + h // 2] += out
+                else:
+                    probs[x:x + w, y:y + h] += out
     return probs
 
 def val(net, data_loader, cuda=True, supervision='full'):
@@ -1255,20 +1255,20 @@ def val(net, data_loader, cuda=True, supervision='full'):
     accuracy, total = 0., 0.
     ignored_labels = data_loader.dataset.ignored_labels
     for batch_idx, (data, target) in enumerate(data_loader):
-        # Load the data into the GPU if required
-        if cuda:
-            data, target = data.cuda(), target.cuda()
-        data, target = Variable(data, volatile=True), Variable(target, volatile=True)
-        if supervision == 'full':
-            output = net(data)
-        elif supervision == 'semi':
-            outs = net(data)
-            output, rec = outs
-        _, output = torch.max(output, dim=1)
-        for out, pred in zip(output.view(-1), target.view(-1)):
-            if out.data[0] in ignored_labels:
-                continue
-            else:
-                accuracy += out.data[0] == pred.data[0]
-                total += 1
+        with torch.no_grad():
+            # Load the data into the GPU if required
+            if cuda:
+                data, target = data.cuda(), target.cuda()
+            if supervision == 'full':
+                output = net(data)
+            elif supervision == 'semi':
+                outs = net(data)
+                output, rec = outs
+            _, output = torch.max(output, dim=1)
+            for out, pred in zip(output.view(-1), target.view(-1)):
+                if out.item() in ignored_labels:
+                    continue
+                else:
+                    accuracy += out.item() == pred.item()
+                    total += 1
     return accuracy / total
