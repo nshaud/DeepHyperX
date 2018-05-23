@@ -271,13 +271,13 @@ for run in range(N_RUNS):
                                      pin_memory=hyperparams['cuda'])
 
         print("Network :")
-        for input, _ in train_loader:
-            break
-        if hyperparams['cuda']:
-            input = input.cuda()
-        input = Variable(input, volatile=True)
-        out = model(input, verbose=True)
-        del(out)
+        with torch.no_grad():
+            for input, _ in train_loader:
+                break
+            if hyperparams['cuda']:
+                input = input.cuda()
+            out = model(input, verbose=True)
+            del(out)
 
         if CHECKPOINT is not None:
             model.load_state_dict(torch.load(CHECKPOINT))
