@@ -489,8 +489,9 @@ def compute_imf_weights(ground_truth, n_classes=None, ignored_classes=[]):
     # Normalize the pixel counts to obtain frequencies
     frequencies /= np.sum(frequencies)
     # Obtain the median on non-zero frequencies
-    median = np.median(frequencies[np.nonzero(frequencies)])
-    weights = median / frequencies
+    idx = np.nonzero(frequencies)
+    median = np.median(frequencies[idx])
+    weights[idx] = median / frequencies[idx]
     weights[frequencies == 0] = 0.
     return weights
 
