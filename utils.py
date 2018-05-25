@@ -5,10 +5,8 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import itertools
 import spectral
-try:
-    import visdom
-except:
-    pass
+import visdom
+
 # Torch
 import torch
 import torch.nn as nn
@@ -62,15 +60,13 @@ def convert_from_color_(arr_3d, palette=None):
     return arr_2d
 
 
-def display_predictions(pred, gt, display=None):
-    d_type = get_display_type(display)
-    if d_type == 'visdom':
-        display.images([np.transpose(pred, (2, 0, 1)),
-                        np.transpose(gt, (2, 0, 1))],
-                       nrow=2,
-                       opts={'caption': "Prediction vs. ground truth"})
+def display_predictions(pred, gt, vis):
+    vis.images([np.transpose(pred, (2, 0, 1)),
+                np.transpose(gt, (2, 0, 1))],
+                nrow=2,
+                opts={'caption': "Prediction vs. ground truth"})
 
-def display_dataset(img, gt, bands, labels, palette, display=None):
+def display_dataset(img, gt, bands, labels, palette, vis):
     """Display the specified dataset.
 
     Args:
@@ -82,22 +78,19 @@ def display_dataset(img, gt, bands, labels, palette, display=None):
         display (optional): type of display, if any
 
     """
-    d_type = get_display_type(display)
     print("Image has dimensions {}x{} and {} channels".format(*img.shape))
     rgb = spectral.get_rgb(img, bands)
     rgb /= np.max(rgb)
     rgb = np.asarray(255 * rgb, dtype='uint8')
 
     # Display the RGB composite image
-    if d_type == 'visdom':
-        caption = "RGB (bands {}, {}, {}) and ground truth".format(*bands)
-        # send to visdom server
-        display.images([np.transpose(rgb, (2, 0, 1)),
-                        np.transpose(convert_to_color_(gt, palette=palette),
-                                     (2, 0, 1))
-                        ],
-                       nrow=2,
-                       opts={'caption': caption})
+    caption = "RGB (bands {}, {}, {}) and ground truth".format(*bands)
+    # send to visdom server
+    vis.images([np.transpose(rgb, (2, 0, 1)),
+                np.transpose(convert_to_color_(gt, palette=palette), (2, 0, 1))
+                ],
+                nrow=2,
+                opts={'caption': caption})
 
 def explore_spectrums(img, complete_gt, class_names,
                       ignored_labels=None, display=None):
@@ -114,8 +107,7 @@ def explore_spectrums(img, complete_gt, class_names,
 
     """
     mean_spectrums = {}
-    d_type = get_display_type(display)
-
+    d_type = 'visdom'
     for c in np.unique(complete_gt):
         if c in ignored_labels:
             continue
@@ -155,7 +147,7 @@ def plot_spectrums(spectrums, display=None):
     palette = sns.color_palette("hls", len(spectrums.keys()))
     sns.set_palette(palette)
 
-    d_type = get_display_type(display)
+    d_type = 'visdom'
     if d_type == 'visdom':
         pass
     elif d_type == 'plt':
@@ -339,22 +331,7 @@ def metrics(prediction, target, ignored_labels=[], n_classes=None):
     return results
 
 
-def get_display_type(display):
-    if display:
-        display_type = 'plt'
-        try:
-            if isinstance(display, visdom.Visdom):
-                display_type = 'visdom'
-        except NameError:
-            pass
-    else:
-        display_type = 'print'
-    return display_type
-
-
-def show_results(results, label_values=None,
-                 display=None, agregated=False):
-    d_type = get_display_type(display)
+def show_results(results, vis, label_values=None, agregated=False):
     text = ""
 
     if agregated:
@@ -372,19 +349,10 @@ def show_results(results, label_values=None,
         F1scores = results["F1 scores"]
         kappa = results["Kappa"]
 
-    if d_type == 'visdom':
-        display.heatmap(cm, opts={'rownames': label_values,
-                                  'columnnames': label_values})
-    elif d_type == 'plt':
-        plt.rcParams.update({'font.size': 10})
-        sns.heatmap(cm, annot=True, square=True)
-        plt.title("Confusion matrix")
-        plt.show()
-        plt.rcParams.update({'font.size': 22})
-    elif d_type == 'print':
-        text += "Confusion matrix :\n"
-        text += str(cm)
-        text += "---\n"
+    vis.heatmap(cm, opts={'rownames': label_values, 'columnnames': label_values})
+    text += "Confusion matrix :\n"
+    text += str(cm)
+    text += "---\n"
 
     if agregated:
         text += ("Accuracy: {:.03f} +- {:.03f}\n".format(np.mean(accuracies),
@@ -409,11 +377,8 @@ def show_results(results, label_values=None,
     else:
         text += "Kappa: {:.03f}\n".format(kappa)
 
-    if d_type == 'visdom':
-        text = text.replace('\n', '<br/>')
-        display.text(text)
-    else:
-        print(text)
+    vis.text(text.replace('\n', '<br/>'))
+    print(text)
 
 
 def sample_gt(gt, percentage, mode='random'):

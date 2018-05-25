@@ -297,15 +297,14 @@ for run in range(N_RUNS):
     prediction[mask] = 0
 
     color_prediction = convert_to_color(prediction)
-    display_predictions(color_prediction, color_gt, display=viz)
+    display_predictions(color_prediction, color_gt, viz)
 
     run_results = metrics(prediction, test_gt, ignored_labels=IGNORED_LABELS, n_classes=N_CLASSES)
     results.append(run_results)
-    show_results(run_results, label_values=LABEL_VALUES, display=viz)
+    show_results(run_results, viz, label_values=LABEL_VALUES)
 
 if N_RUNS > 1:
-    show_results(results, label_values=LABEL_VALUES,
-                 display=viz, agregated=True)
+    show_results(results, viz, label_values=LABEL_VALUES, agregated=True)
 
 if INFERENCE is not None:
     img = open_file(INFERENCE)[:,:,:-2]
