@@ -57,8 +57,12 @@ parser.add_argument('--folder', type=str, help="Folder where to store the "
                     default="./Datasets/")
 parser.add_argument('--cuda', type=bool, const=True, nargs='?',
                     help="Use CUDA")
-parser.add_argument('--data_augmentation', type=bool, const=True, nargs='?',
+parser.add_argument('--flip_augmentation', type=bool, const=True, nargs='?',
                     help="Random flips (if patch_size > 1)")
+parser.add_argument('--radiation_augmentation', type=bool, const=True, nargs='?',
+                    help="Random radiation noise (illumination)")
+parser.add_argument('--mixture_augmentation', type=bool, const=True, nargs='?',
+                    help="Random mixes between spectra")
 parser.add_argument('--with_exploration', type=bool, const=True, nargs='?',
                     help="See data exploration visualization")
 parser.add_argument('--training_sample', type=float, default=0.10,
@@ -98,7 +102,9 @@ CUDA = args.cuda
 # % of training samples
 SAMPLE_PERCENTAGE = args.training_sample
 # Data augmentation ?
-DATA_AUGMENTATION = args.data_augmentation
+FLIP_AUGMENTATION = args.flip_augmentation
+RADIATION_AUGMENTATION = args.radiation_augmentation
+MIXTURE_AUGMENTATION = args.mixture_augmentation
 # Dataset name
 DATASET = args.dataset
 # Model name
@@ -144,6 +150,7 @@ if CUDA:
 else:
     print("Not using CUDA, will run on CPU.")
 
+kwargs = vars(args)
 # Load the dataset
 img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS, palette = get_dataset(DATASET,
                                                                FOLDER)
@@ -172,14 +179,11 @@ def convert_from_color(x):
 
 
 # Instantiate the experiment based on predefined networks
-kwargs = {'cuda': CUDA, 'n_classes': N_CLASSES, 'n_bands': N_BANDS,
-          'epoch': EPOCH, 'ignored_labels': IGNORED_LABELS,
-          'data_augmentation': DATA_AUGMENTATION, 'patch_size': PATCH_SIZE,
-          'learning_rate': LEARNING_RATE, 'test_stride': TEST_STRIDE}
+kwargs.update({'n_classes': N_CLASSES, 'n_bands': N_BANDS, 'ignored_labels': IGNORED_LABELS})
 kwargs = dict((k, v) for k, v in kwargs.items() if v is not None)
 
 # Show the image and the ground truth
-display_dataset(img, gt, RGB_BANDS, LABEL_VALUES, palette, display=viz)
+display_dataset(img, gt, RGB_BANDS, LABEL_VALUES, palette, viz)
 color_gt = convert_to_color(gt)
 
 if DATAVIZ:
@@ -253,19 +257,12 @@ for run in range(N_RUNS):
         # Split train set in train/val
         train_gt, val_gt = sample_gt(train_gt, 0.95, mode='random')
         # Generate the dataset
-        train_dataset = HyperX(img, train_gt, ignored_labels=IGNORED_LABELS,
-                               patch_size=hyperparams['patch_size'],
-                               data_augmentation=hyperparams['data_augmentation'],
-                               center_pixel=hyperparams['center_pixel'],
-                               supervision=hyperparams['supervision'],
-                               name=DATASET)
+        train_dataset = HyperX(img, train_gt, **hyperparams)
         train_loader = data.DataLoader(train_dataset,
                                        batch_size=hyperparams['batch_size'],
                                        pin_memory=hyperparams['cuda'],
                                        shuffle=True)
-        val_dataset = HyperX(img, val_gt, ignored_labels=IGNORED_LABELS,
-                               patch_size=hyperparams['patch_size'],
-                               center_pixel=hyperparams['center_pixel'])
+        val_dataset = HyperX(img, val_gt, **hyperparams)
         val_loader = data.DataLoader(val_dataset,
                                      batch_size=hyperparams['batch_size'],
                                      pin_memory=hyperparams['cuda'])

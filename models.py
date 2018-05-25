@@ -181,9 +181,11 @@ def get_model(name, **kwargs):
     epoch = kwargs.setdefault('epoch', 100)
     kwargs.setdefault('scheduler', optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=epoch//4, verbose=True))
     #kwargs.setdefault('scheduler', None)
-    kwargs.setdefault('data_augmentation', False)
     kwargs.setdefault('batch_size', 100)
     kwargs.setdefault('supervision', 'full')
+    kwargs.setdefault('flip_augmentation', False)
+    kwargs.setdefault('radiation_augmentation', False)
+    kwargs.setdefault('mixture_augmentation', False)
     kwargs['center_pixel'] = center_pixel
     return model, optimizer, criterion, kwargs
 

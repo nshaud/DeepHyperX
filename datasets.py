@@ -313,9 +313,7 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
 class HyperX(torch.utils.data.Dataset):
     """ Generic class for a hyperspectral scene """
 
-    def __init__(self, data, gt, patch_size=3, ignored_labels=None,
-                 center_pixel=False, data_augmentation=False,
-                 supervision='full', name=None):
+    def __init__(self, data, gt, **hyperparams):
         """
         Args:
             data: 3D hyperspectral image
@@ -327,23 +325,27 @@ class HyperX(torch.utils.data.Dataset):
             supervision: 'full' or 'semi' supervised algorithms
         """
         super(HyperX, self).__init__()
-        self.name = name
         self.data = data
         self.label = gt
-        self.patch_size = patch_size
-        self.ignored_labels = set(ignored_labels)
-        self.data_augmentation = data_augmentation
-        self.center_pixel = center_pixel
+        self.name = hyperparams['dataset']
+        self.patch_size = hyperparams['patch_size']
+        self.ignored_labels = set(hyperparams['ignored_labels'])
+        self.flip_augmentation = hyperparams['flip_augmentation']
+        self.radiation_augmentation = hyperparams['radiation_augmentation'] 
+        self.mixture_augmentation = hyperparams['mixture_augmentation'] 
+        self.center_pixel = hyperparams['center_pixel']
+        supervision = hyperparams['supervision']
         # Fully supervised : use all pixels with label not ignored
         if supervision == 'full':
             mask = np.ones_like(gt)
-            for l in ignored_labels:
+            for l in self.ignored_labels:
                 mask[gt == l] = 0
         # Semi-supervised : use all pixels, except padding
         elif supervision == 'semi':
             mask = np.ones_like(gt)
         x_pos, y_pos = np.nonzero(mask)
-        self.indices = np.array([(x,y) for x,y in zip(x_pos, y_pos) if x > patch_size // 2 and x < data.shape[0] - patch_size//2 and y > patch_size // 2 and y < data.shape[1] - patch_size//2])
+        p = self.patch_size // 2
+        self.indices = np.array([(x,y) for x,y in zip(x_pos, y_pos) if x > p and x < data.shape[0] - p and y > p and y < data.shape[1] - p])
         self.labels = [self.label[x,y] for x,y in self.indices]
         np.random.shuffle(self.indices)
 
@@ -387,13 +389,13 @@ class HyperX(torch.utils.data.Dataset):
         data = self.data[x1:x2, y1:y2]
         label = self.label[x1:x2, y1:y2]
 
-        if self.data_augmentation and self.patch_size > 1:
+        if self.flip_augmentation and self.patch_size > 1:
             # Perform data augmentation (only on 2D patches)
             data, label = self.flip(data, label)
-            if np.random.random() < 0.1:
+        if self.radiation_augmentation and np.random.random() < 0.1:
                 data = self.radiation_noise(data)
-            #elif np.random.random() < 0.2:
-            #    data = self.mixture_noise(data, label)
+        if self.mixture_augmentation and np.random.random() < 0.2:
+                data = self.mixture_noise(data, label)
 
         # Copy the data into numpy arrays (PyTorch doesn't like numpy views)
         data = np.asarray(np.copy(data).transpose((2, 0, 1)), dtype='float32')
