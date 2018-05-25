@@ -460,36 +460,10 @@ def compute_imf_weights(ground_truth, n_classes=None, ignored_classes=[]):
     weights[frequencies == 0] = 0.
     return weights
 
-def CrossEntropy2d(input, target, weight=None, size_average=True):
-    """2D version of the PyTorch cross entropy loss.
-
-    Args:
-        input: PyTorch tensor of predictions
-        target: PyTorch tensor of labels
-        weight: PyTorch tensor of weights for the classes
-        size_average (optional): bool, set to True to average the loss on the
-        tensor
-    Returns:
-        cross entropy loss
-    """
-    dim = input.dim()
-    if dim == 2:
-        return F.cross_entropy(input, target, weight, size_average)
-    elif dim == 4:
-        output = input.view(input.size(0), input.size(1), -1)
-        output = torch.transpose(output, 1, 2).contiguous()
-        output = output.view(-1, output.size(2))
-        target = target.view(-1)
-        return F.cross_entropy(output, target, weight, size_average)
-    else:
-        raise ValueError('Expected 2 or 4 dimensions (got {})'.format(dim))
-
 # LRN2D for PyTorch, from :
 # https://github.com/pytorch/pytorch/issues/653#issuecomment-304361386
 
 # function interface, internal, do not use this one!!!
-
-
 class SpatialCrossMapLRNFunc(Function):
     def __init__(self, size, alpha=1e-4, beta=0.75, k=1):
         self.size = size
@@ -509,8 +483,6 @@ class SpatialCrossMapLRNFunc(Function):
         return self.lrn.backward(input, grad_output)
 
 # use this one instead
-
-
 class SpatialCrossMapLRN(nn.Module):
     def __init__(self, size, alpha=1e-4, beta=0.75, k=1):
         super(SpatialCrossMapLRN, self).__init__()

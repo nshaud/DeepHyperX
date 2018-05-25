@@ -12,9 +12,8 @@ import datetime
 import numpy as np
 from sklearn.externals import joblib
 from tqdm import tqdm
-from IPython.display import clear_output
-from utils import grouper, SpatialCrossMapLRN, CrossEntropy2d,\
-                  sliding_window, count_sliding_window, get_display_type,\
+from utils import grouper, SpatialCrossMapLRN,\
+                  sliding_window, count_sliding_window,\
                   camel_to_snake
 
 
@@ -65,9 +64,7 @@ def get_model(name, **kwargs):
         model = LeeEtAl(n_bands, n_classes)
         lr = kwargs.setdefault('learning_rate', 0.001)
         optimizer = optim.Adam(model.parameters(), lr=lr)
-
-        def criterion(x, y):
-            return CrossEntropy2d(x, y, weight=kwargs['weights'])
+        criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
     elif name == 'chen':
         patch_size = kwargs.setdefault('patch_size', 27)
         center_pixel = True
