@@ -7,6 +7,8 @@ import itertools
 import spectral
 import visdom
 import matplotlib.pyplot as plt
+from scipy import io, misc
+import os
 # Torch
 import torch
 import torch.nn as nn
@@ -14,6 +16,22 @@ import torch.nn.functional as F
 from torch.autograd import Function
 from torch.legacy.nn import SpatialCrossMapLRN as SpatialCrossMapLRNOld
 import re
+
+
+def open_file(dataset):
+    _, ext = os.path.splitext(dataset)
+    ext = ext.lower()
+    if ext == '.mat':
+        # Load Matlab array
+        return io.loadmat(dataset)
+    elif ext == '.tif' or ext == '.tiff':
+        # Load TIFF file
+        return misc.imread(dataset)
+    elif ext == '.hdr':
+        img = spectral.open_image(dataset)
+        return img.load()
+    else:
+        raise ValueError("Unknown file format: {}".format(ext))
 
 def convert_to_color_(arr_2d, palette=None):
     """Convert an array of labels to RGB color-encoded image.

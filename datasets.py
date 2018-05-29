@@ -3,7 +3,6 @@
 This file contains the PyTorch dataset for hyperspectral images and
 related helpers.
 """
-from scipy import io, misc
 import spectral
 import numpy as np
 import torch
@@ -16,6 +15,8 @@ try:
 except ImportError:
     # Python 2
     from urllib import urlretrieve
+
+from utils import open_file
 
 DATASETS_CONFIG = {
         'PaviaC': {
@@ -47,40 +48,14 @@ DATASETS_CONFIG = {
                      'http://www.ehu.es/ccwintco/uploads/5/58/Botswana_gt.mat'],
             'img': 'Botswana.mat',
             'gt': 'Botswana_gt.mat',
-            },
-         'Mandji_Z2': {
-            'folder': 'Mandji/',
-            'img': 'img_Mandji_ZONE2_hyper.hdr',
-            'gt': 'Mandji_zone2_VT_synthese.hdr',
-            'download': False
-            },
-         'Mandji_Z4': {
-            'folder': 'Mandji/',
-            'img': 'img_Mandji_ZONE4_hyper.hdr',
-            'gt': 'Mandji_zone4_VT_synthese.hdr',
-            'download': False
-            },
-         'DFC2018_HSI': {
-            'img': '2018_IEEE_GRSS_DFC_HSI_TR.HDR',
-            'gt': '2018_IEEE_GRSS_DFC_GT_TR.tif',
-            'download': False
             }
     }
 
-def open_file(dataset):
-    _, ext = os.path.splitext(dataset)
-    ext = ext.lower()
-    if ext == '.mat':
-        # Load Matlab array
-        return io.loadmat(dataset)
-    elif ext == '.tif' or ext == '.tiff':
-        # Load TIFF file
-        return misc.imread(dataset)
-    elif ext == '.hdr':
-        img = spectral.open_image(dataset)
-        return img.load()
-    else:
-        raise ValueError("Unknown file format: {}".format(ext))
+try:
+    from custom_datasets import CUSTOM_DATASETS_CONFIG
+    DATASETS_CONFIG.update(CUSTOM_DATASETS_CONFIG)
+except ImportError:
+    pass
 
 class TqdmUpTo(tqdm):
     """Provides `update_to(n)` which uses `tqdm.update(delta_n)`."""
@@ -209,99 +184,9 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
                         "Cattail marsh", "Salt marsh", "Mud flats", "Wate"]
 
         ignored_labels = [0]
-    elif dataset_name == 'Mandji_Z2':
-        # Load the image
-        img = open_file(folder + 'img_Mandji_ZONE2_hyper.hdr')
-        img[np.isnan(img)] = 0.
-
-        rgb_bands = (60, 32, 10)
-
-        # Extended SAM1 GT
-        gt = open_file(folder + 'Mandji_zone2_VT_synthese.hdr')[:,:,1]
-        gt = np.array(gt).squeeze().astype('uint8')
-        label_values = ["non identifie", #0
-                        "eau", #1
-                        "laterite", #2
-                        "sable gris", #3
-                        "ancien marigot (nord)", #4
-                        "ancien marigot (sud)", #5
-                        "béton", #6
-                        "--", #7
-                        "végétation rase stressée", #8
-                        "végétation rase + sol nu", #9
-                        "végétation verte clairsemée", #10
-                        "végétation verte dense", #11
-                       ]
-        ignored_labels = [0]
-
-        palette = {0: (0,0,0),
-                   1: (0, 112, 192),
-                   2: (247, 150, 70),
-                   3: (166, 166, 166),
-                   4: (112, 48, 160),
-                   5: (254, 0, 236),
-                   6: (255, 0, 0),
-                   8: (255, 255, 0),
-                   9: (153, 51, 0),
-                   10: (0, 176, 80),
-                   11: (0, 255, 0) 
-                  }
-    elif dataset_name == 'Mandji_Z4':
-        # Load the image
-        img = open_file(folder + 'img_Mandji_ZONE4_hyper.hdr')
-
-        rgb_bands = (60, 32, 10)
-
-        # Extended SAM1 GT
-        gt = open_file(folder + 'Mandji_zone4_VT_synthese.hdr')[:,:,1]
-        gt = np.array(gt).squeeze().astype('uint8')
-        label_values = ["non identifie", #0
-                        "eau", #1
-                        "laterite", #2
-                        "sable gris", #3
-                        "sable sec", #4
-                        "sable humide", #5
-                        "béton", #6
-                        "cabane", #7
-                        "végétation rase stressée", #8
-                        "végétation rase + sol nu", #9
-                        "végétation verte clairsemée", #10
-                        "végétation verte dense", #11
-                        "--", #12
-                        "ancien marigot sud", #13
-                        "marigot asséché", #14
-                        "hydrocarbure",#15
-                         ]
-        ignored_labels = [0]
-    elif dataset_name == 'DFC2018_HSI':
-        img = open_file(folder + '2018_IEEE_GRSS_DFC_HSI_TR.HDR')[:,:,:-2]
-        gt = open_file(folder + '2018_IEEE_GRSS_DFC_GT_TR.tif')
-        gt = gt.astype('uint8')
-
-        rgb_bands = (47, 31, 15)
-
-        label_values = ["Unclassified",
-                        "Healthy grass",
-                        "Stressed grass",
-                        "Artificial turf",
-                        "Evergreen trees",
-                        "Deciduous trees",
-                        "Bare earth",
-                        "Water",
-                        "Residential buildings",
-                        "Non-residential buildings",
-                        "Roads",
-                        "Sidewalks",
-                        "Crosswalks",
-                        "Major thoroughfares",
-                        "Highways",
-                        "Railways",
-                        "Paved parking lots",
-                        "Unpaved parking lots",
-                        "Cars",
-                        "Trains",
-                        "Stadium seats"]
-        ignored_labels = [0]
+    else:
+        # Custom dataset
+        img, gt, rgb_bands, ignored_labels, label_values, palette = CUSTOM_DATASETS_CONFIG[dataset_name]['loader'](folder)
 
     # Normalization
     img = np.asarray(img, dtype='float32')
