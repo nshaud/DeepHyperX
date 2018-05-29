@@ -46,61 +46,83 @@ parser.add_argument('--dataset', type=str, default=None, choices=dataset_names,
                     help="Dataset to use.")
 parser.add_argument('--model', type=str, default=None,
                     help="Model to train. Available:\n"
-                    "SVM, SVM_grid, baseline (fully connected NN), "
+                    "SVM (linear), "
+                    "SVM_grid (grid search on linear, poly and RBF kernels), "
+                    "baseline (fully connected NN), "
                     "hu (1D CNN), "
                     "hamida (3D CNN + 1D classifier), "
                     "lee (3D FCN), "
                     "chen (3D CNN), "
-                    "li (3D CNN)")
+                    "li (3D CNN), "
+                    "he (3D CNN), "
+                    "luo (3D CNN), "
+                    "sharma (2D CNN), "
+                    "boulch (1D semi-supervised CNN), "
+                    "liu (3D semi-supervised CNN), "
+                    "mou (1D RNN)")
 parser.add_argument('--folder', type=str, help="Folder where to store the "
                     "datasets (defaults to the current working directory).",
                     default="./Datasets/")
-parser.add_argument('--cuda', type=bool, const=True, nargs='?',
-                    help="Use CUDA")
-parser.add_argument('--flip_augmentation', type=bool, const=True, nargs='?',
-                    help="Random flips (if patch_size > 1)")
-parser.add_argument('--radiation_augmentation', type=bool, const=True, nargs='?',
-                    help="Random radiation noise (illumination)")
-parser.add_argument('--mixture_augmentation', type=bool, const=True, nargs='?',
-                    help="Random mixes between spectra")
-parser.add_argument('--with_exploration', type=bool, const=True, nargs='?',
-                    help="See data exploration visualization")
-parser.add_argument('--training_sample', type=float, default=0.10,
-                    help="Percentage of samples to use for training")
-parser.add_argument('--epoch', type=int, help="Training epochs (optional, if"
-                    " absent will be set by the model)")
-parser.add_argument('--patch_size', type=int,
-                    help="Size of the spatial neighbourhood (optional, if "
-                    "absent will be set by the model)")
-parser.add_argument('--lr', type=float,
-                    help="Learning rate, set by the model if not specified.")
-parser.add_argument('--class_balancing', const=True, nargs='?', default=False,
-                    help="Inverse median frequency class balancing (default = False)")
-parser.add_argument('--sampling_mode', type=str, help="Sampling mode"
-                    " (random sampling or disjoint, default: random)",
-                    default='random')
-parser.add_argument('--runs', type=int, default=1, help="Number of runs")
+parser.add_argument('--cuda', action='store_true',
+                    help="Use CUDA (defaults to false)")
+parser.add_argument('--runs', type=int, default=1, help="Number of runs (default: 1)")
 parser.add_argument('--restore', type=str, default=None,
                     help="Weights to use for initialization, e.g. a checkpoint")
-parser.add_argument('--train_set', type=str, default=None,
+
+# Dataset options
+group_dataset = parser.add_argument_group('Dataset')
+group_dataset.add_argument('--training_sample', type=int, default=10,
+                    help="Percentage of samples to use for training (default: 10%%)")
+group_dataset.add_argument('--sampling_mode', type=str, help="Sampling mode"
+                    " (random sampling or disjoint, default: random)",
+                    default='random')
+group_dataset.add_argument('--train_set', type=str, default=None,
                     help="Path to the train ground truth (optional, this "
                     "supersedes the --sampling_mode option)")
-parser.add_argument('--test_set', type=str, default=None,
+group_dataset.add_argument('--test_set', type=str, default=None,
                     help="Path to the test set (optional, by default "
                     "the test_set is the entire ground truth minus the training)")
+# Training options
+group_train = parser.add_argument_group('Training')
+group_train.add_argument('--epoch', type=int, help="Training epochs (optional, if"
+                    " absent will be set by the model)")
+group_train.add_argument('--patch_size', type=int,
+                    help="Size of the spatial neighbourhood (optional, if "
+                    "absent will be set by the model)")
+group_train.add_argument('--lr', type=float,
+                    help="Learning rate, set by the model if not specified.")
+group_train.add_argument('--class_balancing', action='store_true',
+                    help="Inverse median frequency class balancing (default = False)")
+# Test options
+group_test = parser.add_argument_group('Test')
+group_test.add_argument('--test_stride', type=int, default=1,
+                     help="Sliding window step stride during inference (default = 1)")
+group_test.add_argument('--inference', type=str, default=None, nargs='?',
+                     help="Path to an image on which to run inference.")
+
+# Data augmentation parameters
+group_da = parser.add_argument_group('Data augmentation')
+group_da.add_argument('--flip_augmentation', action='store_true',
+                    help="Random flips (if patch_size > 1)")
+group_da.add_argument('--radiation_augmentation', action='store_true',
+                    help="Random radiation noise (illumination)")
+group_da.add_argument('--mixture_augmentation', action='store_true',
+                    help="Random mixes between spectra")
+
+parser.add_argument('--with_exploration', action='store_true',
+                    help="See data exploration visualization")
 parser.add_argument('--download', type=str, default=None, nargs='+',
                     choices=dataset_names,
                     help="Download the specified datasets and quits.")
-parser.add_argument('--inference', type=str, default=None, nargs='?')
-parser.add_argument('--test_stride', type=int, default=1,
-                     help="Sliding window step stride during inference (default = 1)")
+
+
 
 args = parser.parse_args()
 
 # Use GPU ?
 CUDA = args.cuda
 # % of training samples
-SAMPLE_PERCENTAGE = args.training_sample
+SAMPLE_PERCENTAGE = args.training_sample / 100
 # Data augmentation ?
 FLIP_AUGMENTATION = args.flip_augmentation
 RADIATION_AUGMENTATION = args.radiation_augmentation
