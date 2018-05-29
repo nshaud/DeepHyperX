@@ -2,6 +2,14 @@
 
 A Python tool to perform deep learning experiments on various hyperspectral datasets.
 
+![http://www.onera.fr/en/dtim](https://lut.im/qwL8UPM0en/soXh7XtiPp4IoML8.png)
+![https://www-obelix.irisa.fr/](https://lut.im/D9OHdqk6rK/Mod6HUGCtwjY00Vk.png)
+![](https://lut.im/5UpsUhIzgE/Fa6XCquMRsnHwjHu.png)
+
+![](https://framapic.org/KKjiExO3V0M9/MbDHG4YSTxRP.gif)
+
+![](https://framapic.org/PLHpoO2sYA18/bYYbY7t4xA8C.gif)
+
 ## Requirements
 
 This tool is compatible with Python 2.7 and Python 3.5+.
@@ -78,7 +86,7 @@ Datasets
 
 ### Adding a new dataset
 
-Adding a custom dataset can be done by modifying the `datasets.py` file. Developers should add a new entry to the `DATASETS_CONFIG` variable and alter the `get_dataset` function by adding a new case to the big `if...else`.
+Adding a custom dataset can be done by modifying the `custom_datasets.py` file. Developers should add a new entry to the `CUSTOM_DATASETS_CONFIG` variable and define a specific data loader for their use case.
 
 ## Models
 
