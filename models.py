@@ -1186,17 +1186,16 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
             save_model(net, camel_to_snake(str(net.__class__.__name__)), data_loader.dataset.name, epoch=e, metric=abs(metric))
 
 def save_model(model, model_name, dataset_name, **kwargs):
-     print("Saving model")
      model_dir = './checkpoints/' + model_name + "/" + dataset_name + "/"
      if not os.path.isdir(model_dir):
          os.makedirs(model_dir, exist_ok=True)
      if isinstance(model, torch.nn.Module):
-         print("saving nn")
          filename = str(datetime.datetime.now()) + "_epoch{epoch}_{metric:.2f}".format(**kwargs)
-         print(filename)
+         tqdm.write("Saving neural network weights in {}".format(filename))
          torch.save(model.state_dict(), model_dir + filename + '.pth')
      else:
          filename = str(datetime.datetime.now())
+         tqdm.write("Saving model params in {}".format(filename))
          joblib.dump(model, model_dir + filename + '.pkl')
 
 
