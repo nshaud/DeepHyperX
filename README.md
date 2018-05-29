@@ -78,7 +78,7 @@ Datasets
 
 ### Adding a new dataset
 
-Adding a custom dataset can be done by modifying the `datasets.py` file. Developers should add a new entry to the `DATASETS_CONFIG` variable and alter the `get_dataset` function by adding a new case to the big `if...else`.
+Adding a custom dataset can be done by modifying the `custom_datasets.py` file. Developers should add a new entry to the `CUSTOM_DATASETS_CONFIG` variable and define a specific data loader for their use case.
 
 ## Models
 
