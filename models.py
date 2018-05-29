@@ -287,9 +287,10 @@ class HuEtAl(nn.Module):
 
 class HamidaEtAl(nn.Module):
     """
-    DEEP LEARNING APPROACH FOR REMOTE SENSING IMAGE ANALYSIS
+    3-D Deep Learning Approach for Remote Sensing Image Classification
     Amina Ben Hamida, Alexandre Benoit, Patrick Lambert, Chokri Ben Amar
-    Big Data from Space (BiDS'16)
+    IEEE TGRS, 2018
+    https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=8344565
     """
     @staticmethod
     def weight_init(m):
@@ -556,6 +557,7 @@ class LiEtAl(nn.Module):
             WITH 3D CONVOLUTIONAL NEURAL NETWORK
     Ying Li, Haokui Zhang and Qiang Shen
     MDPI Remote Sensing, 2017
+    http://www.mdpi.com/2072-4292/9/1/67
     """
     @staticmethod
     def weight_init(m):
@@ -619,6 +621,7 @@ class HeEtAl(nn.Module):
     IMAGE CLASSIFICATION
     Mingyi He, Bo Li, Huahui Chen
     IEEE International Conference on Image Processing (ICIP) 2017
+    https://ieeexplore.ieee.org/document/8297014/
     """
 
     @staticmethod
