@@ -1,8 +1,8 @@
+# -*- coding: utf-8 -*-
 """
 This file contains the PyTorch dataset for hyperspectral images and
 related helpers.
 """
-# -*- coding: utf-8 -*-
 from scipy import io, misc
 import spectral
 import numpy as np

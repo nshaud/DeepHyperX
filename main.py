@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 DEEP LEARNING FOR HYPERSPECTRAL DATA.
 
@@ -9,7 +10,6 @@ This code is released under the GPLv3 license for non-commercial and research
 purposes only.
 For commercial use, please contact the authors.
 """
-# -*- coding: utf-8 -*-
 # Python 2/3 compatiblity
 from __future__ import print_function
 from __future__ import division
