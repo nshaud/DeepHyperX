@@ -6,7 +6,7 @@ import seaborn as sns
 import itertools
 import spectral
 import visdom
-
+import matplotlib.pyplot as plt
 # Torch
 import torch
 import torch.nn as nn
@@ -92,8 +92,8 @@ def display_dataset(img, gt, bands, labels, palette, vis):
                 nrow=2,
                 opts={'caption': caption})
 
-def explore_spectrums(img, complete_gt, class_names,
-                      ignored_labels=None, display=None):
+def explore_spectrums(img, complete_gt, class_names, vis,
+                      ignored_labels=None):
     """Plot sampled spectrums with mean + std for each class.
 
     Args:
@@ -101,67 +101,48 @@ def explore_spectrums(img, complete_gt, class_names,
         complete_gt: 2D array of labels
         class_names: list of class names
         ignored_labels (optional): list of labels to ignore
-        display (optional): type of display, if any
+        vis : Visdom display
     Returns:
         mean_spectrums: dict of mean spectrum by class
 
     """
     mean_spectrums = {}
-    d_type = 'visdom'
     for c in np.unique(complete_gt):
         if c in ignored_labels:
             continue
         mask = complete_gt == c
         class_spectrums = img[mask].reshape(-1, img.shape[-1])
-        if visdom:
-            step = max(1, class_spectrums.shape[0] // 100)
-            # Sample and plot spectrums from the selected class
-            for spectrum in class_spectrums[::step, :]:
-                plt.title(class_names[c])
-                plt.plot(spectrum, alpha=0.25)
+        step = max(1, class_spectrums.shape[0] // 100)
+        # Sample and plot spectrums from the selected class
+        for spectrum in class_spectrums[::step, :]:
+            plt.title(class_names[c])
+            plt.plot(spectrum, alpha=0.25)
         mean_spectrum = np.mean(class_spectrums, axis=0)
         std_spectrum = np.std(class_spectrums, axis=0)
         lower_spectrum = np.maximum(0, mean_spectrum - std_spectrum)
         higher_spectrum = mean_spectrum + std_spectrum
 
-        if d_type == 'visdom':
-            pass
-        elif d_type == 'plt':
-            # Plot the mean spectrum with thickness based on std
-            plt.fill_between(range(len(mean_spectrum)), lower_spectrum,
-                             higher_spectrum, color="#3F5D7D")
-            plt.plot(mean_spectrum, alpha=1, color="#FFFFFF", lw=2)
-            plt.show()
+        # Plot the mean spectrum with thickness based on std
+        plt.fill_between(range(len(mean_spectrum)), lower_spectrum,
+                         higher_spectrum, color="#3F5D7D")
+        plt.plot(mean_spectrum, alpha=1, color="#FFFFFF", lw=2)
+        vis.matplot(plt)
         mean_spectrums[class_names[c]] = mean_spectrum
     return mean_spectrums
 
 
-def plot_spectrums(spectrums, display=None):
+def plot_spectrums(spectrums, vis):
     """Plot the specified dictionary of spectrums.
 
     Args:
         spectrums: dictionary (name -> spectrum) of spectrums to plot
-
+        vis: Visdom display
     """
-    # Generate a color palette using seaborn
-    palette = sns.color_palette("hls", len(spectrums.keys()))
-    sns.set_palette(palette)
-
-    d_type = 'visdom'
-    if d_type == 'visdom':
-        pass
-    elif d_type == 'plt':
-        fig = plt.figure()
-        for k, v in spectrums.items():
-            plt.plot(v)
-            n_bands = len(v)
-        axes = fig.axes[0]
-        axes.set_xlim(0, n_bands)
-        axes.set_ylim(0,)
-        plt.title('Mean spectra')
-        # Place the legend under the plot
-        plt.legend(spectrums.keys(), loc=9, bbox_to_anchor=(0.5, -0.1), ncol=2)
-        plt.show()
+    win = None
+    for k, v in spectrums.items():
+        n_bands = len(v)
+        update = None if win is None else 'append'
+        win = vis.line(X=np.arange(n_bands), Y=v, name=k, win=win, update=update)
 
 
 def build_dataset(mat, gt, ignored_labels=None):

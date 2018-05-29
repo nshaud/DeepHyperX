@@ -210,10 +210,9 @@ color_gt = convert_to_color(gt)
 
 if DATAVIZ:
     # Data exploration : compute and show the mean spectrums
-    mean_spectrums = explore_spectrums(img, gt, LABEL_VALUES,
-                                       ignored_labels=IGNORED_LABELS,
-                                       display=viz)
-    plot_spectrums(mean_spectrums, display=viz)
+    mean_spectrums = explore_spectrums(img, gt, LABEL_VALUES, viz,
+                                       ignored_labels=IGNORED_LABELS)
+    plot_spectrums(mean_spectrums, viz)
 
 results = []
 # run the experiment several times
