@@ -1,0 +1,13 @@
+ Tout Logiciel transféré par une Partie à l’autre Partie, sera accompagné des documents suivants :
+
+    un manuel utilisateur, qui précisera, entre autre la configuration matérielle compatible ainsi que l’operating system compatible, le langage du code et sa nature (exécutable, bibliothèque, source),
+
+    des jeux de données test entrantes et sortantes,
+
+    un script contenant une procédure de recette.
+
+Une procédure de recette sera réalisée. Si tous les résultats de la recette concordent avec le jeu de données sortantes, la recette est réputée conforme. La conformité de la recette indique que le Logiciel transféré fonctionne de manière nominale.
+
+Cas des Logiciels faisant partie des Résultats de Collaboration:
+La Partie qui transfère n’assure aucune MCO, qui est à la charge de la Partie réceptrice du Logiciel. La Partie réceptrice assurera seul ou par le biais d’un Tiers ladite MCO. Dans le cas où la Partie Réceptrice ferait appel à un Tiers pour réaliser la MCO, elle informera la Partie qui transfère du nom dudit Tiers et s’assurera du respect de la confidentialité par le Tiers relativement audit source.
+
