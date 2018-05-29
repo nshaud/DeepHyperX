@@ -5,7 +5,6 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import itertools
 import spectral
-import visdom
 import matplotlib.pyplot as plt
 from scipy import io, misc
 import os
@@ -76,91 +75,6 @@ def convert_from_color_(arr_3d, palette=None):
         arr_2d[m] = i
 
     return arr_2d
-
-
-def display_predictions(pred, gt, vis):
-    vis.images([np.transpose(pred, (2, 0, 1)),
-                np.transpose(gt, (2, 0, 1))],
-                nrow=2,
-                opts={'caption': "Prediction vs. ground truth"})
-
-def display_dataset(img, gt, bands, labels, palette, vis):
-    """Display the specified dataset.
-
-    Args:
-        img: 3D hyperspectral image
-        gt: 2D array labels
-        bands: tuple of RGB bands to select
-        labels: list of label class names
-        palette: dict of colors
-        display (optional): type of display, if any
-
-    """
-    print("Image has dimensions {}x{} and {} channels".format(*img.shape))
-    rgb = spectral.get_rgb(img, bands)
-    rgb /= np.max(rgb)
-    rgb = np.asarray(255 * rgb, dtype='uint8')
-
-    # Display the RGB composite image
-    caption = "RGB (bands {}, {}, {}) and ground truth".format(*bands)
-    # send to visdom server
-    vis.images([np.transpose(rgb, (2, 0, 1)),
-                np.transpose(convert_to_color_(gt, palette=palette), (2, 0, 1))
-                ],
-                nrow=2,
-                opts={'caption': caption})
-
-def explore_spectrums(img, complete_gt, class_names, vis,
-                      ignored_labels=None):
-    """Plot sampled spectrums with mean + std for each class.
-
-    Args:
-        img: 3D hyperspectral image
-        complete_gt: 2D array of labels
-        class_names: list of class names
-        ignored_labels (optional): list of labels to ignore
-        vis : Visdom display
-    Returns:
-        mean_spectrums: dict of mean spectrum by class
-
-    """
-    mean_spectrums = {}
-    for c in np.unique(complete_gt):
-        if c in ignored_labels:
-            continue
-        mask = complete_gt == c
-        class_spectrums = img[mask].reshape(-1, img.shape[-1])
-        step = max(1, class_spectrums.shape[0] // 100)
-        # Sample and plot spectrums from the selected class
-        for spectrum in class_spectrums[::step, :]:
-            plt.title(class_names[c])
-            plt.plot(spectrum, alpha=0.25)
-        mean_spectrum = np.mean(class_spectrums, axis=0)
-        std_spectrum = np.std(class_spectrums, axis=0)
-        lower_spectrum = np.maximum(0, mean_spectrum - std_spectrum)
-        higher_spectrum = mean_spectrum + std_spectrum
-
-        # Plot the mean spectrum with thickness based on std
-        plt.fill_between(range(len(mean_spectrum)), lower_spectrum,
-                         higher_spectrum, color="#3F5D7D")
-        plt.plot(mean_spectrum, alpha=1, color="#FFFFFF", lw=2)
-        vis.matplot(plt)
-        mean_spectrums[class_names[c]] = mean_spectrum
-    return mean_spectrums
-
-
-def plot_spectrums(spectrums, vis):
-    """Plot the specified dictionary of spectrums.
-
-    Args:
-        spectrums: dictionary (name -> spectrum) of spectrums to plot
-        vis: Visdom display
-    """
-    win = None
-    for k, v in spectrums.items():
-        n_bands = len(v)
-        update = None if win is None else 'append'
-        win = vis.line(X=np.arange(n_bands), Y=v, name=k, win=win, update=update)
 
 
 def build_dataset(mat, gt, ignored_labels=None):
@@ -348,7 +262,6 @@ def show_results(results, vis, label_values=None, agregated=False):
         F1scores = results["F1 scores"]
         kappa = results["Kappa"]
 
-    vis.heatmap(cm, opts={'rownames': label_values, 'columnnames': label_values})
     text += "Confusion matrix :\n"
     text += str(cm)
     text += "---\n"
@@ -376,7 +289,6 @@ def show_results(results, vis, label_values=None, agregated=False):
     else:
         text += "Kappa: {:.03f}\n".format(kappa)
 
-    vis.text(text.replace('\n', '<br/>'))
     print(text)
 
 

@@ -26,11 +26,9 @@ import sklearn.model_selection
 from skimage import io
 # Visualization
 import seaborn as sns
-import visdom
-
+viz = None
 import os
 from utils import metrics, convert_to_color_, convert_from_color_,\
-    display_dataset, display_predictions, explore_spectrums, plot_spectrums,\
     sample_gt, build_dataset, show_results, compute_imf_weights
 from datasets import get_dataset, HyperX, open_file, DATASETS_CONFIG
 from models import get_model, train, test, save_model
@@ -109,8 +107,6 @@ group_da.add_argument('--radiation_augmentation', action='store_true',
 group_da.add_argument('--mixture_augmentation', action='store_true',
                     help="Random mixes between spectra")
 
-parser.add_argument('--with_exploration', action='store_true',
-                    help="See data exploration visualization")
 parser.add_argument('--download', type=str, default=None, nargs='+',
                     choices=dataset_names,
                     help="Download the specified datasets and quits.")
@@ -135,8 +131,6 @@ MODEL = args.model
 N_RUNS = args.runs
 # Spatial context size (number of neighbours in each spatial direction)
 PATCH_SIZE = args.patch_size
-# Add some visualization of the spectra ?
-DATAVIZ = args.with_exploration
 # Target folder to store/download/load the datasets
 FOLDER = args.folder
 # Number of epochs to run
@@ -161,11 +155,6 @@ if args.download is not None and len(args.download) > 0:
     for dataset in args.download:
         get_dataset(dataset, target_folder=FOLDER)
     quit()
-
-viz = visdom.Visdom(env=DATASET + ' ' + MODEL)
-if not viz.check_connection:
-    print("Visdom is not connected. Did you run 'python -m visdom.server' ?")
-
 
 if CUDA:
     print("Using CUDA")
@@ -205,14 +194,7 @@ kwargs.update({'n_classes': N_CLASSES, 'n_bands': N_BANDS, 'ignored_labels': IGN
 kwargs = dict((k, v) for k, v in kwargs.items() if v is not None)
 
 # Show the image and the ground truth
-display_dataset(img, gt, RGB_BANDS, LABEL_VALUES, palette, viz)
 color_gt = convert_to_color(gt)
-
-if DATAVIZ:
-    # Data exploration : compute and show the mean spectrums
-    mean_spectrums = explore_spectrums(img, gt, LABEL_VALUES, viz,
-                                       ignored_labels=IGNORED_LABELS)
-    plot_spectrums(mean_spectrums, viz)
 
 results = []
 # run the experiment several times
@@ -303,8 +285,7 @@ for run in range(N_RUNS):
         try:
             train(model, optimizer, loss, train_loader, hyperparams['epoch'],
                   scheduler=hyperparams['scheduler'], cuda=hyperparams['cuda'],
-                  supervision=hyperparams['supervision'], val_loader=val_loader,
-                  display=viz)
+                  supervision=hyperparams['supervision'], val_loader=val_loader)
         except KeyboardInterrupt:
             # Allow the user to stop the training
             pass
@@ -316,9 +297,6 @@ for run in range(N_RUNS):
     for l in IGNORED_LABELS:
         mask[gt == l] = True
     prediction[mask] = 0
-
-    color_prediction = convert_to_color(prediction)
-    display_predictions(color_prediction, color_gt, viz)
 
     run_results = metrics(prediction, test_gt, ignored_labels=IGNORED_LABELS, n_classes=N_CLASSES)
     results.append(run_results)

@@ -1152,18 +1152,8 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
                     len(data), len(data) * len(data_loader),
                     100. * batch_idx / len(data_loader), mean_losses[iter_])
                 update = None if loss_win is None else 'append'
-                loss_win = display.line(
-                    X=np.arange(iter_ - display_iter, iter_),
-                    Y=mean_losses[iter_ - display_iter:iter_],
-                    win=loss_win,
-                    update=update
-                )
                 tqdm.write(string)
 
-                if len(val_accuracies) > 0:
-                    val_win = display.line(Y=np.array(val_accuracies),
-                                           X=np.arange(len(val_accuracies)),
-                                           win=val_win)
             iter_ += 1
             del(data, target, loss, output)
 
