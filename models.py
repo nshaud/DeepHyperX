@@ -4,7 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import torch.optim as optim
-from torch.autograd import Variable
 from torch.nn import init
 # utils
 import os
@@ -12,8 +11,7 @@ import datetime
 import numpy as np
 from sklearn.externals import joblib
 from tqdm import tqdm
-from utils import grouper, SpatialCrossMapLRN,\
-                  sliding_window, count_sliding_window,\
+from utils import grouper, sliding_window, count_sliding_window,\
                   camel_to_snake
 
 
@@ -420,8 +418,8 @@ class LeeEtAl(nn.Module):
         self.conv7 = nn.Conv2d(128, 128, (1, 1))
         self.conv8 = nn.Conv2d(128, n_classes, (1, 1))
 
-        self.lrn1 = SpatialCrossMapLRN(256)
-        self.lrn2 = SpatialCrossMapLRN(128)
+        self.lrn1 = nn.LocalResponseNorm(256)
+        self.lrn2 = nn.LocalResponseNorm(128)
 
         # The 7 th and 8 th convolutional layers have dropout in training
         self.dropout = nn.Dropout(p=0.5)
@@ -890,7 +888,7 @@ class LiuEtAl(nn.Module):
         # "W1 is a 3x3xB1 kernel [...] B1 is the number of the output bands for the convolutional
         # "and pooling layer" -> actually 3x3 2D convolutions with B1 outputs
         # "the value of B1 is set to be 80"
-        self.conv1 = nn.Conv2d(input_channels, 80, (3, 3), stride=(1,1))
+        self.conv1 = nn.Conv2d(input_channels, 80, (3, 3))
         self.pool1 = nn.MaxPool2d((2, 2))
         self.conv1_bn = nn.BatchNorm2d(80)
 
@@ -912,7 +910,6 @@ class LiuEtAl(nn.Module):
     def _get_sizes(self):
         x = torch.zeros((1, self.input_channels,
                          self.patch_size, self.patch_size))
-        x = Variable(x)
         x = F.relu(self.conv1_bn(self.conv1(x)))
         _, c, w, h = x.size()
         size0 = c * w * h
@@ -929,7 +926,6 @@ class LiuEtAl(nn.Module):
 
     def forward(self, x, verbose=False):
         x = x.squeeze()
-        x = x.unsqueeze(1)
         if verbose:
             print("Input size : {}".format(x.size()))
         x_conv1 = self.conv1_bn(self.conv1(x))
@@ -984,31 +980,32 @@ class BoulchEtAl(nn.Module):
         
         encoder_modules = []
         n = input_channels
-        x = Variable(torch.zeros((10, 1, self.input_channels)))
-        print(x.size())
-        while(n > 1):
-            print("---------- {} ---------".format(n))
-            if n == input_channels:
-                p1, p2 = 1, 2 * planes
-            elif n == input_channels // 2:
-                p1, p2 = 2 * planes, planes
-            else:
-                p1, p2 = planes, planes
-            encoder_modules.append(nn.Conv1d(p1, p2, 3, padding=1))
-            x = encoder_modules[-1](x)
+        with torch.no_grad():
+            x = torch.zeros((10, 1, self.input_channels))
             print(x.size())
-            encoder_modules.append(nn.MaxPool1d(2))
-            x = encoder_modules[-1](x)
-            print(x.size())
-            encoder_modules.append(nn.ReLU(inplace=True))
-            x = encoder_modules[-1](x)
-            print(x.size())
-            encoder_modules.append(nn.BatchNorm1d(p2))
-            x = encoder_modules[-1](x)
-            print(x.size())
-            n = n // 2
+            while(n > 1):
+                print("---------- {} ---------".format(n))
+                if n == input_channels:
+                    p1, p2 = 1, 2 * planes
+                elif n == input_channels // 2:
+                    p1, p2 = 2 * planes, planes
+                else:
+                    p1, p2 = planes, planes
+                encoder_modules.append(nn.Conv1d(p1, p2, 3, padding=1))
+                x = encoder_modules[-1](x)
+                print(x.size())
+                encoder_modules.append(nn.MaxPool1d(2))
+                x = encoder_modules[-1](x)
+                print(x.size())
+                encoder_modules.append(nn.ReLU(inplace=True))
+                x = encoder_modules[-1](x)
+                print(x.size())
+                encoder_modules.append(nn.BatchNorm1d(p2))
+                x = encoder_modules[-1](x)
+                print(x.size())
+                n = n // 2
 
-        encoder_modules.append(nn.Conv1d(planes, 3, 3, padding=1))
+            encoder_modules.append(nn.Conv1d(planes, 3, 3, padding=1))
         encoder_modules.append(nn.Tanh())
         self.encoder = nn.Sequential(*encoder_modules)
         self.features_sizes = self._get_sizes()
@@ -1018,10 +1015,10 @@ class BoulchEtAl(nn.Module):
         self.apply(self.weight_init)
 
     def _get_sizes(self):
-        x = torch.zeros((10, 1, self.input_channels))
-        x = Variable(x)
-        x = self.encoder(x)
-        _, c, w = x.size()
+        with torch.no_grad():
+            x = torch.zeros((10, 1, self.input_channels))
+            x = self.encoder(x)
+            _, c, w = x.size()
         return c*w
 
     def forward(self, x, verbose=False):
@@ -1122,12 +1119,11 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
         avg_loss = 0.
 
         # Run the training loop for one epoch
-        for batch_idx, (data, target) in enumerate(data_loader):
+        for batch_idx, (data, target) in tqdm(enumerate(data_loader), total=len(data_loader)):
             # Load the data into the GPU if required
             if cuda:
                 data, target = data.cuda(), target.cuda()
 
-            data, target = Variable(data), Variable(target)
             optimizer.zero_grad()
             if supervision == 'full':
                 output = net(data)

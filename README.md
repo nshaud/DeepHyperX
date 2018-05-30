@@ -14,7 +14,7 @@ A Python tool to perform deep learning experiments on various hyperspectral data
 
 This tool is compatible with Python 2.7 and Python 3.5+.
 
-It is based on the [PyTorch](http://pytorch.org/) deep learning and GPU computing framework and use the [Visdom](https://github.com/facebookresearch/visdom) visualization server.
+It is based on the [PyTorch](http://pytorch.org/) deep learning and GPU computing framework.
 
 ## Setup
 
@@ -27,19 +27,18 @@ Alternatively, it is possible to run the [Docker](https://www.docker.com/communi
 
 Grab the image using:
 ```
-docker pull registry.gitlab.inria.fr/naudeber/deephyperx:preview
+docker pull registry.gitlab.inria.fr/naudeber/deephyperx:total_rc2
 ```
 
 And then run the image using:
 ```
-docker run -p 9999:8097 -ti --rm -v `pwd`:/workspace/DeepHyperX/ registry.gitlab.inria.fr/naudeber/deephyperx:preview
+docker run -ti --rm -v `pwd`:/workspace/DeepHyperX/ registry.gitlab.inria.fr/naudeber/deephyperx:total_rc2
 ```
 
 This command:
-  * starts a Docker container using the image `registry.gitlab.inria.fr/naudeber/deephyperx:preview`
+  * starts a Docker container using the image `registry.gitlab.inria.fr/naudeber/deephyperx:total_rc2`
   * starts an interactive shell session `-ti`
   * mounts the current folder in the `/workspace/DeepHyperX/` path of the container
-  * binds the local port 9999 to the container port 8097 (for Visdom)
   * removes the container `--rm` when the user has finished.
 
 All data and products are stored in the current folder.
@@ -111,11 +110,7 @@ Adding a custom deep network can be done by modifying the `models.py` file. This
 
 ## Usage
 
-Start a Visdom server:
-`python -m visdom.server`
-and go to [`http://localhost:8097`](http://localhost:8097) to see the visualizations (or [`http://localhost:9999`](http://localhost:9999) if you use Docker).
-
-Then, run the script `main.py`.
+Run the script `main.py`.
 
 The most useful arguments are:
   * `--model` to specify the model (e.g. 'svm', 'nn', 'hamida', 'lee', 'chen', 'li'),
@@ -126,7 +121,7 @@ There are more parameters that can be used to control more finely the behaviour 
 
 Examples:
   * `python main.py --model SVM --dataset IndianPines --training_sample 0.3`
-    This runs a grid search on SVM on the Indian Pines dataset, using 30% of the samples for training and the rest for testing. Results are displayed in the visdom panel.
+    This runs a grid search on SVM on the Indian Pines dataset, using 30% of the samples for training and the rest for testing.
   * `python main.py --model nn --dataset PaviaU --training_sample 0.1 --cuda`
     This runs on GPU a basic 4-layers fully connected neural network on the Pavia University dataset, using 10% of the samples for training.
   * `python main.py --model hamida --dataset PaviaU --training_sample 0.5 --patch_size 7 --epoch 50 --cuda`

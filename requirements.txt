@@ -2,7 +2,6 @@ numpy>=1.10.0
 spectral==0.19
 scipy>=0.19.0
 tqdm>=4.15.0
-visdom>=0.1.5
 seaborn>=0.8
 scikit-learn>=0.19.0
 scikit-image>=0.13.1
