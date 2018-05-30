@@ -12,8 +12,7 @@ import datetime
 import numpy as np
 from sklearn.externals import joblib
 from tqdm import tqdm
-from utils import grouper, SpatialCrossMapLRN,\
-                  sliding_window, count_sliding_window,\
+from utils import grouper, sliding_window, count_sliding_window,\
                   camel_to_snake
 
 
@@ -420,8 +419,8 @@ class LeeEtAl(nn.Module):
         self.conv7 = nn.Conv2d(128, 128, (1, 1))
         self.conv8 = nn.Conv2d(128, n_classes, (1, 1))
 
-        self.lrn1 = SpatialCrossMapLRN(256)
-        self.lrn2 = SpatialCrossMapLRN(128)
+        self.lrn1 = nn.LocalResponseNorm(256)
+        self.lrn2 = nn.LocalResponseNorm(128)
 
         # The 7 th and 8 th convolutional layers have dropout in training
         self.dropout = nn.Dropout(p=0.5)
