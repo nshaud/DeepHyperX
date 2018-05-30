@@ -161,7 +161,7 @@ if CUDA:
 else:
     print("Not using CUDA, will run on CPU.")
 
-kwargs = vars(args)
+hyperparams = vars(args)
 # Load the dataset
 img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS, palette = get_dataset(DATASET,
                                                                FOLDER)
@@ -190,8 +190,8 @@ def convert_from_color(x):
 
 
 # Instantiate the experiment based on predefined networks
-kwargs.update({'n_classes': N_CLASSES, 'n_bands': N_BANDS, 'ignored_labels': IGNORED_LABELS})
-kwargs = dict((k, v) for k, v in kwargs.items() if v is not None)
+hyperparams.update({'n_classes': N_CLASSES, 'n_bands': N_BANDS, 'ignored_labels': IGNORED_LABELS})
+hyperparams = dict((k, v) for k, v in hyperparams.items() if v is not None)
 
 # Show the image and the ground truth
 color_gt = convert_to_color(gt)
@@ -253,7 +253,7 @@ for run in range(N_RUNS):
         prediction = prediction.reshape(img.shape[:2])
     else:
         # Neural network
-        model, optimizer, loss, hyperparams = get_model(MODEL, **kwargs)
+        model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
         if CLASS_BALANCING:
             weights = compute_imf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
             hyperparams['weights'] = torch.from_numpy(weights)
@@ -298,7 +298,7 @@ for run in range(N_RUNS):
         mask[gt == l] = True
     prediction[mask] = 0
 
-    run_results = metrics(prediction, test_gt, ignored_labels=IGNORED_LABELS, n_classes=N_CLASSES)
+    run_results = metrics(prediction, test_gt, ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
     results.append(run_results)
     show_results(run_results, viz, label_values=LABEL_VALUES)
 
@@ -317,7 +317,7 @@ if INFERENCE is not None:
         prediction = model.predict(X)
         prediction = prediction.reshape(img.shape[:2])
     else:
-        model = get_model(MODEL, **kwargs)[0]
+        model, _, _, hyperparams = get_model(MODEL, **hyperparams)
         model.load_state_dict(torch.load(CHECKPOINT))
         probabilities = test(model, img, hyperparams)
         prediction = np.argmax(probabilities, axis=-1)
