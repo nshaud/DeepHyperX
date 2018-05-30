@@ -235,6 +235,9 @@ for run in range(N_RUNS):
     print("Running an experiment with the {} model".format(MODEL),
           "run {}/{}".format(run + 1, N_RUNS))
 
+    display_predictions(convert_to_color(train_gt), viz, caption="Train ground truth")
+    display_predictions(convert_to_color(test_gt), viz, caption="Test ground truth")
+
     if MODEL == 'SVM_grid':
         print("Running a grid search SVM")
         # Grid search SVM (linear and RBF)
@@ -312,15 +315,16 @@ for run in range(N_RUNS):
         probabilities = test(model, img, hyperparams)
         prediction = np.argmax(probabilities, axis=-1)
 
+    run_results = metrics(prediction, test_gt, ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
+
     mask = np.zeros(gt.shape, dtype='bool')
     for l in IGNORED_LABELS:
         mask[gt == l] = True
     prediction[mask] = 0
 
     color_prediction = convert_to_color(prediction)
-    display_predictions(color_prediction, color_gt, viz)
+    display_predictions(color_prediction, viz, gt=convert_to_color(test_gt), caption="Prediction vs. test ground truth")
 
-    run_results = metrics(prediction, test_gt, ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
     results.append(run_results)
     show_results(run_results, viz, label_values=LABEL_VALUES)
 
