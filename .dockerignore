@@ -1,3 +1,5 @@
-Datasets/*
-checkpoints/*
-__pycache__/*
+Datasets/
+checkpoints/
+__pycache__/
+*.pyc
+.git/

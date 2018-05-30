@@ -17,7 +17,6 @@ from __future__ import division
 # Torch
 import torch
 import torch.utils.data as data
-from torch.autograd import Variable
 
 # Numpy, scipy, scikit-image, spectral
 import numpy as np
@@ -91,6 +90,8 @@ group_train.add_argument('--lr', type=float,
                     help="Learning rate, set by the model if not specified.")
 group_train.add_argument('--class_balancing', action='store_true',
                     help="Inverse median frequency class balancing (default = False)")
+group_train.add_argument('--batch_size', type=int,
+                    help="Batch size (optional, if absent will be set by the model")
 # Test options
 group_test = parser.add_argument_group('Test')
 group_test.add_argument('--test_stride', type=int, default=1,
@@ -293,12 +294,13 @@ for run in range(N_RUNS):
         probabilities = test(model, img, hyperparams)
         prediction = np.argmax(probabilities, axis=-1)
 
+    run_results = metrics(prediction, test_gt, ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
+
     mask = np.zeros(gt.shape, dtype='bool')
     for l in IGNORED_LABELS:
         mask[gt == l] = True
     prediction[mask] = 0
 
-    run_results = metrics(prediction, test_gt, ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
     results.append(run_results)
     show_results(run_results, viz, label_values=LABEL_VALUES)
 
