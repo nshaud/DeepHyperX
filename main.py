@@ -93,6 +93,8 @@ group_train.add_argument('--lr', type=float,
                     help="Learning rate, set by the model if not specified.")
 group_train.add_argument('--class_balancing', action='store_true',
                     help="Inverse median frequency class balancing (default = False)")
+group_train.add_argument('--batch_size', type=int,
+                    help="Batch size (optional, if absent will be set by the model")
 # Test options
 group_test = parser.add_argument_group('Test')
 group_test.add_argument('--test_stride', type=int, default=1,
