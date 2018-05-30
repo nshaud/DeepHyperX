@@ -1119,7 +1119,7 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
         avg_loss = 0.
 
         # Run the training loop for one epoch
-        for batch_idx, (data, target) in enumerate(data_loader):
+        for batch_idx, (data, target) in tqdm(enumerate(data_loader), total=len(data_loader)):
             # Load the data into the GPU if required
             if cuda:
                 data, target = data.cuda(), target.cuda()
