@@ -17,7 +17,6 @@ from __future__ import division
 # Torch
 import torch
 import torch.utils.data as data
-from torch.autograd import Variable
 
 # Numpy, scipy, scikit-image, spectral
 import numpy as np
