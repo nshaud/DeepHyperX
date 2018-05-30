@@ -890,7 +890,7 @@ class LiuEtAl(nn.Module):
         # "W1 is a 3x3xB1 kernel [...] B1 is the number of the output bands for the convolutional
         # "and pooling layer" -> actually 3x3 2D convolutions with B1 outputs
         # "the value of B1 is set to be 80"
-        self.conv1 = nn.Conv2d(input_channels, 80, (3, 3), stride=(1,1))
+        self.conv1 = nn.Conv2d(input_channels, 80, (3, 3))
         self.pool1 = nn.MaxPool2d((2, 2))
         self.conv1_bn = nn.BatchNorm2d(80)
 
@@ -929,7 +929,6 @@ class LiuEtAl(nn.Module):
 
     def forward(self, x, verbose=False):
         x = x.squeeze()
-        x = x.unsqueeze(1)
         if verbose:
             print("Input size : {}".format(x.size()))
         x_conv1 = self.conv1_bn(self.conv1(x))
