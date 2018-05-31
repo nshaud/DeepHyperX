@@ -28,6 +28,7 @@ import seaborn as sns
 viz = None
 import os
 from utils import metrics, convert_to_color_, convert_from_color_,\
+    display_dataset, display_predictions, explore_spectrums, plot_spectrums,\
     sample_gt, build_dataset, show_results, compute_imf_weights
 from datasets import get_dataset, HyperX, open_file, DATASETS_CONFIG
 from models import get_model, train, test, save_model
@@ -108,6 +109,8 @@ group_da.add_argument('--radiation_augmentation', action='store_true',
 group_da.add_argument('--mixture_augmentation', action='store_true',
                     help="Random mixes between spectra")
 
+parser.add_argument('--with_exploration', action='store_true',
+                    help="See data exploration visualization")
 parser.add_argument('--download', type=str, default=None, nargs='+',
                     choices=dataset_names,
                     help="Download the specified datasets and quits.")
@@ -132,6 +135,8 @@ MODEL = args.model
 N_RUNS = args.runs
 # Spatial context size (number of neighbours in each spatial direction)
 PATCH_SIZE = args.patch_size
+# Add some visualization of the spectra ?
+DATAVIZ = args.with_exploration
 # Target folder to store/download/load the datasets
 FOLDER = args.folder
 # Number of epochs to run
