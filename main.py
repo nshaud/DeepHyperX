@@ -213,7 +213,7 @@ if DATAVIZ:
     # Data exploration : compute and show the mean spectrums
     mean_spectrums = explore_spectrums(img, gt, LABEL_VALUES, viz,
                                        ignored_labels=IGNORED_LABELS)
-    plot_spectrums(mean_spectrums, viz)
+    plot_spectrums(mean_spectrums, viz, title='Mean spectrum/class')
 
 results = []
 # run the experiment several times

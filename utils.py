@@ -126,9 +126,10 @@ def explore_spectrums(img, complete_gt, class_names, vis,
         mask = complete_gt == c
         class_spectrums = img[mask].reshape(-1, img.shape[-1])
         step = max(1, class_spectrums.shape[0] // 100)
+        fig = plt.figure()
+        plt.title(class_names[c])
         # Sample and plot spectrums from the selected class
         for spectrum in class_spectrums[::step, :]:
-            plt.title(class_names[c])
             plt.plot(spectrum, alpha=0.25)
         mean_spectrum = np.mean(class_spectrums, axis=0)
         std_spectrum = np.std(class_spectrums, axis=0)
@@ -144,7 +145,7 @@ def explore_spectrums(img, complete_gt, class_names, vis,
     return mean_spectrums
 
 
-def plot_spectrums(spectrums, vis):
+def plot_spectrums(spectrums, vis, title=""):
     """Plot the specified dictionary of spectrums.
 
     Args:
@@ -155,7 +156,8 @@ def plot_spectrums(spectrums, vis):
     for k, v in spectrums.items():
         n_bands = len(v)
         update = None if win is None else 'append'
-        win = vis.line(X=np.arange(n_bands), Y=v, name=k, win=win, update=update)
+        win = vis.line(X=np.arange(n_bands), Y=v, name=k, win=win, update=update,
+                       opts={'title': title})
 
 
 def build_dataset(mat, gt, ignored_labels=None):
@@ -343,7 +345,12 @@ def show_results(results, vis, label_values=None, agregated=False):
         F1scores = results["F1 scores"]
         kappa = results["Kappa"]
 
-    vis.heatmap(cm, opts={'rownames': label_values, 'columnnames': label_values})
+    vis.heatmap(cm, opts={'title': "Confusion matrix", 
+                          'marginbottom': 150,
+                          'marginleft': 150,
+                          'width': 500,
+                          'height': 500,
+                          'rownames': label_values, 'columnnames': label_values})
     text += "Confusion matrix :\n"
     text += str(cm)
     text += "---\n"

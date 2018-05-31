@@ -1152,14 +1152,22 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
                     X=np.arange(iter_ - display_iter, iter_),
                     Y=mean_losses[iter_ - display_iter:iter_],
                     win=loss_win,
-                    update=update
+                    update=update,
+                    opts={'title': "Training loss",
+                          'xlabel': "Iterations",
+                          'ylabel': "Loss"
+                         }
                 )
                 tqdm.write(string)
 
                 if len(val_accuracies) > 0:
                     val_win = display.line(Y=np.array(val_accuracies),
                                            X=np.arange(len(val_accuracies)),
-                                           win=val_win)
+                                           win=val_win,
+                                           opts={'title': "Validation accuracy",
+                                                 'xlabel': "Epochs",
+                                                 'ylabel': "Accuracy"
+                                                })
             iter_ += 1
             del(data, target, loss, output)
 
