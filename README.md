@@ -6,8 +6,6 @@ A Python tool to perform deep learning experiments on various hyperspectral data
 ![https://www-obelix.irisa.fr/](https://lut.im/D9OHdqk6rK/Mod6HUGCtwjY00Vk.png)
 ![](https://lut.im/5UpsUhIzgE/Fa6XCquMRsnHwjHu.png)
 
-![](https://framapic.org/KKjiExO3V0M9/MbDHG4YSTxRP.gif)
-
 ![](https://framapic.org/PLHpoO2sYA18/bYYbY7t4xA8C.gif)
 
 ## Requirements
