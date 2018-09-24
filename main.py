@@ -17,6 +17,7 @@ from __future__ import division
 # Torch
 import torch
 import torch.utils.data as data
+from torchsummary import summary
 
 # Numpy, scipy, scikit-image, spectral
 import numpy as np
@@ -297,10 +298,7 @@ for run in range(N_RUNS):
         with torch.no_grad():
             for input, _ in train_loader:
                 break
-            if hyperparams['cuda']:
-                input = input.cuda()
-            out = model(input, verbose=True)
-            del(out)
+            summary(model.to(CUDA_DEVICE), input.size()[1:], device=str(CUDA_DEVICE).split(':')[0])
 
         if CHECKPOINT is not None:
             model.load_state_dict(torch.load(CHECKPOINT))
