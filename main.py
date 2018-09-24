@@ -62,8 +62,8 @@ parser.add_argument('--model', type=str, default=None,
 parser.add_argument('--folder', type=str, help="Folder where to store the "
                     "datasets (defaults to the current working directory).",
                     default="./Datasets/")
-parser.add_argument('--cuda', action='store_true',
-                    help="Use CUDA (defaults to false)")
+parser.add_argument('--cuda', type=int, default=-1,
+                    help="Specify CUDA device (defaults to -1, which learns on CPU)")
 parser.add_argument('--runs', type=int, default=1, help="Number of runs (default: 1)")
 parser.add_argument('--restore', type=str, default=None,
                     help="Weights to use for initialization, e.g. a checkpoint")
@@ -121,7 +121,13 @@ parser.add_argument('--download', type=str, default=None, nargs='+',
 args = parser.parse_args()
 
 # Use GPU ?
-CUDA = args.cuda
+if args.cuda < 0:
+    print("Computation on CPU")
+    CUDA_DEVICE = torch.device('cpu')
+else:
+    print("Computation on CUDA GPU device {}".format(args.cuda))
+    CUDA_DEVICE = torch.device('cuda:{}'.format(args.cuda))
+
 # % of training samples
 SAMPLE_PERCENTAGE = args.training_sample / 100
 # Data augmentation ?
@@ -168,11 +174,6 @@ if not viz.check_connection:
     print("Visdom is not connected. Did you run 'python -m visdom.server' ?")
 
 
-if CUDA:
-    print("Using CUDA")
-else:
-    print("Not using CUDA, will run on CPU.")
-
 hyperparams = vars(args)
 # Load the dataset
 img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS, palette = get_dataset(DATASET,
@@ -202,7 +203,7 @@ def convert_from_color(x):
 
 
 # Instantiate the experiment based on predefined networks
-hyperparams.update({'n_classes': N_CLASSES, 'n_bands': N_BANDS, 'ignored_labels': IGNORED_LABELS})
+hyperparams.update({'n_classes': N_CLASSES, 'n_bands': N_BANDS, 'ignored_labels': IGNORED_LABELS, 'device': CUDA_DEVICE})
 hyperparams = dict((k, v) for k, v in hyperparams.items() if v is not None)
 
 # Show the image and the ground truth
@@ -285,12 +286,12 @@ for run in range(N_RUNS):
         train_dataset = HyperX(img, train_gt, **hyperparams)
         train_loader = data.DataLoader(train_dataset,
                                        batch_size=hyperparams['batch_size'],
-                                       pin_memory=hyperparams['cuda'],
+                                       #pin_memory=hyperparams['device'],
                                        shuffle=True)
         val_dataset = HyperX(img, val_gt, **hyperparams)
         val_loader = data.DataLoader(val_dataset,
-                                     batch_size=hyperparams['batch_size'],
-                                     pin_memory=hyperparams['cuda'])
+                                     #pin_memory=hyperparams['device'],
+                                     batch_size=hyperparams['batch_size'])
 
         print("Network :")
         with torch.no_grad():
@@ -306,7 +307,7 @@ for run in range(N_RUNS):
 
         try:
             train(model, optimizer, loss, train_loader, hyperparams['epoch'],
-                  scheduler=hyperparams['scheduler'], cuda=hyperparams['cuda'],
+                  scheduler=hyperparams['scheduler'], device=hyperparams['device'],
                   supervision=hyperparams['supervision'], val_loader=val_loader,
                   display=viz)
         except KeyboardInterrupt:

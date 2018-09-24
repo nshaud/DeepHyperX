@@ -28,14 +28,13 @@ def get_model(name, **kwargs):
         criterion: PyTorch loss Function
         kwargs: hyperparameters with sane defaults
     """
-    cuda = kwargs.setdefault('cuda', False)
+    device = kwargs.setdefault('device', torch.device('cpu'))
     n_classes = kwargs['n_classes']
     n_bands = kwargs['n_bands']
     weights = torch.ones(n_classes)
     weights[torch.LongTensor(kwargs['ignored_labels'])] = 0.
+    weights = weights.to(device)
     weights = kwargs.setdefault('weights', weights)
-    if cuda:
-        kwargs['weights'] = weights.cuda()
 
     if name == 'nn':
         kwargs.setdefault('patch_size', 1)
@@ -102,8 +101,7 @@ def get_model(name, **kwargs):
         center_pixel = True
         model = HeEtAl(n_bands, n_classes, patch_size=kwargs['patch_size'])
         # For Adagrad, we need to load the model on GPU before creating the optimizer
-        if cuda:
-            model = model.cuda()
+        model = model.to(device)
         optimizer = optim.Adagrad(model.parameters(), lr=lr, weight_decay=0.01)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
     elif name == 'luo':
@@ -164,15 +162,13 @@ def get_model(name, **kwargs):
         lr = kwargs.setdefault('lr', 1.0)
         model = MouEtAl(n_bands, n_classes)
         # For Adadelta, we need to load the model on GPU before creating the optimizer
-        if cuda:
-            model = model.cuda()
+        model = model.to(device)
         optimizer = optim.Adadelta(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
     else:
         raise KeyError("{} model is unknown.".format(name))
 
-    if cuda:
-        model = model.cuda()
+    model = model.to(device)
     epoch = kwargs.setdefault('epoch', 100)
     kwargs.setdefault('scheduler', optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=epoch//4, verbose=True))
     #kwargs.setdefault('scheduler', None)
@@ -1079,7 +1075,7 @@ class MouEtAl(nn.Module):
 
 
 def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
-          display_iter=100, cuda=True, display=None,
+          display_iter=100, device=torch.device('cpu'), display=None,
           val_loader=None, supervision='full'):
     """
     Training loop to optimize a network for several epochs and a specified loss
@@ -1090,7 +1086,7 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
         data_loader: a PyTorch dataset loader
         epoch: int specifying the number of training epochs
         criterion: a PyTorch-compatible loss function, e.g. nn.CrossEntropyLoss
-        cuda (optional): bool set to True to use CUDA/CUDNN
+        device (optional): torch device to use (defaults to CPU)
         display_iter (optional): number of iterations before refreshing the
         display (False/None to switch off).
         scheduler (optional): PyTorch scheduler
@@ -1101,13 +1097,10 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
     if criterion is None:
         raise Exception("Missing criterion. You must specify a loss function.")
 
-    if cuda:
-        net.cuda()
+    net.to(device)
 
     save_epoch = epoch // 20 if epoch > 20 else 1
 
-    # Set the network to training mode
-    net.train()
 
     losses = np.zeros(1000000)
     mean_losses = np.zeros(100000000)
@@ -1116,13 +1109,14 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
     val_accuracies = []
 
     for e in tqdm(range(1, epoch + 1), desc="Training the network"):
+        # Set the network to training mode
+        net.train()
         avg_loss = 0.
 
         # Run the training loop for one epoch
         for batch_idx, (data, target) in tqdm(enumerate(data_loader), total=len(data_loader)):
             # Load the data into the GPU if required
-            if cuda:
-                data, target = data.cuda(), target.cuda()
+            data, target = data.to(device), target.to(device)
 
             optimizer.zero_grad()
             if supervision == 'full':
@@ -1174,7 +1168,7 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
         # Update the scheduler
         avg_loss /= len(data_loader)
         if val_loader is not None:
-            val_acc = val(net, val_loader, cuda=cuda, supervision=supervision)
+            val_acc = val(net, val_loader, device=device, supervision=supervision)
             val_accuracies.append(val_acc)
             metric = -val_acc
         else:
@@ -1210,7 +1204,7 @@ def test(net, img, hyperparams):
     net.eval()
     patch_size = hyperparams['patch_size']
     center_pixel = hyperparams['center_pixel']
-    batch_size, cuda = hyperparams['batch_size'], hyperparams['cuda']
+    batch_size, device = hyperparams['batch_size'], hyperparams['device']
     n_classes = hyperparams['n_classes']
 
     kwargs = {'step': hyperparams['test_stride'], 'window_size': (patch_size, patch_size)}
@@ -1234,15 +1228,11 @@ def test(net, img, hyperparams):
                 data = data.unsqueeze(1)
 
             indices = [b[1:] for b in batch]
-            if cuda:
-                data = data.cuda()
+            data = data.to(device)
             output = net(data)
             if isinstance(output, tuple):
                 output = output[0]
-            if cuda:
-                output = output.data.cpu()
-            else:
-                output = output.data
+            output = output.to('cpu')
 
             if patch_size == 1 or center_pixel:
                 output = output.numpy()
@@ -1255,15 +1245,14 @@ def test(net, img, hyperparams):
                     probs[x:x + w, y:y + h] += out
     return probs
 
-def val(net, data_loader, cuda=True, supervision='full'):
+def val(net, data_loader, device='cpu', supervision='full'):
 # TODO : fix me using metrics()
     accuracy, total = 0., 0.
     ignored_labels = data_loader.dataset.ignored_labels
     for batch_idx, (data, target) in enumerate(data_loader):
         with torch.no_grad():
             # Load the data into the GPU if required
-            if cuda:
-                data, target = data.cuda(), target.cuda()
+            data, target = data.to(device), target.to(device)
             if supervision == 'full':
                 output = net(data)
             elif supervision == 'semi':
