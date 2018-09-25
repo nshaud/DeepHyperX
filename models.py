@@ -6,6 +6,7 @@ import torch
 import torch.optim as optim
 from torch.nn import init
 # utils
+import math
 import os
 import datetime
 import numpy as np
@@ -85,8 +86,9 @@ def get_model(name, **kwargs):
         kwargs.setdefault('patch_size', 1)
         center_pixel = True
         model = HuEtAl(n_bands, n_classes)
+        # From what I infer from the paper (Eq.7 and Algorithm 1), it is standard SGD with lr = 0.01
         lr = kwargs.setdefault('learning_rate', 0.01)
-        optimizer = optim.Adam(model.parameters(), lr=lr)
+        optimizer = optim.SGD(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss(weight=kwargs['weights'])
         kwargs.setdefault('epoch', 100)
         kwargs.setdefault('batch_size', 100)
@@ -225,8 +227,11 @@ class HuEtAl(nn.Module):
     """
     @staticmethod
     def weight_init(m):
+        # [All the trainable parameters in our CNN should be initialized to
+        # be a random value between −0.05 and 0.05.]
         if isinstance(m, nn.Linear) or isinstance(m, nn.Conv1d):
             init.uniform_(m.weight.data, -0.05, 0.05)
+            init.constant_(m.bias.data, 0)
 
     def _get_final_flattened_size(self):
         with torch.no_grad():
@@ -237,20 +242,26 @@ class HuEtAl(nn.Module):
     def __init__(self, input_channels, n_classes, kernel_size=None, pool_size=None):
         super(HuEtAl, self).__init__()
         if kernel_size is None:
-           kernel_size = input_channels // 10 + 1
+           # [In our experiments, k1 is better to be [ceil](n1/9)]
+           kernel_size = math.ceil(input_channels / 9)
         if pool_size is None:
-           pool_size = kernel_size // 5 + 1
+           # The authors recommand that k2's value is chosen so that the pooled features have 30~40 values
+           # ceil(kernel_size/5) gives the same values as in the paper so let's assume it's okay
+           pool_size = math.ceil(kernel_size / 5)
         self.input_channels = input_channels
 
+        # [The first hidden convolution layer C1 filters the n1 x 1 input data with 20 kernels of size k1 x 1]
         self.conv = nn.Conv1d(1, 20, kernel_size)
         self.pool = nn.MaxPool1d(pool_size)
         self.features_size = self._get_final_flattened_size()
+        # [n4 is set to be 100]
         self.fc1 = nn.Linear(self.features_size, 100)
         self.fc2 = nn.Linear(100, n_classes)
         self.apply(self.weight_init)
 
-        x = x.squeeze()
     def forward(self, x):
+        # [In our design architecture, we choose the hyperbolic tangent function tanh(u)]
+        x = x.squeeze(dim=-1).squeeze(dim=-1)
         x = x.unsqueeze(1)
         x = self.conv(x)
         x = torch.tanh(self.pool(x))
