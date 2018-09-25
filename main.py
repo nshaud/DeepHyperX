@@ -269,6 +269,18 @@ for run in range(N_RUNS):
         save_model(clf, MODEL, DATASET)
         prediction = clf.predict(scaler.transform(img.reshape(-1, N_BANDS)))
         prediction = prediction.reshape(img.shape[:2])
+    elif MODEL == 'nearest':
+        X_train, y_train = build_dataset(img, train_gt,
+                                         ignored_labels=IGNORED_LABELS)
+        X_train, y_train = sklearn.utils.shuffle(X_train, y_train)
+        class_weight = 'balanced' if CLASS_BALANCING else None
+        clf = sklearn.neighbors.KNeighborsClassifier(weights='distance')
+        clf = sklearn.model_selection.GridSearchCV(clf, {'n_neighbors': [1, 3, 5, 10, 20]}, verbose=5, n_jobs=4)
+        clf.fit(X_train, y_train)
+        clf.fit(X_train, y_train)
+        save_model(clf, MODEL, DATASET)
+        prediction = clf.predict(img.reshape(-1, N_BANDS))
+        prediction = prediction.reshape(img.shape[:2])
     else:
         # Neural network
         model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
