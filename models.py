@@ -203,27 +203,17 @@ class Baseline(nn.Module):
 
         self.apply(self.weight_init)
 
-    def forward(self, x, verbose=False):
-        if verbose:
-            print("Input size: {}".format(x.size()))
+    def forward(self, x):
         x = F.relu(self.fc1(x))
-        if verbose:
-            print("Fc1 size: {}".format(x.size()))
         if self.use_dropout:
             x = self.dropout(x)
         x = F.relu(self.fc2(x))
-        if verbose:
-            print("Fc2 size: {}".format(x.size()))
         if self.use_dropout:
             x = self.dropout(x)
         x = F.relu(self.fc3(x))
-        if verbose:
-            print("Fc3 size: {}".format(x.size()))
         if self.use_dropout:
             x = self.dropout(x)
         x = self.fc4(x)
-        if verbose:
-            print("Output size: {}".format(x.size()))
         return x
 
 class HuEtAl(nn.Module):
@@ -259,24 +249,14 @@ class HuEtAl(nn.Module):
         self.fc2 = nn.Linear(100, n_classes)
         self.apply(self.weight_init)
 
-    def forward(self, x, verbose=False):
         x = x.squeeze()
+    def forward(self, x):
         x = x.unsqueeze(1)
-        if verbose:
-            print(x.size())
         x = self.conv(x)
-        if verbose:
-            print(x.size())
-        x = F.relu(self.pool(x))
-        if verbose:
-            print(x.size())
+        x = torch.tanh(self.pool(x))
         x = x.view(-1, self.features_size)
-        x = F.relu(self.fc1(x))
-        if verbose:
-            print(x.size())
+        x = torch.tanh(self.fc1(x))
         x = self.fc2(x)
-        if verbose:
-            print(x.size())
         return x
 
 class HamidaEtAl(nn.Module):
@@ -345,34 +325,16 @@ class HamidaEtAl(nn.Module):
             _, t, c, w, h = x.size()
         return t * c * w * h
 
-    def forward(self, x, verbose=False):
-        if verbose:
-            print("Input size : {}".format(x.size()))
+    def forward(self, x):
         x = F.relu(self.conv1(x))
-        if verbose:
-            print("Conv1 size : {}".format(x.size()))
         x = self.pool1(x)
-        if verbose:
-            print("Pool1 size : {}".format(x.size()))
         x = F.relu(self.conv2(x))
-        if verbose:
-            print("Conv2 size : {}".format(x.size()))
         x = self.pool2(x)
-        if verbose:
-            print("Pool2 size : {}".format(x.size()))
         x = F.relu(self.conv3(x))
-        if verbose:
-            print("Conv3 size : {}".format(x.size()))
         x = F.relu(self.conv4(x))
-        if verbose:
-            print("Conv4 size : {}".format(x.size()))
         x = x.view(-1, self.features_size)
-        if verbose:
-            print("Flatten size : {}".format(x.size()))
         #x = self.dropout(x)
         x = self.fc(x)
-        if verbose:
-            print("Output size : {}".format(x.size()))
         return x
 
 
@@ -422,21 +384,13 @@ class LeeEtAl(nn.Module):
 
         self.apply(self.weight_init)
 
-    def forward(self, x, verbose=False):
+    def forward(self, x):
         # Inception module
         x_3x3 = self.conv_3x3(x)
-        if verbose:
-            print("Inception 3x3 size : {}".format(x_3x3.size()))
         x_1x1 = self.conv_1x1(x)
-        if verbose:
-            print("Inception 1x1 size : {}".format(x_1x1.size()))
         x = torch.cat([x_3x3, x_1x1], dim=1)
-        if verbose:
-            print("Concatenated size : {}".format(x.size()))
         # Remove the third dimension of the tensor
         x = torch.squeeze(x)
-        if verbose:
-            print("Squeezed size : {}".format(x.size()))
 
         # Local Response Normalization
         x = F.relu(self.lrn1(x))
@@ -451,23 +405,17 @@ class LeeEtAl(nn.Module):
         x_res = F.relu(self.conv2(x))
         x_res = self.conv3(x_res)
         x = F.relu(x + x_res)
-        if verbose:
-            print("First residual block : {}".format(x.size()))
 
         # Second residual block
         x_res = F.relu(self.conv4(x))
         x_res = self.conv5(x_res)
         x = F.relu(x + x_res)
-        if verbose:
-            print("Second residual block : {}".format(x.size()))
 
         x = F.relu(self.conv6(x))
         x = self.dropout(x)
         x = F.relu(self.conv7(x))
         x = self.dropout(x)
         x = self.conv8(x)
-        if verbose:
-            print("Output size : {}".format(x.size()))
         return x
 
 
@@ -515,33 +463,17 @@ class ChenEtAl(nn.Module):
             _, t, c, w, h = x.size()
         return t * c * w * h
 
-    def forward(self, x, verbose=False):
-        if verbose:
-            print("Input size : {}".format(x.size()))
+    def forward(self, x):
         x = F.relu(self.conv1(x))
-        if verbose:
-            print("Conv1 size : {}".format(x.size()))
         x = self.pool1(x)
-        if verbose:
-            print("Conv1 size : {}".format(x.size()))
         x = self.dropout(x)
         x = F.relu(self.conv2(x))
-        if verbose:
-            print("Conv2 size : {}".format(x.size()))
         x = self.pool2(x)
-        if verbose:
-            print("Pool2 size : {}".format(x.size()))
         x = self.dropout(x)
         x = F.relu(self.conv3(x))
-        if verbose:
-            print("Conv3 size : {}".format(x.size()))
         x = self.dropout(x)
         x = x.view(-1, self.features_size)
-        if verbose:
-            print("Flattened size : {}".format(x.size()))
         x = self.fc(x)
-        if verbose:
-            print("Output size : {}".format(x.size()))
         return x
 
 
@@ -591,22 +523,12 @@ class LiEtAl(nn.Module):
             _, t, c, w, h = x.size()
         return t * c * w * h
 
-    def forward(self, x, verbose=False):
-        if verbose:
-            print("Input size : {}".format(x.size()))
+    def forward(self, x):
         x = F.relu(self.conv1(x))
-        if verbose:
-            print("Conv1 size : {}".format(x.size()))
         x = F.relu(self.conv2(x))
-        if verbose:
-            print("Conv2 size : {}".format(x.size()))
         x = x.view(-1, self.features_size)
-        if verbose:
-            print("Flattened size : {}".format(x.size()))
         #x = self.dropout(x)
         x = self.fc(x)
-        if verbose:
-            print("Output size : {}".format(x.size()))
         return x
 
 class HeEtAl(nn.Module):
@@ -667,38 +589,24 @@ class HeEtAl(nn.Module):
             _, t, c, w, h = x.size()
         return t * c * w * h
 
-    def forward(self, x, verbose=False):
-        if verbose:
-            print("Input size : {}".format(x.size()))
+    def forward(self, x):
         x = F.relu(self.conv1(x))
-        if verbose:
-            print("Conv1 size : {}".format(x.size()))
         x2_1 = self.conv2_1(x)
         x2_2 = self.conv2_2(x)
         x2_3 = self.conv2_3(x)
         x2_4 = self.conv2_4(x)
         x = x2_1 + x2_2 + x2_3 + x2_4
         x = F.relu(x)
-        if verbose:
-            print("Conv2 size : {}".format(x.size()))
         x3_1 = self.conv3_1(x)
         x3_2 = self.conv3_2(x)
         x3_3 = self.conv3_3(x)
         x3_4 = self.conv3_4(x)
         x = x3_1 + x3_2 + x3_3 + x3_4
         x = F.relu(x)
-        if verbose:
-            print("Conv3 size : {}".format(x.size()))
         x = F.relu(self.conv4(x))
-        if verbose:
-            print("Conv4 size : {}".format(x.size()))
         x = x.view(-1, self.features_size)
         x = self.dropout(x)
-        if verbose:
-            print("Flattened size : {}".format(x.size()))
         x = self.fc(x)
-        if verbose:
-            print("Output size : {}".format(x.size()))
         return x
 
 class LuoEtAl(nn.Module):
@@ -748,26 +656,14 @@ class LuoEtAl(nn.Module):
             _, c, w, h = x.size()
         return c * w * h
 
-    def forward(self, x, verbose=False):
-        if verbose:
-            print("Input size : {}".format(x.size()))
+    def forward(self, x):
         x = F.relu(self.conv1(x))
-        if verbose:
-            print("Conv1 size : {}".format(x.size()))
         b = x.size(0)
         x = x.view(b, 1, -1, self.n_planes)
         x = F.relu(self.conv2(x))
-        if verbose:
-            print("Conv2 size : {}".format(x.size()))
         x = x.view(-1, self.features_size)
-        if verbose:
-            print("Flattened size : {}".format(x.size()))
         x = F.relu(self.fc1(x))
-        if verbose:
-            print("FC1 size : {}".format(x.size()))
         x = self.fc2(x)
-        if verbose:
-            print("Output size : {}".format(x.size()))
         return x
 
 
@@ -832,34 +728,20 @@ class SharmaEtAl(nn.Module):
             _, t, c, w, h = x.size()
         return t * c * w * h
 
-    def forward(self, x, verbose=False):
-        if verbose:
-            print("Input size : {}".format(x.size()))
+    def forward(self, x):
         x = F.relu(self.conv1_bn(self.conv1(x)))
-        if verbose:
-            print("Conv1 size : {}".format(x.size()))
         x = self.pool1(x)
         b, t, c, w, h = x.size()
         x = x.view(b, 1, t*c, w, h) 
         x = F.relu(self.conv2_bn(self.conv2(x)))
-        if verbose:
-            print("Conv2 size : {}".format(x.size()))
         x = self.pool2(x)
         b, t, c, w, h = x.size()
         x = x.view(b, 1, t*c, w, h) 
         x = F.relu(self.conv3(x))
-        if verbose:
-            print("Conv3 size : {}".format(x.size()))
         x = x.view(-1, self.features_size)
-        if verbose:
-            print("Flattened size : {}".format(x.size()))
         x = self.fc1(x)
-        if verbose:
-            print("FC1 size : {}".format(x.size()))
         x = self.dropout(x)
         x = self.fc2(x)
-        if verbose:
-            print("Output size : {}".format(x.size()))
         return x
 
 
@@ -920,40 +802,22 @@ class LiuEtAl(nn.Module):
 
         return size0, size1, size2
 
-    def forward(self, x, verbose=False):
+    def forward(self, x):
         x = x.squeeze()
-        if verbose:
-            print("Input size : {}".format(x.size()))
         x_conv1 = self.conv1_bn(self.conv1(x))
         x = x_conv1
-        if verbose:
-            print("Conv1 size : {}".format(x.size()))
         x_pool1 = self.pool1(x)
         x = x_pool1
-        if verbose:
-            print("Pool1 size : {}".format(x.size()))
         x_enc = F.relu(x).view(-1, self.features_sizes[2])
         x = x_enc
-        if verbose:
-            print("Flattened size : {}".format(x.size()))
 
         x_classif = self.fc_enc(x)
-        if verbose:
-            print("Output size : {}".format(x_classif.size()))
 
         #x = F.relu(self.fc1_dec_bn(self.fc1_dec(x) + x_enc))
         x = F.relu(self.fc1_dec(x))
-        if verbose:
-            print("Decoder FC1 size : {}".format(x.size()))
         x = F.relu(self.fc2_dec_bn(self.fc2_dec(x) + x_pool1.view(-1, self.features_sizes[1])))
-        if verbose:
-            print("Decoder FC2 size : {}".format(x.size()))
         x = F.relu(self.fc3_dec_bn(self.fc3_dec(x) +x_conv1.view(-1, self.features_sizes[0])))
-        if verbose:
-            print("Decoder FC3 size : {}".format(x.size()))
         x = self.fc4_dec(x)
-        if verbose:
-            print("Decoder output size : {}".format(x.size()))
         return x_classif, x
 
 
@@ -1017,20 +881,12 @@ class BoulchEtAl(nn.Module):
             _, c, w = x.size()
         return c*w
 
-    def forward(self, x, verbose=False):
+    def forward(self, x):
         x = x.unsqueeze(1)
-        if verbose:
-            print("Input size : {}".format(x.size()))
         x = self.encoder(x)
-        if verbose:
-            print("Encoded size : {}".format(x.size()))
         x = x.view(-1, self.features_sizes)
         x_classif = self.classifier(x)
-        if verbose:
-            print("Output size : {}".format(x_classif.size()))
         x = self.regressor(x)
-        if verbose:
-            print("Decoded size : {}".format(x.size()))
         return x_classif, x
 
 
@@ -1053,24 +909,18 @@ class MouEtAl(nn.Module):
         self.tanh = nn.Tanh()
         self.fc = nn.Linear(64*input_channels, n_classes)
 
-    def forward(self, x, verbose=False):
+    def forward(self, x):
         x = x.squeeze()
         x = x.unsqueeze(0)
         # x is in 1, N, C but we expect C, N, 1 for GRU layer
         x = x.permute(2, 1,0)
-        if verbose:
-            print("Input size : {}".format(x.size()))
         x = self.gru(x)[0]
         # x is in C, N, 64, we permute back
-        if verbose:
-            print("Hidden recurrent state : {}".format(x.size()))
         x = x.permute(1,2,0).contiguous()
         x = x.view(x.size(0), -1)
         x = self.gru_bn(x)
         x = self.tanh(x)
         x = self.fc(x)
-        if verbose:
-            print("Output size : {}".format(x.size()))
         return x
 
 
