@@ -71,7 +71,7 @@ parser.add_argument('--restore', type=str, default=None,
 
 # Dataset options
 group_dataset = parser.add_argument_group('Dataset')
-group_dataset.add_argument('--training_sample', type=int, default=10,
+group_dataset.add_argument('--training_sample', type=float, default=10,
                     help="Percentage of samples to use for training (default: 10%%)")
 group_dataset.add_argument('--sampling_mode', type=str, help="Sampling mode"
                     " (random sampling or disjoint, default: random)",
@@ -130,7 +130,7 @@ else:
     CUDA_DEVICE = torch.device('cuda:{}'.format(args.cuda))
 
 # % of training samples
-SAMPLE_PERCENTAGE = args.training_sample / 100
+SAMPLE_PERCENTAGE = args.training_sample
 # Data augmentation ?
 FLIP_AUGMENTATION = args.flip_augmentation
 RADIATION_AUGMENTATION = args.radiation_augmentation
