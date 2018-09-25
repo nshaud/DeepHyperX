@@ -31,7 +31,7 @@ import visdom
 import os
 from utils import metrics, convert_to_color_, convert_from_color_,\
     display_dataset, display_predictions, explore_spectrums, plot_spectrums,\
-    sample_gt, build_dataset, show_results, compute_imf_weights
+    sample_gt, build_dataset, show_results, compute_imf_weights, get_device
 from datasets import get_dataset, HyperX, open_file, DATASETS_CONFIG
 from models import get_model, train, test, save_model
 
@@ -121,13 +121,7 @@ parser.add_argument('--download', type=str, default=None, nargs='+',
 
 args = parser.parse_args()
 
-# Use GPU ?
-if args.cuda < 0:
-    print("Computation on CPU")
-    CUDA_DEVICE = torch.device('cpu')
-else:
-    print("Computation on CUDA GPU device {}".format(args.cuda))
-    CUDA_DEVICE = torch.device('cuda:{}'.format(args.cuda))
+CUDA_DEVICE = get_device(args.cuda)
 
 # % of training samples
 SAMPLE_PERCENTAGE = args.training_sample
@@ -294,11 +288,12 @@ for run in range(N_RUNS):
                                      #pin_memory=hyperparams['device'],
                                      batch_size=hyperparams['batch_size'])
 
+        print(hyperparams)
         print("Network :")
         with torch.no_grad():
             for input, _ in train_loader:
                 break
-            summary(model.to(CUDA_DEVICE), input.size()[1:], device=str(CUDA_DEVICE).split(':')[0])
+            summary(model.to(hyperparams['device']), input.size()[1:], device=hyperparams['device'])
 
         if CHECKPOINT is not None:
             model.load_state_dict(torch.load(CHECKPOINT))
