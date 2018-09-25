@@ -190,7 +190,8 @@ class Baseline(nn.Module):
     @staticmethod
     def weight_init(m):
         if isinstance(m, nn.Linear):
-            init.xavier_uniform(m.weight.data)
+            init.kaiming_normal_(m.weight)
+            init.zeros_(m.bias)
 
     def __init__(self, input_channels, n_classes, dropout=False):
         super(Baseline, self).__init__()
@@ -230,8 +231,8 @@ class HuEtAl(nn.Module):
         # [All the trainable parameters in our CNN should be initialized to
         # be a random value between −0.05 and 0.05.]
         if isinstance(m, nn.Linear) or isinstance(m, nn.Conv1d):
-            init.uniform_(m.weight.data, -0.05, 0.05)
-            init.constant_(m.bias.data, 0)
+            init.uniform_(m.weight, -0.05, 0.05)
+            init.zeros_(m.bias)
 
     def _get_final_flattened_size(self):
         with torch.no_grad():
@@ -280,7 +281,8 @@ class HamidaEtAl(nn.Module):
     @staticmethod
     def weight_init(m):
         if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
-            init.kaiming_normal(m.weight.data)
+            init.kaiming_normal_(m.weight)
+            init.zeros_(m.bias)
 
     def __init__(self, input_channels, n_classes, patch_size=5, dilation=1):
         super(HamidaEtAl, self).__init__()
@@ -358,7 +360,8 @@ class LeeEtAl(nn.Module):
     @staticmethod
     def weight_init(m):
         if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
-            init.xavier_uniform(m.weight.data)
+            init.kaiming_uniform_(m.weight)
+            init.zeros_(m.bias)
 
     def __init__(self, in_channels, n_classes):
         super(LeeEtAl, self).__init__()
@@ -442,7 +445,8 @@ class ChenEtAl(nn.Module):
         # In the beginning, the weights are randomly initialized
         # with standard deviation 0.001
         if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
-            init.normal(m.weight.data, std=0.001)
+            init.normal_(m.weight, std=0.001)
+            init.zeros_(m.bias)
 
     def __init__(self, input_channels, n_classes, patch_size=27, n_planes=32):
         super(ChenEtAl, self).__init__()
@@ -499,7 +503,8 @@ class LiEtAl(nn.Module):
     @staticmethod
     def weight_init(m):
         if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
-            init.xavier_uniform(m.weight.data)
+            init.xavier_uniform_(m.weight.data)
+            init.constant_(m.bias.data, 0)
 
     def __init__(self, input_channels, n_classes, n_planes=2, patch_size=5):
         super(LiEtAl, self).__init__()
@@ -554,7 +559,8 @@ class HeEtAl(nn.Module):
     @staticmethod
     def weight_init(m):
         if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
-            init.kaiming_uniform(m.weight.data)
+            init.kaiming_uniform(m.weight)
+            init.zeros_(m.bias)
 
     def __init__(self, input_channels, n_classes, patch_size=7):
         super(HeEtAl, self).__init__()
@@ -629,8 +635,9 @@ class LuoEtAl(nn.Module):
 
     @staticmethod
     def weight_init(m):
-        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
-            init.kaiming_uniform(m.weight.data)
+        if isinstance(m, (nn.Linear, nn.Conv2d, nn.Conv3d)):
+            init.kaiming_uniform_(m.weight)
+            init.zeros_(m.bias)
 
     def __init__(self, input_channels, n_classes, patch_size=3, n_planes=90):
         super(LuoEtAl, self).__init__()
@@ -688,8 +695,9 @@ class SharmaEtAl(nn.Module):
 
     @staticmethod
     def weight_init(m):
-        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
-            init.kaiming_normal(m.weight.data)
+        if isinstance(m, (nn.Linear, nn.Conv3d)):
+            init.kaiming_normal_(m.weight)
+            init.zeros_(m.bias)
 
     def __init__(self, input_channels, n_classes, patch_size=64):
         super(SharmaEtAl, self).__init__()
@@ -765,8 +773,9 @@ class LiuEtAl(nn.Module):
 
     @staticmethod
     def weight_init(m):
-        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
-            init.kaiming_normal(m.weight.data)
+        if isinstance(m, (nn.Linear, nn.Conv2d)):
+            init.kaiming_normal_(m.weight)
+            init.zeros_(m.bias)
 
     def __init__(self, input_channels, n_classes, patch_size=9):
         super(LiuEtAl, self).__init__()
@@ -841,8 +850,9 @@ class BoulchEtAl(nn.Module):
 
     @staticmethod
     def weight_init(m):
-        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv1d):
-            init.kaiming_normal(m.weight.data)
+        if isinstance(m, (nn.Linear, nn.Conv1d)):
+            init.kaiming_normal_(m.weight)
+            init.zeros_(m.bias)
 
     def __init__(self, input_channels, n_classes, planes=16):
         super(BoulchEtAl, self).__init__()
@@ -909,10 +919,13 @@ class MouEtAl(nn.Module):
     """
     @staticmethod
     def weight_init(m):
-        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv1d):
+ # All weight matrices in our RNN and bias vectors are initialized with a uniform distribution, and the values of these weight matrices and bias vectors are initialized in the range [−0.1,0.1]
+        if isinstance(m, (nn.Linear, nn.GRU)):
             init.uniform_(m.weight.data, -0.1, 0.1)
+            init.uniform_(m.bias.data, -0.1, 0.1)
 
     def __init__(self, input_channels, n_classes):
+        # The proposed network model uses a single recurrent layer that adopts our modified GRUs of size 64 with sigmoid gate activation and PRetanh activation functions for hidden representations
         super(MouEtAl, self).__init__()
         self.input_channels = input_channels
         self.gru = nn.GRU(1, 64, 1, bidirectional=False) # TODO: try to change this ?
