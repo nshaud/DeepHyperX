@@ -7,6 +7,7 @@ import spectral
 import numpy as np
 import torch
 import torch.utils
+import torch.utils.data
 import os
 from tqdm import tqdm
 try:

@@ -95,13 +95,8 @@ group_train.add_argument('--class_balancing', action='store_true',
                     help="Inverse median frequency class balancing (default = False)")
 group_train.add_argument('--batch_size', type=int,
                     help="Batch size (optional, if absent will be set by the model")
-# Test options
-group_test = parser.add_argument_group('Test')
-group_test.add_argument('--test_stride', type=int, default=1,
+group_train.add_argument('--test_stride', type=int, default=1,
                      help="Sliding window step stride during inference (default = 1)")
-group_test.add_argument('--inference', type=str, default=None, nargs='?',
-                     help="Path to an image on which to run inference.")
-
 # Data augmentation parameters
 group_da = parser.add_argument_group('Data augmentation')
 group_da.add_argument('--flip_augmentation', action='store_true',
@@ -155,8 +150,6 @@ CLASS_BALANCING = args.class_balancing
 TRAIN_GT = args.train_set
 # Testing ground truth file
 TEST_GT = args.test_set
-
-INFERENCE = args.inference
 TEST_STRIDE = args.test_stride
 
 if args.download is not None and len(args.download) > 0:
@@ -338,28 +331,3 @@ for run in range(N_RUNS):
 if N_RUNS > 1:
     show_results(results, viz, label_values=LABEL_VALUES, agregated=True)
 
-if INFERENCE is not None:
-    img = open_file(INFERENCE)[:,:,:-2]
-    # Normalization
-    img = np.asarray(img, dtype='float32')
-    img = (img - np.min(img)) / (np.max(img) - np.min(img))
-    if MODEL in ['SVM', 'SVM_grid', 'SGD']:
-        from sklearn.externals import joblib
-        model = joblib.load(CHECKPOINT)
-        X = scaler.transform(img.reshape(-1, N_BANDS))
-        prediction = model.predict(X)
-        prediction = prediction.reshape(img.shape[:2])
-    else:
-        model, _, _, hyperparams = get_model(MODEL, **hyperparams)
-        model.load_state_dict(torch.load(CHECKPOINT))
-        probabilities = test(model, img, hyperparams)
-        prediction = np.argmax(probabilities, axis=-1)
-
-    basename = os.path.basename(INFERENCE)
-    basename = str(model.__class__.__name__) + basename
-    dirname = os.path.dirname(INFERENCE)
-    filename = dirname + '/' + basename + '.tif'
-    io.imsave(filename, prediction)
-    basename = 'color_' + basename
-    filename = dirname + '/' + basename + '.tif'
-    io.imsave(filename, convert_to_color(prediction))
