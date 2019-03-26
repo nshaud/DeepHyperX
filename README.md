@@ -2,9 +2,9 @@
 
 A Python tool to perform deep learning experiments on various hyperspectral datasets.
 
-![http://www.onera.fr/en/dtim](https://lut.im/qwL8UPM0en/soXh7XtiPp4IoML8.png)
-![https://www-obelix.irisa.fr/](https://lut.im/D9OHdqk6rK/Mod6HUGCtwjY00Vk.png)
-![](https://lut.im/5UpsUhIzgE/Fa6XCquMRsnHwjHu.png)
+![http://www.onera.fr/en/dtim](https://framapic.org/VgDCJuO6QDNx/UZaBtqqxbV2F.png)
+![https://www-obelix.irisa.fr/](https://framapic.org/khHGG0Mo6U3C/45Jl9MebT4XS.png)
+![](https://framapic.org/NI9GogSoovTl/IDhzTph7jMEr.png)
 
 ![](https://framapic.org/KKjiExO3V0M9/MbDHG4YSTxRP.gif)
 
@@ -132,3 +132,4 @@ Examples:
   * `python main.py --model hamida --dataset PaviaU --training_sample 0.5 --patch_size 7 --epoch 50 --cuda`
     This runs on GPU the 3D CNN from Hamida et al. on the Pavia University dataset with a patch size of 7, using 50% of the samples for training and optimizing for 50 epochs.
 
+[![Say Thanks!](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://saythanks.io/to/nshaud)
