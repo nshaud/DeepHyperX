@@ -298,7 +298,9 @@ for run in range(N_RUNS):
         with torch.no_grad():
             for input, _ in train_loader:
                 break
-            summary(model.to(hyperparams['device']), input.size()[1:], device=hyperparams['device'])
+            summary(model.to(hyperparams['device']), input.size()[1:])
+            # We would like to use device=hyperparams['device'] altough we have
+            # to wait for torchsummary to be fixed first.
 
         if CHECKPOINT is not None:
             model.load_state_dict(torch.load(CHECKPOINT))
