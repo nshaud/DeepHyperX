@@ -2,13 +2,8 @@
 
 A Python tool to perform deep learning experiments on various hyperspectral datasets.
 
-![http://www.onera.fr/en/dtim](https://framapic.org/VgDCJuO6QDNx/UZaBtqqxbV2F.png)
-![https://www-obelix.irisa.fr/](https://framapic.org/khHGG0Mo6U3C/45Jl9MebT4XS.png)
-![](https://framapic.org/NI9GogSoovTl/IDhzTph7jMEr.png)
-
-![](https://framapic.org/KKjiExO3V0M9/MbDHG4YSTxRP.gif)
-
-![](https://framapic.org/PLHpoO2sYA18/bYYbY7t4xA8C.gif)
+![https://www.onera.fr/en/research/information-processing-and-systems-domain](https://www.onera.fr/sites/default/files/logo-onera.png | height=60)
+![https://www-obelix.irisa.fr/](https://www.irisa.fr/sites/all/themes/irisa_theme/logoIRISA-web.png | width=60)
 
 ## Requirements
 
