@@ -2,8 +2,28 @@
 
 A Python tool to perform deep learning experiments on various hyperspectral datasets.
 
-![https://www.onera.fr/en/research/information-processing-and-systems-domain](https://www.onera.fr/sites/default/files/logo-onera.png | height=60)
-![https://www-obelix.irisa.fr/](https://www.irisa.fr/sites/all/themes/irisa_theme/logoIRISA-web.png | width=60)
+![https://www.onera.fr/en/research/information-processing-and-systems-domain](https://www.onera.fr/sites/default/files/logo-onera.png|height=60)
+
+![https://www-obelix.irisa.fr/](https://www.irisa.fr/sites/all/themes/irisa_theme/logoIRISA-web.png|width=60)
+
+## Reference
+
+This toolbox was used for our review paper in Geoscience and Remote Sensing Magazine :
+> N. Audebert, B. Le Saux and S. Lefevre, "*Deep Learning for Classification of Hyperspectral Data: A Comparative Review*," in IEEE Geoscience and Remote Sensing Magazine, vol. 7, no. 2, pp. 159-173, June 2019.
+
+Bibtex format :
+
+> @article{8738045,
+author={N. {Audebert} and B. {Le Saux} and S. {Lefèvre}},
+journal={IEEE Geoscience and Remote Sensing Magazine},
+title={Deep Learning for Classification of Hyperspectral Data: A Comparative Review},
+year={2019},
+volume={7},
+number={2},
+pages={159-173},
+doi={10.1109/MGRS.2019.2912563},
+ISSN={2373-7468},
+month={June},}
 
 ## Requirements
 
