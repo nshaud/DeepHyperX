@@ -1,7 +1,7 @@
 # Python 2/3 compatiblity
 from __future__ import print_function
 from __future__ import division
-
+import joblib
 import os
 from utils import convert_to_color_, convert_from_color_, get_device
 from datasets import open_file
@@ -91,7 +91,6 @@ def convert_from_color(x):
     return convert_from_color_(x, palette=invert_palette)
 
 if MODEL in ['SVM', 'SVM_grid', 'SGD', 'nearest']:
-    from sklearn.externals import joblib
     model = joblib.load(CHECKPOINT)
     w, h = img.shape[:2]
     X = img.reshape((w*h, N_BANDS))

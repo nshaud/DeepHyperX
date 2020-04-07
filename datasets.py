@@ -26,6 +26,12 @@ DATASETS_CONFIG = {
             'img': 'Pavia.mat',
             'gt': 'Pavia_gt.mat'
             },
+        'Salinas': {
+            'urls': ['http://www.ehu.eus/ccwintco/uploads/a/a3/Salinas_corrected.mat',
+                     'http://www.ehu.eus/ccwintco/uploads/f/fa/Salinas_gt.mat'],
+            'img': 'Salinas_corrected.mat',
+            'gt': 'Salinas_gt.mat'
+            },
         'PaviaU': {
             'urls': ['http://www.ehu.eus/ccwintco/uploads/e/ee/PaviaU.mat',
                      'http://www.ehu.eus/ccwintco/uploads/5/50/PaviaU_gt.mat'],
@@ -138,6 +144,20 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
 
         ignored_labels = [0]
 
+    
+    elif dataset_name == 'Salinas':
+        img = open_file(folder + 'Salinas.mat')['Salinas_corrected']
+
+        rgb_bands = (43, 21, 11)  # AVIRIS sensor
+
+        gt = open_file(folder + 'Salinas_gt.mat')['Salinas_gt']
+
+        label_values = ['Undefined','Brocoli_green_weeds_1', 'Brocoli_green_weeds_2','Fallow','Fallow_rough_plow','Fallow_smooth','Stubble','Celery',
+                       'Grapes_untrained','Soil_vinyard_develop','Corn_senesced_green_weeds','Lettuce_romaine_4wk','Lettuce_romaine_5wk','Lettuce_romaine_6wk',
+                       'Lettuce_romaine_7wk','Vinyard_untrained','Vinyard_vertical_trellis']
+
+        ignored_labels = [0]    
+    
     elif dataset_name == 'IndianPines':
         # Load the image
         img = open_file(folder + 'Indian_pines_corrected.mat')
