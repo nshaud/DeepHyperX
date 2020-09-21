@@ -104,7 +104,7 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
     if dataset.get('download', True):
         # Download the dataset if is not present
         if not os.path.isdir(folder):
-            os.mkdir(folder)
+            os.makedirs(folder)
         for url in datasets[dataset_name]['urls']:
             # download the files
             filename = url.split('/')[-1]
