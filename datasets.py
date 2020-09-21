@@ -10,6 +10,7 @@ import torch.utils
 import torch.utils.data
 import os
 from tqdm import tqdm
+
 try:
     # Python 3
     from urllib.request import urlretrieve
@@ -20,52 +21,67 @@ except ImportError:
 from utils import open_file
 
 DATASETS_CONFIG = {
-        'PaviaC': {
-            'urls': ['http://www.ehu.eus/ccwintco/uploads/e/e3/Pavia.mat', 
-                     'http://www.ehu.eus/ccwintco/uploads/5/53/Pavia_gt.mat'],
-            'img': 'Pavia.mat',
-            'gt': 'Pavia_gt.mat'
-            },
-        'Salinas': {
-            'urls': ['http://www.ehu.eus/ccwintco/uploads/a/a3/Salinas_corrected.mat',
-                     'http://www.ehu.eus/ccwintco/uploads/f/fa/Salinas_gt.mat'],
-            'img': 'Salinas_corrected.mat',
-            'gt': 'Salinas_gt.mat'
-            },
-        'PaviaU': {
-            'urls': ['http://www.ehu.eus/ccwintco/uploads/e/ee/PaviaU.mat',
-                     'http://www.ehu.eus/ccwintco/uploads/5/50/PaviaU_gt.mat'],
-            'img': 'PaviaU.mat',
-            'gt': 'PaviaU_gt.mat'
-            },
-        'KSC': {
-            'urls': ['http://www.ehu.es/ccwintco/uploads/2/26/KSC.mat',
-                     'http://www.ehu.es/ccwintco/uploads/a/a6/KSC_gt.mat'],
-            'img': 'KSC.mat',
-            'gt': 'KSC_gt.mat'
-            },
-        'IndianPines': {
-            'urls': ['http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat',
-                     'http://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat'],
-            'img': 'Indian_pines_corrected.mat',
-            'gt': 'Indian_pines_gt.mat'
-            },
-        'Botswana': {
-            'urls': ['http://www.ehu.es/ccwintco/uploads/7/72/Botswana.mat',
-                     'http://www.ehu.es/ccwintco/uploads/5/58/Botswana_gt.mat'],
-            'img': 'Botswana.mat',
-            'gt': 'Botswana_gt.mat',
-            }
-    }
+    "PaviaC": {
+        "urls": [
+            "http://www.ehu.eus/ccwintco/uploads/e/e3/Pavia.mat",
+            "http://www.ehu.eus/ccwintco/uploads/5/53/Pavia_gt.mat",
+        ],
+        "img": "Pavia.mat",
+        "gt": "Pavia_gt.mat",
+    },
+    "Salinas": {
+        "urls": [
+            "http://www.ehu.eus/ccwintco/uploads/a/a3/Salinas_corrected.mat",
+            "http://www.ehu.eus/ccwintco/uploads/f/fa/Salinas_gt.mat",
+        ],
+        "img": "Salinas_corrected.mat",
+        "gt": "Salinas_gt.mat",
+    },
+    "PaviaU": {
+        "urls": [
+            "http://www.ehu.eus/ccwintco/uploads/e/ee/PaviaU.mat",
+            "http://www.ehu.eus/ccwintco/uploads/5/50/PaviaU_gt.mat",
+        ],
+        "img": "PaviaU.mat",
+        "gt": "PaviaU_gt.mat",
+    },
+    "KSC": {
+        "urls": [
+            "http://www.ehu.es/ccwintco/uploads/2/26/KSC.mat",
+            "http://www.ehu.es/ccwintco/uploads/a/a6/KSC_gt.mat",
+        ],
+        "img": "KSC.mat",
+        "gt": "KSC_gt.mat",
+    },
+    "IndianPines": {
+        "urls": [
+            "http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat",
+            "http://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat",
+        ],
+        "img": "Indian_pines_corrected.mat",
+        "gt": "Indian_pines_gt.mat",
+    },
+    "Botswana": {
+        "urls": [
+            "http://www.ehu.es/ccwintco/uploads/7/72/Botswana.mat",
+            "http://www.ehu.es/ccwintco/uploads/5/58/Botswana_gt.mat",
+        ],
+        "img": "Botswana.mat",
+        "gt": "Botswana_gt.mat",
+    },
+}
 
 try:
     from custom_datasets import CUSTOM_DATASETS_CONFIG
+
     DATASETS_CONFIG.update(CUSTOM_DATASETS_CONFIG)
 except ImportError:
     pass
 
+
 class TqdmUpTo(tqdm):
     """Provides `update_to(n)` which uses `tqdm.update(delta_n)`."""
+
     def update_to(self, b=1, bsize=1, tsize=None):
         """
         b  : int, optional
@@ -81,7 +97,7 @@ class TqdmUpTo(tqdm):
 
 
 def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
-    """ Gets the dataset specified by name and return the related components.
+    """Gets the dataset specified by name and return the related components.
     Args:
         dataset_name: string with the name of the dataset
         target_folder (optional): folder to store the datasets, defaults to ./
@@ -94,132 +110,212 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
         rgb_bands: int tuple that correspond to red, green and blue bands
     """
     palette = None
-    
+
     if dataset_name not in datasets.keys():
         raise ValueError("{} dataset is unknown.".format(dataset_name))
 
     dataset = datasets[dataset_name]
 
-    folder = target_folder + datasets[dataset_name].get('folder', dataset_name + '/')
-    if dataset.get('download', True):
+    folder = target_folder + datasets[dataset_name].get("folder", dataset_name + "/")
+    if dataset.get("download", True):
         # Download the dataset if is not present
         if not os.path.isdir(folder):
             os.makedirs(folder)
-        for url in datasets[dataset_name]['urls']:
+        for url in datasets[dataset_name]["urls"]:
             # download the files
-            filename = url.split('/')[-1]
+            filename = url.split("/")[-1]
             if not os.path.exists(folder + filename):
-                with TqdmUpTo(unit='B', unit_scale=True, miniters=1,
-                          desc="Downloading {}".format(filename)) as t:
-                    urlretrieve(url, filename=folder + filename,
-                                     reporthook=t.update_to)
+                with TqdmUpTo(
+                    unit="B",
+                    unit_scale=True,
+                    miniters=1,
+                    desc="Downloading {}".format(filename),
+                ) as t:
+                    urlretrieve(url, filename=folder + filename, reporthook=t.update_to)
     elif not os.path.isdir(folder):
-       print("WARNING: {} is not downloadable.".format(dataset_name))
+        print("WARNING: {} is not downloadable.".format(dataset_name))
 
-    if dataset_name == 'PaviaC':
+    if dataset_name == "PaviaC":
         # Load the image
-        img = open_file(folder + 'Pavia.mat')['pavia']
+        img = open_file(folder + "Pavia.mat")["pavia"]
 
         rgb_bands = (55, 41, 12)
 
-        gt = open_file(folder + 'Pavia_gt.mat')['pavia_gt']
+        gt = open_file(folder + "Pavia_gt.mat")["pavia_gt"]
 
-        label_values = ["Undefined", "Water", "Trees", "Asphalt",
-                        "Self-Blocking Bricks", "Bitumen", "Tiles", "Shadows",
-                        "Meadows", "Bare Soil"]
+        label_values = [
+            "Undefined",
+            "Water",
+            "Trees",
+            "Asphalt",
+            "Self-Blocking Bricks",
+            "Bitumen",
+            "Tiles",
+            "Shadows",
+            "Meadows",
+            "Bare Soil",
+        ]
 
         ignored_labels = [0]
 
-    elif dataset_name == 'PaviaU':
+    elif dataset_name == "PaviaU":
         # Load the image
-        img = open_file(folder + 'PaviaU.mat')['paviaU']
+        img = open_file(folder + "PaviaU.mat")["paviaU"]
 
         rgb_bands = (55, 41, 12)
 
-        gt = open_file(folder + 'PaviaU_gt.mat')['paviaU_gt']
+        gt = open_file(folder + "PaviaU_gt.mat")["paviaU_gt"]
 
-        label_values = ['Undefined', 'Asphalt', 'Meadows', 'Gravel', 'Trees',
-                        'Painted metal sheets', 'Bare Soil', 'Bitumen',
-                        'Self-Blocking Bricks', 'Shadows']
-
-        ignored_labels = [0]
-
-    
-    elif dataset_name == 'Salinas':
-        img = open_file(folder + 'Salinas.mat')['Salinas_corrected']
-
-        rgb_bands = (43, 21, 11)  # AVIRIS sensor
-
-        gt = open_file(folder + 'Salinas_gt.mat')['Salinas_gt']
-
-        label_values = ['Undefined','Brocoli_green_weeds_1', 'Brocoli_green_weeds_2','Fallow','Fallow_rough_plow','Fallow_smooth','Stubble','Celery',
-                       'Grapes_untrained','Soil_vinyard_develop','Corn_senesced_green_weeds','Lettuce_romaine_4wk','Lettuce_romaine_5wk','Lettuce_romaine_6wk',
-                       'Lettuce_romaine_7wk','Vinyard_untrained','Vinyard_vertical_trellis']
-
-        ignored_labels = [0]    
-    
-    elif dataset_name == 'IndianPines':
-        # Load the image
-        img = open_file(folder + 'Indian_pines_corrected.mat')
-        img = img['indian_pines_corrected']
-
-        rgb_bands = (43, 21, 11)  # AVIRIS sensor
-
-        gt = open_file(folder + 'Indian_pines_gt.mat')['indian_pines_gt']
-        label_values = ["Undefined", "Alfalfa", "Corn-notill", "Corn-mintill",
-                        "Corn", "Grass-pasture", "Grass-trees",
-                        "Grass-pasture-mowed", "Hay-windrowed", "Oats",
-                        "Soybean-notill", "Soybean-mintill", "Soybean-clean",
-                        "Wheat", "Woods", "Buildings-Grass-Trees-Drives",
-                        "Stone-Steel-Towers"]
+        label_values = [
+            "Undefined",
+            "Asphalt",
+            "Meadows",
+            "Gravel",
+            "Trees",
+            "Painted metal sheets",
+            "Bare Soil",
+            "Bitumen",
+            "Self-Blocking Bricks",
+            "Shadows",
+        ]
 
         ignored_labels = [0]
 
-    elif dataset_name == 'Botswana':
+    elif dataset_name == "Salinas":
+        img = open_file(folder + "Salinas.mat")["Salinas_corrected"]
+
+        rgb_bands = (43, 21, 11)  # AVIRIS sensor
+
+        gt = open_file(folder + "Salinas_gt.mat")["Salinas_gt"]
+
+        label_values = [
+            "Undefined",
+            "Brocoli_green_weeds_1",
+            "Brocoli_green_weeds_2",
+            "Fallow",
+            "Fallow_rough_plow",
+            "Fallow_smooth",
+            "Stubble",
+            "Celery",
+            "Grapes_untrained",
+            "Soil_vinyard_develop",
+            "Corn_senesced_green_weeds",
+            "Lettuce_romaine_4wk",
+            "Lettuce_romaine_5wk",
+            "Lettuce_romaine_6wk",
+            "Lettuce_romaine_7wk",
+            "Vinyard_untrained",
+            "Vinyard_vertical_trellis",
+        ]
+
+        ignored_labels = [0]
+
+    elif dataset_name == "IndianPines":
         # Load the image
-        img = open_file(folder + 'Botswana.mat')['Botswana']
+        img = open_file(folder + "Indian_pines_corrected.mat")
+        img = img["indian_pines_corrected"]
+
+        rgb_bands = (43, 21, 11)  # AVIRIS sensor
+
+        gt = open_file(folder + "Indian_pines_gt.mat")["indian_pines_gt"]
+        label_values = [
+            "Undefined",
+            "Alfalfa",
+            "Corn-notill",
+            "Corn-mintill",
+            "Corn",
+            "Grass-pasture",
+            "Grass-trees",
+            "Grass-pasture-mowed",
+            "Hay-windrowed",
+            "Oats",
+            "Soybean-notill",
+            "Soybean-mintill",
+            "Soybean-clean",
+            "Wheat",
+            "Woods",
+            "Buildings-Grass-Trees-Drives",
+            "Stone-Steel-Towers",
+        ]
+
+        ignored_labels = [0]
+
+    elif dataset_name == "Botswana":
+        # Load the image
+        img = open_file(folder + "Botswana.mat")["Botswana"]
 
         rgb_bands = (75, 33, 15)
 
-        gt = open_file(folder + 'Botswana_gt.mat')['Botswana_gt']
-        label_values = ["Undefined", "Water", "Hippo grass",
-                        "Floodplain grasses 1", "Floodplain grasses 2",
-                        "Reeds", "Riparian", "Firescar", "Island interior",
-                        "Acacia woodlands", "Acacia shrublands",
-                        "Acacia grasslands", "Short mopane", "Mixed mopane",
-                        "Exposed soils"]
+        gt = open_file(folder + "Botswana_gt.mat")["Botswana_gt"]
+        label_values = [
+            "Undefined",
+            "Water",
+            "Hippo grass",
+            "Floodplain grasses 1",
+            "Floodplain grasses 2",
+            "Reeds",
+            "Riparian",
+            "Firescar",
+            "Island interior",
+            "Acacia woodlands",
+            "Acacia shrublands",
+            "Acacia grasslands",
+            "Short mopane",
+            "Mixed mopane",
+            "Exposed soils",
+        ]
 
         ignored_labels = [0]
 
-    elif dataset_name == 'KSC':
+    elif dataset_name == "KSC":
         # Load the image
-        img = open_file(folder + 'KSC.mat')['KSC']
+        img = open_file(folder + "KSC.mat")["KSC"]
 
         rgb_bands = (43, 21, 11)  # AVIRIS sensor
 
-        gt = open_file(folder + 'KSC_gt.mat')['KSC_gt']
-        label_values = ["Undefined", "Scrub", "Willow swamp",
-                        "Cabbage palm hammock", "Cabbage palm/oak hammock",
-                        "Slash pine", "Oak/broadleaf hammock",
-                        "Hardwood swamp", "Graminoid marsh", "Spartina marsh",
-                        "Cattail marsh", "Salt marsh", "Mud flats", "Wate"]
+        gt = open_file(folder + "KSC_gt.mat")["KSC_gt"]
+        label_values = [
+            "Undefined",
+            "Scrub",
+            "Willow swamp",
+            "Cabbage palm hammock",
+            "Cabbage palm/oak hammock",
+            "Slash pine",
+            "Oak/broadleaf hammock",
+            "Hardwood swamp",
+            "Graminoid marsh",
+            "Spartina marsh",
+            "Cattail marsh",
+            "Salt marsh",
+            "Mud flats",
+            "Wate",
+        ]
 
         ignored_labels = [0]
     else:
         # Custom dataset
-        img, gt, rgb_bands, ignored_labels, label_values, palette = CUSTOM_DATASETS_CONFIG[dataset_name]['loader'](folder)
+        (
+            img,
+            gt,
+            rgb_bands,
+            ignored_labels,
+            label_values,
+            palette,
+        ) = CUSTOM_DATASETS_CONFIG[dataset_name]["loader"](folder)
 
     # Filter NaN out
     nan_mask = np.isnan(img.sum(axis=-1))
     if np.count_nonzero(nan_mask) > 0:
-       print("Warning: NaN have been found in the data. It is preferable to remove them beforehand. Learning on NaN data is disabled.")
+        print(
+            "Warning: NaN have been found in the data. It is preferable to remove them beforehand. Learning on NaN data is disabled."
+        )
     img[nan_mask] = 0
     gt[nan_mask] = 0
     ignored_labels.append(0)
 
     ignored_labels = list(set(ignored_labels))
     # Normalization
-    img = np.asarray(img, dtype='float32')
+    img = np.asarray(img, dtype="float32")
     img = (img - np.min(img)) / (np.max(img) - np.min(img))
     return img, gt, label_values, ignored_labels, rgb_bands, palette
 
@@ -241,26 +337,32 @@ class HyperX(torch.utils.data.Dataset):
         super(HyperX, self).__init__()
         self.data = data
         self.label = gt
-        self.name = hyperparams['dataset']
-        self.patch_size = hyperparams['patch_size']
-        self.ignored_labels = set(hyperparams['ignored_labels'])
-        self.flip_augmentation = hyperparams['flip_augmentation']
-        self.radiation_augmentation = hyperparams['radiation_augmentation'] 
-        self.mixture_augmentation = hyperparams['mixture_augmentation'] 
-        self.center_pixel = hyperparams['center_pixel']
-        supervision = hyperparams['supervision']
+        self.name = hyperparams["dataset"]
+        self.patch_size = hyperparams["patch_size"]
+        self.ignored_labels = set(hyperparams["ignored_labels"])
+        self.flip_augmentation = hyperparams["flip_augmentation"]
+        self.radiation_augmentation = hyperparams["radiation_augmentation"]
+        self.mixture_augmentation = hyperparams["mixture_augmentation"]
+        self.center_pixel = hyperparams["center_pixel"]
+        supervision = hyperparams["supervision"]
         # Fully supervised : use all pixels with label not ignored
-        if supervision == 'full':
+        if supervision == "full":
             mask = np.ones_like(gt)
             for l in self.ignored_labels:
                 mask[gt == l] = 0
         # Semi-supervised : use all pixels, except padding
-        elif supervision == 'semi':
+        elif supervision == "semi":
             mask = np.ones_like(gt)
         x_pos, y_pos = np.nonzero(mask)
         p = self.patch_size // 2
-        self.indices = np.array([(x,y) for x,y in zip(x_pos, y_pos) if x > p and x < data.shape[0] - p and y > p and y < data.shape[1] - p])
-        self.labels = [self.label[x,y] for x,y in self.indices]
+        self.indices = np.array(
+            [
+                (x, y)
+                for x, y in zip(x_pos, y_pos)
+                if x > p and x < data.shape[0] - p and y > p and y < data.shape[1] - p
+            ]
+        )
+        self.labels = [self.label[x, y] for x, y in self.indices]
         np.random.shuffle(self.indices)
 
     @staticmethod
@@ -274,22 +376,22 @@ class HyperX(torch.utils.data.Dataset):
         return arrays
 
     @staticmethod
-    def radiation_noise(data, alpha_range=(0.9, 1.1), beta=1/25):
+    def radiation_noise(data, alpha_range=(0.9, 1.1), beta=1 / 25):
         alpha = np.random.uniform(*alpha_range)
-        noise = np.random.normal(loc=0., scale=1.0, size=data.shape)
+        noise = np.random.normal(loc=0.0, scale=1.0, size=data.shape)
         return alpha * data + beta * noise
 
-    def mixture_noise(self, data, label, beta=1/25):
-        alpha1, alpha2 = np.random.uniform(0.01, 1., size=2)
-        noise = np.random.normal(loc=0., scale=1.0, size=data.shape)
+    def mixture_noise(self, data, label, beta=1 / 25):
+        alpha1, alpha2 = np.random.uniform(0.01, 1.0, size=2)
+        noise = np.random.normal(loc=0.0, scale=1.0, size=data.shape)
         data2 = np.zeros_like(data)
-        for  idx, value in np.ndenumerate(label):
+        for idx, value in np.ndenumerate(label):
             if value not in self.ignored_labels:
                 l_indices = np.nonzero(self.labels == value)[0]
                 l_indice = np.random.choice(l_indices)
-                assert(self.labels[l_indice] == value)
+                assert self.labels[l_indice] == value
                 x, y = self.indices[l_indice]
-                data2[idx] = self.data[x,y]
+                data2[idx] = self.data[x, y]
         return (alpha1 * data + alpha2 * data2) / (alpha1 + alpha2) + beta * noise
 
     def __len__(self):
@@ -307,13 +409,13 @@ class HyperX(torch.utils.data.Dataset):
             # Perform data augmentation (only on 2D patches)
             data, label = self.flip(data, label)
         if self.radiation_augmentation and np.random.random() < 0.1:
-                data = self.radiation_noise(data)
+            data = self.radiation_noise(data)
         if self.mixture_augmentation and np.random.random() < 0.2:
-                data = self.mixture_noise(data, label)
+            data = self.mixture_noise(data, label)
 
         # Copy the data into numpy arrays (PyTorch doesn't like numpy views)
-        data = np.asarray(np.copy(data).transpose((2, 0, 1)), dtype='float32')
-        label = np.asarray(np.copy(label), dtype='int64')
+        data = np.asarray(np.copy(data).transpose((2, 0, 1)), dtype="float32")
+        label = np.asarray(np.copy(label), dtype="int64")
 
         # Load the data into PyTorch tensors
         data = torch.from_numpy(data)
