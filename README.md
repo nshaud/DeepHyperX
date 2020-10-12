@@ -36,6 +36,8 @@ It is based on the [PyTorch](http://pytorch.org/) deep learning and GPU computin
 The easiest way to install this code is to create a [Python virtual environment](https://docs.python.org/3/tutorial/venv.html) and to install dependencies using:
 `pip install -r requirements.txt`
 
+(on Windows you should use `pip install -r requirements.txt -f https://download.pytorch.org/whl/torch_stable.html`)
+
 ### Docker
 
 Alternatively, it is possible to run the [Docker](https://www.docker.com/community-edition) image.
