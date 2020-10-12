@@ -504,7 +504,8 @@ class CNN2D(nn.Module):
         self.classifier = nn.Linear(64, n_classes)
 
     def forward(self, x):
-        x = x.squeeze()
+        #print(x.size())
+        x = x[:,0]
         x = self.encoder(x)
         x = self.pooling(x).squeeze()
         x = self.classifier(x)

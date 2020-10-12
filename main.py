@@ -369,7 +369,7 @@ for run in range(N_RUNS):
     else:
         if CLASS_BALANCING:
             weights = compute_imf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
-            hyperparams["weights"] = torch.from_numpy(weights)
+            hyperparams["weights"] = torch.from_numpy(weights).float()
         # Neural network
         model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
         # Split train set in train/val
@@ -389,12 +389,12 @@ for run in range(N_RUNS):
             batch_size=hyperparams["batch_size"],
         )
 
-        print(hyperparams)
-        print("Network :")
-        with torch.no_grad():
-            for input, _ in train_loader:
-                break
-            summary(model.to(hyperparams["device"]), input.size()[1:])
+        #print(hyperparams)
+        #print("Network :")
+        #with torch.no_grad():
+        #    for input, _ in train_loader:
+        #        break
+        #    summary(model.to(hyperparams["device"]), input.size()[1:])
             # We would like to use device=hyperparams['device'] altough we have
             # to wait for torchsummary to be fixed first.
 

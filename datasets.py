@@ -309,13 +309,14 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
         print(
             "Warning: NaN have been found in the data. It is preferable to remove them beforehand. Learning on NaN data is disabled."
         )
-    img[nan_mask] = 0
-    gt[nan_mask] = 0
-    ignored_labels.append(0)
+        img[nan_mask] = 0
+        gt[nan_mask] = 0
+        ignored_labels.append(0)
 
     ignored_labels = list(set(ignored_labels))
     # Normalization
     img = np.asarray(img, dtype="float32")
+    print(img.shape)
     img = (img - np.min(img)) / (np.max(img) - np.min(img))
     return img, gt, label_values, ignored_labels, rgb_bands, palette
 
