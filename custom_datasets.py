@@ -18,7 +18,7 @@ CUSTOM_DATASETS_CONFIG = {
         "img": "taurus_L1495_250_sample.fits",
         "gt": "taurus_L1495_250_sample_mask.fits",
         "download": False,
-        "loader": lambda folder: taurus_sample_loader("./Taurus/"),
+        "loader": lambda folder: taurus_sample_loader("/Users/robitaij/postdoc/Lhyrica/Taurus/"),
     }
 }
 
