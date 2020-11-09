@@ -538,7 +538,8 @@ class FCN2D(nn.Module):
             nn.Conv2d(16, n_classes, (3, 3), padding=1))
 
     def forward(self, x):
-        x = x.squeeze()
+        #x = x.squeeze()
+        x = x[:,0]
         x = self.encoder(x)
         x = self.decoder(x)
         return x
