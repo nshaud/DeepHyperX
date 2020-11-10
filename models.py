@@ -35,8 +35,8 @@ def get_model(name, **kwargs):
     n_bands = kwargs["n_bands"]
     weights = torch.ones(n_classes)
     weights[torch.LongTensor(kwargs["ignored_labels"])] = 0.0
-    weights = weights.to(device)
     weights = kwargs.setdefault("weights", weights)
+    kwargs["weights"] = weights.to(device)
 
     if name == "nn":
         kwargs.setdefault("patch_size", 1)
