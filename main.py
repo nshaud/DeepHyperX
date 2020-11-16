@@ -444,7 +444,7 @@ for run in range(N_RUNS):
     )
 
     results.append(run_results)
-    show_results(run_results, viz, label_values=LABEL_VALUES)
+    show_results(run_results, writer, label_values=LABEL_VALUES)
 
 if N_RUNS > 1:
-    show_results(results, viz, label_values=LABEL_VALUES, agregated=True)
+    show_results(results, writer, label_values=LABEL_VALUES, agregated=True)

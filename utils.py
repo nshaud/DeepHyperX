@@ -337,7 +337,7 @@ def metrics(prediction, target, ignored_labels=[], n_classes=None):
     return results
 
 
-def show_results(results, vis, label_values=None, agregated=False):
+def show_results(results, writer, label_values=None, agregated=False):
     text = ""
 
     if agregated:
@@ -355,12 +355,10 @@ def show_results(results, vis, label_values=None, agregated=False):
         F1scores = results["F1 scores"]
         kappa = results["Kappa"]
 
-    vis.heatmap(cm, opts={'title': "Confusion matrix", 
-                          'marginbottom': 150,
-                          'marginleft': 150,
-                          'width': 500,
-                          'height': 500,
-                          'rownames': label_values, 'columnnames': label_values})
+    # TODO: add which ones are true labels and which ones are predicted labels
+    fig = plt.figure(figsize=(10, 10))
+    sns.heatmap(cm, xticklabels=label_values, yticklabels=label_values, annot=True, fmt="d")
+    writer.add_figure("Confusion matrix", fig)
     text += "Confusion matrix :\n"
     text += str(cm)
     text += "---\n"
@@ -388,7 +386,7 @@ def show_results(results, vis, label_values=None, agregated=False):
     else:
         text += "Kappa: {:.03f}\n".format(kappa)
 
-    vis.text(text.replace('\n', '<br/>'))
+    #vis.text(text.replace('\n', '<br/>'))
     print(text)
 
 
