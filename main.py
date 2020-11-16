@@ -280,7 +280,8 @@ hyperparams.update(
 hyperparams = dict((k, v) for k, v in hyperparams.items() if v is not None)
 
 # Show the image and the ground truth
-display_dataset(img, gt, RGB_BANDS, LABEL_VALUES, palette, viz)
+writer = SummaryWriter()
+display_dataset(img, gt, RGB_BANDS, LABEL_VALUES, palette, writer=writer)
 color_gt = convert_to_color(gt)
 
 if DATAVIZ:

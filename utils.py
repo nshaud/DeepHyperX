@@ -97,7 +97,7 @@ def display_predictions(pred, vis, gt=None, caption=""):
                     nrow=2,
                     opts={'caption': caption})
 
-def display_dataset(img, gt, bands, labels, palette, vis):
+def display_dataset(img, gt, bands, labels, palette, writer=None):
     """Display the specified dataset.
 
     Args:
@@ -115,10 +115,9 @@ def display_dataset(img, gt, bands, labels, palette, vis):
     rgb = np.asarray(255 * rgb, dtype='uint8')
 
     # Display the RGB composite image
-    caption = "RGB (bands {}, {}, {})".format(*bands)
-    # send to visdom server
-    vis.images([np.transpose(rgb, (2, 0, 1))],
-                opts={'caption': caption})
+    caption = "HSI/RGB (bands {}, {}, {})".format(*bands)
+    # Send to Tensorboard
+    writer.add_image(caption, rgb, dataformats="HWC")
 
 def explore_spectrums(img, complete_gt, class_names, vis,
                       ignored_labels=None):
