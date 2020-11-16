@@ -317,8 +317,8 @@ for run in range(N_RUNS):
         "run {}/{}".format(run + 1, N_RUNS),
     )
 
-    display_predictions(convert_to_color(train_gt), viz, caption="Train ground truth")
-    display_predictions(convert_to_color(test_gt), viz, caption="Test ground truth")
+    display_predictions(convert_to_color(train_gt), writer, caption="Train GT")
+    display_predictions(convert_to_color(test_gt), writer, caption="Test GT")
 
     if MODEL == "SVM_grid":
         print("Running a grid search SVM")
@@ -438,9 +438,9 @@ for run in range(N_RUNS):
     color_prediction = convert_to_color(prediction)
     display_predictions(
         color_prediction,
-        viz,
+        writer,
         gt=convert_to_color(test_gt),
-        caption="Prediction vs. test ground truth",
+        caption="Final prediction",
     )
 
     results.append(run_results)

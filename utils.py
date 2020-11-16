@@ -87,15 +87,11 @@ def convert_from_color_(arr_3d, palette=None):
     return arr_2d
 
 
-def display_predictions(pred, vis, gt=None, caption=""):
-    if gt is None:
-        vis.images([np.transpose(pred, (2, 0, 1))],
-                    opts={'caption': caption})
-    else:
-        vis.images([np.transpose(pred, (2, 0, 1)),
-                    np.transpose(gt, (2, 0, 1))],
-                    nrow=2,
-                    opts={'caption': caption})
+def display_predictions(pred, writer, gt=None, caption=""):
+    writer.add_image("Segmentation/" + caption, pred, dataformats="HWC")
+    #if gt is None:
+    #    vis.images([np.transpose(pred, (2, 0, 1))],
+    #                opts={'caption': caption})
 
 def display_dataset(img, gt, bands, labels, palette, writer=None):
     """Display the specified dataset.
