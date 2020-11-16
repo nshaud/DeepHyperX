@@ -1217,12 +1217,12 @@ def test(net, img, hyperparams):
                 probs[x, y] += out
                 
                 probs[x : x + w, y : y + h] += out -->
-                probs[x: min(x + w, img.shape[1] + 1), y:min(y + h, img.shape[1] + 1)] += out
+                probs[x: min(x + w, img.shape[0]), y:min(y + h, img.shape[1])] += out
                 """
                 if center_pixel:
                     probs[x, y] += out
                 else:
-                    probs[x: min(x + w, img.shape[1]), y:min(y + h, img.shape[1])] += out
+                    probs[x: min(x + w, img.shape[0]), y:min(y + h, img.shape[1])] += out
     return probs
 
 
