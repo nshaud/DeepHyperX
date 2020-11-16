@@ -18,7 +18,7 @@ except ImportError:
     # Python 2
     from urllib import urlretrieve
 
-from utils import open_file
+from utils import open_file, padding_image
 
 DATASETS_CONFIG = {
     "PaviaC": {
@@ -355,6 +355,12 @@ class HyperX(torch.utils.data.Dataset):
             mask = np.ones_like(gt)
         x_pos, y_pos = np.nonzero(mask)
         p = self.patch_size // 2
+
+        """
+        Both data and label are padded 
+        Accordingly, the indices recording the labels of center pixels is modified.
+        
+        The original codes are:
         self.indices = np.array(
             [
                 (x, y)
@@ -362,6 +368,27 @@ class HyperX(torch.utils.data.Dataset):
                 if x > p and x < data.shape[0] - p and y > p and y < data.shape[1] - p
             ]
         )
+		
+		Now, the codes are:
+		self.data = padding_image(self.data, [self.patch_size, self.patch_size])
+        self.label = padding_image(self.label, [self.patch_size, self.patch_size])
+        self.indices = np.array(
+            [
+                (x + p, y + p)
+                for x, y in zip(x_pos, y_pos)
+            ]
+        )
+        """
+
+        self.data = padding_image(self.data, [self.patch_size, self.patch_size])
+        self.label = padding_image(self.label, [self.patch_size, self.patch_size])
+        self.indices = np.array(
+            [
+                (x + p, y + p)
+                for x, y in zip(x_pos, y_pos)
+            ]
+        )
+
         self.labels = [self.label[x, y] for x, y in self.indices]
         np.random.shuffle(self.indices)
 

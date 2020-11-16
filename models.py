@@ -14,7 +14,7 @@ import numpy as np
 import joblib
 
 from tqdm import tqdm
-from utils import grouper, sliding_window, count_sliding_window, camel_to_snake
+from utils import grouper, sliding_window, count_sliding_window, camel_to_snake, padding_image
 
 
 def get_model(name, **kwargs):
@@ -55,6 +55,7 @@ def get_model(name, **kwargs):
         optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=0.0005)
         kwargs.setdefault("batch_size", 100)
         criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
+
     elif name == "lee":
         kwargs.setdefault("epoch", 200)
         patch_size = kwargs.setdefault("patch_size", 5)
@@ -1138,16 +1139,19 @@ def save_model(model, model_name, dataset_name, **kwargs):
     model_dir = "./checkpoints/" + model_name + "/" + dataset_name + "/"
     if not os.path.isdir(model_dir):
         os.makedirs(model_dir, exist_ok=True)
+    """
+    Using strftime in case it triggers exceptions on windows 10 system
+    """
+    time_str = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     if isinstance(model, torch.nn.Module):
-        filename = str(datetime.datetime.now()) + "_epoch{epoch}_{metric:.2f}".format(
+        filename = time_str + "_epoch{epoch}_{metric:.2f}".format(
             **kwargs
         )
         tqdm.write("Saving neural network weights in {}".format(filename))
         torch.save(model.state_dict(), model_dir + filename + ".pth")
     else:
-        filename = str(datetime.datetime.now())
-        tqdm.write("Saving model params in {}".format(filename))
-        joblib.dump(model, model_dir + filename + ".pkl")
+        tqdm.write("Saving model params in {}".format(time_str))
+        joblib.dump(model, model_dir + time_str + ".pkl")
 
 
 def test(net, img, hyperparams):
@@ -1166,9 +1170,20 @@ def test(net, img, hyperparams):
     }
     probs = np.zeros(img.shape[:2] + (n_classes,))
 
-    iterations = count_sliding_window(img, **kwargs) // batch_size
+    """
+    Training and Validation dat sets need to be padded so as to include the marginal pixels.
+    Therefore, the 'img' is changed to the padded_img in the following codes.
+    
+    iterations = count_sliding_window(img, **kwargs) -->
+    iterations = count_sliding_window(padded_img, **kwargs)
+    
+    grouper(batch_size, sliding_window(img, **kwargs)) -->
+    grouper(batch_size, sliding_window(padded_img, **kwargs))
+    """
+    padded_img = padding_image(img, [patch_size, patch_size])
+    iterations = count_sliding_window(padded_img, **kwargs) // batch_size
     for batch in tqdm(
-        grouper(batch_size, sliding_window(img, **kwargs)),
+        grouper(batch_size, sliding_window(padded_img, **kwargs)),
         total=(iterations),
         desc="Inference on the image",
     ):
@@ -1196,10 +1211,18 @@ def test(net, img, hyperparams):
             else:
                 output = np.transpose(output.numpy(), (0, 2, 3, 1))
             for (x, y, w, h), out in zip(indices, output):
+                """
+                Two changes are done in this script as follows:
+                probs[x + w // 2, y + h // 2] += out -->
+                probs[x, y] += out
+                
+                probs[x : x + w, y : y + h] += out -->
+                probs[x: min(x + w, img.shape[1] + 1), y:min(y + h, img.shape[1] + 1)] += out
+                """
                 if center_pixel:
-                    probs[x + w // 2, y + h // 2] += out
+                    probs[x, y] += out
                 else:
-                    probs[x : x + w, y : y + h] += out
+                    probs[x: min(x + w, img.shape[1]), y:min(y + h, img.shape[1])] += out
     return probs
 
 
