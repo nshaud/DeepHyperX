@@ -18,6 +18,7 @@ from __future__ import division
 import torch
 import torch.utils.data as data
 from torchsummary import summary
+from torch.utils.tensorboard import SummaryWriter
 
 # Numpy, scipy, scikit-image, spectral
 import numpy as np
@@ -412,7 +413,7 @@ for run in range(N_RUNS):
                 device=hyperparams["device"],
                 supervision=hyperparams["supervision"],
                 val_loader=val_loader,
-                display=viz,
+                writer=writer,
             )
         except KeyboardInterrupt:
             # Allow the user to stop the training
