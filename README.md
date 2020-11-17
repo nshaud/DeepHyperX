@@ -49,14 +49,14 @@ docker pull registry.gitlab.inria.fr/naudeber/deephyperx:preview
 
 And then run the image using:
 ```
-docker run -p 9999:8097 -ti --rm -v `pwd`:/workspace/DeepHyperX/ registry.gitlab.inria.fr/naudeber/deephyperx:preview
+docker run -p 9999:6006 -ti --rm -v `pwd`:/workspace/DeepHyperX/ registry.gitlab.inria.fr/naudeber/deephyperx:preview
 ```
 
 This command:
   * starts a Docker container using the image `registry.gitlab.inria.fr/naudeber/deephyperx:preview`
   * starts an interactive shell session `-ti`
   * mounts the current folder in the `/workspace/DeepHyperX/` path of the container
-  * binds the local port 9999 to the container port 8097 (for Visdom)
+  * binds the local port 9999 to the container port 6006 (for Visdom)
   * removes the container `--rm` when the user has finished.
 
 All data and products are stored in the current folder.
@@ -128,9 +128,9 @@ Adding a custom deep network can be done by modifying the `models.py` file. This
 
 ## Usage
 
-Start a Visdom server:
-`python -m visdom.server`
-and go to [`http://localhost:8097`](http://localhost:8097) to see the visualizations (or [`http://localhost:9999`](http://localhost:9999) if you use Docker).
+Start a [TensorBoard](https://www.tensorflow.org/tensorboard/) server:
+`tensorboard --logdir=runs`
+and go to [`http://localhost:6006`](http://localhost:6006) to see the visualizations (or [`http://localhost:9999`](http://localhost:9999) if you use Docker).
 
 Then, run the script `main.py`.
 
