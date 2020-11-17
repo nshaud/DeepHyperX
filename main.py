@@ -28,7 +28,6 @@ from skimage import io
 
 # Visualization
 import seaborn as sns
-import visdom
 
 import os
 from utils import (
@@ -232,11 +231,6 @@ if args.download is not None and len(args.download) > 0:
         get_dataset(dataset, target_folder=FOLDER)
     quit()
 
-viz = visdom.Visdom(env=DATASET + " " + MODEL)
-if not viz.check_connection:
-    print("Visdom is not connected. Did you run 'python -m visdom.server' ?")
-
-
 hyperparams = vars(args)
 # Load the dataset
 img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS, palette = get_dataset(DATASET, FOLDER)
@@ -280,16 +274,17 @@ hyperparams.update(
 hyperparams = dict((k, v) for k, v in hyperparams.items() if v is not None)
 
 # Show the image and the ground truth
-writer = SummaryWriter()
+writer = SummaryWriter(comment=f"{DATASET} {MODEL}")
 display_dataset(img, gt, RGB_BANDS, LABEL_VALUES, palette, writer=writer)
 color_gt = convert_to_color(gt)
+
 
 if DATAVIZ:
     # Data exploration : compute and show the mean spectrums
     mean_spectrums = explore_spectrums(
-        img, gt, LABEL_VALUES, viz, ignored_labels=IGNORED_LABELS
+        img, gt, LABEL_VALUES, writer, ignored_labels=IGNORED_LABELS
     )
-    plot_spectrums(mean_spectrums, viz, title="Mean spectrum/class")
+    plot_spectrums(mean_spectrums, writer, title="Mean spectrum/class")
 
 results = []
 # run the experiment several times
