@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torch
 import torch.optim as optim
 from torch.nn import init
+from torch.utils.tensorboard import SummaryWriter
 
 # utils
 import math
@@ -35,8 +36,8 @@ def get_model(name, **kwargs):
     n_bands = kwargs["n_bands"]
     weights = torch.ones(n_classes)
     weights[torch.LongTensor(kwargs["ignored_labels"])] = 0.0
-    weights = weights.to(device)
     weights = kwargs.setdefault("weights", weights)
+    kwargs["weights"] = weights.to(device)
 
     if name == "nn":
         kwargs.setdefault("patch_size", 1)
@@ -538,7 +539,8 @@ class FCN2D(nn.Module):
             nn.Conv2d(16, n_classes, (3, 3), padding=1))
 
     def forward(self, x):
-        x = x.squeeze()
+        #x = x.squeeze()
+        x = x[:,0]
         x = self.encoder(x)
         x = self.decoder(x)
         return x
@@ -1078,11 +1080,10 @@ def train(
     data_loader,
     epoch,
     scheduler=None,
-    display_iter=100,
     device=torch.device("cpu"),
-    display=None,
     val_loader=None,
     supervision="full",
+    writer=None
 ):
     """
     Training loop to optimize a network for several epochs and a specified loss
@@ -1094,8 +1095,6 @@ def train(
         epoch: int specifying the number of training epochs
         criterion: a PyTorch-compatible loss function, e.g. nn.CrossEntropyLoss
         device (optional): torch device to use (defaults to CPU)
-        display_iter (optional): number of iterations before refreshing the
-        display (False/None to switch off).
         scheduler (optional): PyTorch scheduler
         val_loader (optional): validation dataset
         supervision (optional): 'full' or 'semi'
@@ -1104,15 +1103,15 @@ def train(
     if criterion is None:
         raise Exception("Missing criterion. You must specify a loss function.")
 
+    if writer is None:
+        writer = SummaryWriter()
+
     net.to(device)
 
     save_epoch = epoch // 20 if epoch > 20 else 1
 
-    losses = np.zeros(1000000)
-    mean_losses = np.zeros(100000000)
-    iter_ = 1
-    loss_win, val_win = None, None
-    val_accuracies = []
+    avg_loss = 0.0
+    n_iter = 1
 
     for e in tqdm(range(1, epoch + 1), desc="Training the network"):
         # Set the network to training mode
@@ -1120,9 +1119,7 @@ def train(
         avg_loss = 0.0
 
         # Run the training loop for one epoch
-        for batch_idx, (data, target) in tqdm(
-            enumerate(data_loader), total=len(data_loader)
-        ):
+        for batch_idx, (data, target) in tqdm(enumerate(data_loader), total=len(data_loader)):
             # Load the data into the GPU if required
             data, target = data.to(device), target.to(device)
 
@@ -1143,54 +1140,21 @@ def train(
             loss.backward()
             optimizer.step()
 
+            # Update training loss plot in Tensorboard
+            writer.add_scalar("Loss/train", loss.item(), n_iter)
+
             avg_loss += loss.item()
-            losses[iter_] = loss.item()
-            mean_losses[iter_] = np.mean(losses[max(0, iter_ - 100) : iter_ + 1])
 
-            if display_iter and iter_ % display_iter == 0:
-                string = "Train (epoch {}/{}) [{}/{} ({:.0f}%)]\tLoss: {:.6f}"
-                string = string.format(
-                    e,
-                    epoch,
-                    batch_idx * len(data),
-                    len(data) * len(data_loader),
-                    100.0 * batch_idx / len(data_loader),
-                    mean_losses[iter_],
-                )
-                update = None if loss_win is None else "append"
-                loss_win = display.line(
-                    X=np.arange(iter_ - display_iter, iter_),
-                    Y=mean_losses[iter_ - display_iter : iter_],
-                    win=loss_win,
-                    update=update,
-                    opts={
-                        "title": "Training loss",
-                        "xlabel": "Iterations",
-                        "ylabel": "Loss",
-                    },
-                )
-                tqdm.write(string)
-
-                if len(val_accuracies) > 0:
-                    val_win = display.line(
-                        Y=np.array(val_accuracies),
-                        X=np.arange(len(val_accuracies)),
-                        win=val_win,
-                        opts={
-                            "title": "Validation accuracy",
-                            "xlabel": "Epochs",
-                            "ylabel": "Accuracy",
-                        },
-                    )
-            iter_ += 1
+            n_iter += 1
             del (data, target, loss, output)
 
         # Update the scheduler
         avg_loss /= len(data_loader)
         if val_loader is not None:
             val_acc = val(net, val_loader, device=device, supervision=supervision)
-            val_accuracies.append(val_acc)
             metric = -val_acc
+            # Update validation accuracy in Tensorboard
+            writer.add_scalar("Accuracy/validation", val_acc, e)
         else:
             metric = avg_loss
 
