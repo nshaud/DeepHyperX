@@ -222,6 +222,33 @@ def get_random_pos(img, window_shape):
     return x1, x2, y1, y2
 
 
+def padding_image(image, patch_size=None, mode="symmetric", constant_values=0):
+    """Padding an input image.
+    Modified at 2020.11.16. If you find any issues, please email at mengxue_zhang@hhu.edu.cn with details.
+
+    Args:
+        image: 2D+ image with a shape of [h, w, ...],
+        The array to pad
+        patch_size: optional, a list include two integers, default is [1, 1] for pure spectra algorithm,
+        The patch size of the algorithm
+        mode: optional, str or function, default is "symmetric",
+        Including 'constant', 'reflect', 'symmetric', more details see np.pad()
+        constant_values: optional, sequence or scalar, default is 0,
+        Used in 'constant'.  The values to set the padded values for each axis
+    Returns:
+        padded_image with a shape of [h + patch_size[0] // 2 * 2, w + patch_size[1] // 2 * 2, ...]
+
+    """
+    if patch_size is None:
+        patch_size = [1, 1]
+    h = patch_size[0] // 2
+    w = patch_size[1] // 2
+    pad_width = [[h, h], [w, w]]
+    [pad_width.append([0, 0]) for i in image.shape[2:]]
+    padded_image = np.pad(image, pad_width, mode=mode, constant_values=constant_values)
+    return padded_image
+
+
 def sliding_window(image, step=10, window_size=(20, 20), with_data=True):
     """Sliding window generator over an input image.
 
@@ -241,10 +268,26 @@ def sliding_window(image, step=10, window_size=(20, 20), with_data=True):
     W, H = image.shape[:2]
     offset_w = (W - w) % step
     offset_h = (H - h) % step
-    for x in range(0, W - w + offset_w, step):
+    """
+    Compensate one for the stop value of range(...). because this function does not include the stop value.
+    Two examples are listed as follows.
+    When step = 1, supposing w = h = 3, W = H = 7, and step = 1.
+    Then offset_w = 0, offset_h = 0.
+    In this case, the x should have been ranged from 0 to 4 (4-6 is the last window),
+    i.e., x is in range(0, 5) while W (7) - w (3) + offset_w (0) + 1 = 5. Plus one !
+    Range(0, 5, 1) equals [0, 1, 2, 3, 4].
+
+    When step = 2, supposing w = h = 3, W = H = 8, and step = 2.
+    Then offset_w = 1, offset_h = 1.
+    In this case, x is in [0, 2, 4] while W (8) - w (3) + offset_w (1) + 1 = 6. Plus one !
+    Range(0, 6, 2) equals [0, 2, 4]/
+
+    Same reason to H, h, offset_h, and y.
+    """
+    for x in range(0, W - w + offset_w + 1, step):
         if x + w > W:
             x = W - w
-        for y in range(0, H - h + offset_h, step):
+        for y in range(0, H - h + offset_h + 1, step):
             if y + h > H:
                 y = H - h
             if with_data:
