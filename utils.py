@@ -87,17 +87,13 @@ def convert_from_color_(arr_3d, palette=None):
     return arr_2d
 
 
-def display_predictions(pred, vis, gt=None, caption=""):
-    if gt is None:
-        vis.images([np.transpose(pred, (2, 0, 1))],
-                    opts={'caption': caption})
-    else:
-        vis.images([np.transpose(pred, (2, 0, 1)),
-                    np.transpose(gt, (2, 0, 1))],
-                    nrow=2,
-                    opts={'caption': caption})
+def display_predictions(pred, writer, gt=None, caption=""):
+    writer.add_image("Segmentation/" + caption, pred, dataformats="HWC")
+    #if gt is None:
+    #    vis.images([np.transpose(pred, (2, 0, 1))],
+    #                opts={'caption': caption})
 
-def display_dataset(img, gt, bands, labels, palette, vis):
+def display_dataset(img, gt, bands, labels, palette, writer=None):
     """Display the specified dataset.
 
     Args:
@@ -115,12 +111,11 @@ def display_dataset(img, gt, bands, labels, palette, vis):
     rgb = np.asarray(255 * rgb, dtype='uint8')
 
     # Display the RGB composite image
-    caption = "RGB (bands {}, {}, {})".format(*bands)
-    # send to visdom server
-    vis.images([np.transpose(rgb, (2, 0, 1))],
-                opts={'caption': caption})
+    caption = "HSI/RGB (bands {}, {}, {})".format(*bands)
+    # Send to Tensorboard
+    writer.add_image(caption, rgb, dataformats="HWC")
 
-def explore_spectrums(img, complete_gt, class_names, vis,
+def explore_spectrums(img, complete_gt, class_names, writer,
                       ignored_labels=None):
     """Plot sampled spectrums with mean + std for each class.
 
@@ -129,7 +124,7 @@ def explore_spectrums(img, complete_gt, class_names, vis,
         complete_gt: 2D array of labels
         class_names: list of class names
         ignored_labels (optional): list of labels to ignore
-        vis : Visdom display
+        writer : TensorBoard writer
     Returns:
         mean_spectrums: dict of mean spectrum by class
 
@@ -141,7 +136,7 @@ def explore_spectrums(img, complete_gt, class_names, vis,
         mask = complete_gt == c
         class_spectrums = img[mask].reshape(-1, img.shape[-1])
         step = max(1, class_spectrums.shape[0] // 100)
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6))
         plt.title(class_names[c])
         # Sample and plot spectrums from the selected class
         for spectrum in class_spectrums[::step, :]:
@@ -155,24 +150,26 @@ def explore_spectrums(img, complete_gt, class_names, vis,
         plt.fill_between(range(len(mean_spectrum)), lower_spectrum,
                          higher_spectrum, color="#3F5D7D")
         plt.plot(mean_spectrum, alpha=1, color="#FFFFFF", lw=2)
-        vis.matplot(plt)
+        writer.add_figure(f"Spectra/{class_names[c]}", fig)
         mean_spectrums[class_names[c]] = mean_spectrum
     return mean_spectrums
 
 
-def plot_spectrums(spectrums, vis, title=""):
+def plot_spectrums(spectrums, writer, title=""):
     """Plot the specified dictionary of spectrums.
 
     Args:
         spectrums: dictionary (name -> spectrum) of spectrums to plot
-        vis: Visdom display
+        writer: TensorBoard writer
     """
-    win = None
-    for k, v in spectrums.items():
-        n_bands = len(v)
-        update = None if win is None else 'append'
-        win = vis.line(X=np.arange(n_bands), Y=v, name=k, win=win, update=update,
-                       opts={'title': title})
+    fig = plt.figure(figsize=(12, 10))
+    for name, spectrum in spectrums.items():
+        n_bands = len(spectrum)
+        plt.plot(np.arange(n_bands), spectrum, label=name)
+        plt.legend()
+        plt.xlim(0, n_bands)
+        plt.title(title)
+    writer.add_figure(title, fig)
 
 
 def build_dataset(mat, gt, ignored_labels=None):
@@ -386,7 +383,7 @@ def metrics(prediction, target, ignored_labels=[], n_classes=None):
     return results
 
 
-def show_results(results, vis, label_values=None, agregated=False):
+def show_results(results, writer, label_values=None, agregated=False):
     text = ""
 
     if agregated:
@@ -404,12 +401,10 @@ def show_results(results, vis, label_values=None, agregated=False):
         F1scores = results["F1 scores"]
         kappa = results["Kappa"]
 
-    vis.heatmap(cm, opts={'title': "Confusion matrix", 
-                          'marginbottom': 150,
-                          'marginleft': 150,
-                          'width': 500,
-                          'height': 500,
-                          'rownames': label_values, 'columnnames': label_values})
+    # TODO: add which ones are true labels and which ones are predicted labels
+    fig = plt.figure(figsize=(10, 10))
+    sns.heatmap(cm, xticklabels=label_values, yticklabels=label_values, annot=True, fmt="d")
+    writer.add_figure("Confusion matrix", fig)
     text += "Confusion matrix :\n"
     text += str(cm)
     text += "---\n"
@@ -437,7 +432,7 @@ def show_results(results, vis, label_values=None, agregated=False):
     else:
         text += "Kappa: {:.03f}\n".format(kappa)
 
-    vis.text(text.replace('\n', '<br/>'))
+    #vis.text(text.replace('\n', '<br/>'))
     print(text)
 
 
