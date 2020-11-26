@@ -11,6 +11,8 @@ import torch.utils.data
 import os
 from tqdm import tqdm
 
+IGNORED_INDEX = 255
+
 try:
     # Python 3
     from urllib.request import urlretrieve
@@ -309,15 +311,25 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
         print(
             "Warning: NaN have been found in the data. It is preferable to remove them beforehand. Learning on NaN data is disabled."
         )
-    img[nan_mask] = 0
-    gt[nan_mask] = 0
-    ignored_labels.append(0)
+        img[nan_mask] = 0
+        gt[nan_mask] = IGNORED_INDEX
+    ignored_labels.append(IGNORED_INDEX)
 
     ignored_labels = list(set(ignored_labels))
+    # Remove ignored classes from the ground truth
+    for c in ignored_labels:
+        mask = gt == c
+        gt[c] = IGNORED_INDEX
+    # TODO: use sklearn to relabel the classes based on what has been ignored
+    # TODO: fix the palette after relabeling
+    # TODO: fix the label values after relabeling
+
     # Normalization
     img = np.asarray(img, dtype="float32")
+    print(img.shape)
+    # TODO: make this configurable
     img = (img - np.min(img)) / (np.max(img) - np.min(img))
-    return img, gt, label_values, ignored_labels, rgb_bands, palette
+    return img, gt, label_values, rgb_bands, palette
 
 
 class HyperX(torch.utils.data.Dataset):

@@ -16,6 +16,7 @@ import joblib
 from tqdm import tqdm
 from utils import grouper, sliding_window, count_sliding_window, camel_to_snake
 
+from datasets import IGNORED_INDEX
 
 def get_model(name, **kwargs):
     """
@@ -34,8 +35,8 @@ def get_model(name, **kwargs):
     n_classes = kwargs["n_classes"]
     n_bands = kwargs["n_bands"]
     weights = torch.ones(n_classes)
-    weights[torch.LongTensor(kwargs["ignored_labels"])] = 0.0
-    weights = weights.to(device)
+    #weights[torch.LongTensor(kwargs["ignored_labels"])] = 0.0
+    criterion = nn.CrossEntropyLoss(weight=kwargs["weights"], ignore_index=IGNORED_INDEX)
     weights = kwargs.setdefault("weights", weights)
 
     if name == "nn":
@@ -44,7 +45,6 @@ def get_model(name, **kwargs):
         model = Baseline(n_bands, n_classes, kwargs.setdefault("dropout", False))
         lr = kwargs.setdefault("learning_rate", 0.0001)
         optimizer = optim.Adam(model.parameters(), lr=lr)
-        criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
         kwargs.setdefault("epoch", 100)
         kwargs.setdefault("batch_size", 100)
     elif name == "hamida":
@@ -54,7 +54,6 @@ def get_model(name, **kwargs):
         lr = kwargs.setdefault("learning_rate", 0.01)
         optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=0.0005)
         kwargs.setdefault("batch_size", 100)
-        criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
     elif name == "lee":
         kwargs.setdefault("epoch", 200)
         patch_size = kwargs.setdefault("patch_size", 5)
@@ -62,14 +61,26 @@ def get_model(name, **kwargs):
         model = LeeEtAl(n_bands, n_classes)
         lr = kwargs.setdefault("learning_rate", 0.001)
         optimizer = optim.Adam(model.parameters(), lr=lr)
-        criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
+    elif name == "fcn2d":
+        kwargs.setdefault("epoch", 100)
+        patch_size = kwargs.setdefault("patch_size", 16)
+        center_pixel = False
+        model = FCN2D(n_bands, n_classes)
+        lr = kwargs.setdefault("learning_rate", 0.001)
+        optimizer = optim.Adam(model.parameters(), lr=lr)
+    elif name == "cnn2d":
+        kwargs.setdefault("epoch", 100)
+        patch_size = kwargs.setdefault("patch_size", 16)
+        center_pixel = True
+        model = CNN2D(n_bands, n_classes)
+        lr = kwargs.setdefault("learning_rate", 0.001)
+        optimizer = optim.Adam(model.parameters(), lr=lr)
     elif name == "chen":
         patch_size = kwargs.setdefault("patch_size", 27)
         center_pixel = True
         model = ChenEtAl(n_bands, n_classes, patch_size=patch_size)
         lr = kwargs.setdefault("learning_rate", 0.003)
         optimizer = optim.SGD(model.parameters(), lr=lr)
-        criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
         kwargs.setdefault("epoch", 400)
         kwargs.setdefault("batch_size", 100)
     elif name == "li":
@@ -77,11 +88,8 @@ def get_model(name, **kwargs):
         center_pixel = True
         model = LiEtAl(n_bands, n_classes, n_planes=16, patch_size=patch_size)
         lr = kwargs.setdefault("learning_rate", 0.01)
-        optimizer = optim.SGD(
-            model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005
-        )
+        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
         epoch = kwargs.setdefault("epoch", 200)
-        criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
         # kwargs.setdefault('scheduler', optim.lr_scheduler.MultiStepLR(optimizer, milestones=[epoch // 2, (5 * epoch) // 6], gamma=0.1))
     elif name == "hu":
         kwargs.setdefault("patch_size", 1)
@@ -90,7 +98,6 @@ def get_model(name, **kwargs):
         # From what I infer from the paper (Eq.7 and Algorithm 1), it is standard SGD with lr = 0.01
         lr = kwargs.setdefault("learning_rate", 0.01)
         optimizer = optim.SGD(model.parameters(), lr=lr)
-        criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
         kwargs.setdefault("epoch", 100)
         kwargs.setdefault("batch_size", 100)
     elif name == "he":
@@ -106,7 +113,6 @@ def get_model(name, **kwargs):
         # For Adagrad, we need to load the model on GPU before creating the optimizer
         model = model.to(device)
         optimizer = optim.Adagrad(model.parameters(), lr=lr, weight_decay=0.01)
-        criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
     elif name == "luo":
         # All  the  experiments  are  settled  by  the  learning  rate  of  0.1,
         # the  decay  term  of  0.09  and  batch  size  of  100.
@@ -116,7 +122,6 @@ def get_model(name, **kwargs):
         center_pixel = True
         model = LuoEtAl(n_bands, n_classes, patch_size=kwargs["patch_size"])
         optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=0.09)
-        criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
     elif name == "sharma":
         # We train our S-CNN from scratch using stochastic gradient descent with
         # momentum set to 0.9, weight decay of 0.0005, and with a batch size
@@ -133,7 +138,6 @@ def get_model(name, **kwargs):
         kwargs.setdefault("patch_size", 64)
         model = SharmaEtAl(n_bands, n_classes, patch_size=kwargs["patch_size"])
         optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=0.0005)
-        criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
         kwargs.setdefault(
             "scheduler",
             optim.lr_scheduler.MultiStepLR(
@@ -180,7 +184,6 @@ def get_model(name, **kwargs):
         # For Adadelta, we need to load the model on GPU before creating the optimizer
         model = model.to(device)
         optimizer = optim.Adadelta(model.parameters(), lr=lr)
-        criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
     else:
         raise KeyError("{} model is unknown.".format(name))
 
@@ -317,13 +320,9 @@ class HamidaEtAl(nn.Module):
         dilation = (dilation, 1, 1)
 
         if patch_size == 3:
-            self.conv1 = nn.Conv3d(
-                1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=1
-            )
+            self.conv1 = nn.Conv3d(1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=1)
         else:
-            self.conv1 = nn.Conv3d(
-                1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=0
-            )
+            self.conv1 = nn.Conv3d(1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=0)
         # Next pooling is applied using a layer identical to the previous one
         # with the difference of a 1D kernel size (1,1,3) and a larger stride
         # equal to 2 in order to reduce the spectral dimension
@@ -360,9 +359,7 @@ class HamidaEtAl(nn.Module):
 
     def _get_final_flattened_size(self):
         with torch.no_grad():
-            x = torch.zeros(
-                (1, 1, self.input_channels, self.patch_size, self.patch_size)
-            )
+            x = torch.zeros((1, 1, self.input_channels, self.patch_size, self.patch_size))
             x = self.pool1(self.conv1(x))
             x = self.pool2(self.conv2(x))
             x = self.conv3(x)
@@ -402,12 +399,8 @@ class LeeEtAl(nn.Module):
         # image uses an inception module that locally convolves the input
         # image with two convolutional filters with different sizes
         # (1x1xB and 3x3xB where B is the number of spectral bands)
-        self.conv_3x3 = nn.Conv3d(
-            1, 128, (in_channels, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1)
-        )
-        self.conv_1x1 = nn.Conv3d(
-            1, 128, (in_channels, 1, 1), stride=(1, 1, 1), padding=0
-        )
+        self.conv_3x3 = nn.Conv3d(1, 128, (in_channels, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1))
+        self.conv_1x1 = nn.Conv3d(1, 128, (in_channels, 1, 1), stride=(1, 1, 1), padding=0)
 
         # We use two modules from the residual learning approach
         # Residual block 1
@@ -506,9 +499,7 @@ class ChenEtAl(nn.Module):
 
     def _get_final_flattened_size(self):
         with torch.no_grad():
-            x = torch.zeros(
-                (1, 1, self.input_channels, self.patch_size, self.patch_size)
-            )
+            x = torch.zeros((1, 1, self.input_channels, self.patch_size, self.patch_size))
             x = self.pool1(self.conv1(x))
             x = self.pool2(self.conv2(x))
             x = self.conv3(x)
@@ -569,9 +560,7 @@ class LiEtAl(nn.Module):
 
     def _get_final_flattened_size(self):
         with torch.no_grad():
-            x = torch.zeros(
-                (1, 1, self.input_channels, self.patch_size, self.patch_size)
-            )
+            x = torch.zeros((1, 1, self.input_channels, self.patch_size, self.patch_size))
             x = self.conv1(x)
             x = self.conv2(x)
             _, t, c, w, h = x.size()
@@ -628,9 +617,7 @@ class HeEtAl(nn.Module):
 
     def _get_final_flattened_size(self):
         with torch.no_grad():
-            x = torch.zeros(
-                (1, 1, self.input_channels, self.patch_size, self.patch_size)
-            )
+            x = torch.zeros((1, 1, self.input_channels, self.patch_size, self.patch_size))
             x = self.conv1(x)
             x2_1 = self.conv2_1(x)
             x2_2 = self.conv2_2(x)
@@ -706,9 +693,7 @@ class LuoEtAl(nn.Module):
 
     def _get_final_flattened_size(self):
         with torch.no_grad():
-            x = torch.zeros(
-                (1, 1, self.input_channels, self.patch_size, self.patch_size)
-            )
+            x = torch.zeros((1, 1, self.input_channels, self.patch_size, self.patch_size))
             x = self.conv1(x)
             b = x.size(0)
             x = x.view(b, 1, -1, self.n_planes)
@@ -772,9 +757,7 @@ class SharmaEtAl(nn.Module):
 
     def _get_final_flattened_size(self):
         with torch.no_grad():
-            x = torch.zeros(
-                (1, 1, self.input_channels, self.patch_size, self.patch_size)
-            )
+            x = torch.zeros((1, 1, self.input_channels, self.patch_size, self.patch_size))
             x = F.relu(self.conv1_bn(self.conv1(x)))
             x = self.pool1(x)
             print(x.size())
@@ -877,12 +860,8 @@ class LiuEtAl(nn.Module):
 
         # x = F.relu(self.fc1_dec_bn(self.fc1_dec(x) + x_enc))
         x = F.relu(self.fc1_dec(x))
-        x = F.relu(
-            self.fc2_dec_bn(self.fc2_dec(x) + x_pool1.view(-1, self.features_sizes[1]))
-        )
-        x = F.relu(
-            self.fc3_dec_bn(self.fc3_dec(x) + x_conv1.view(-1, self.features_sizes[0]))
-        )
+        x = F.relu(self.fc2_dec_bn(self.fc2_dec(x) + x_pool1.view(-1, self.features_sizes[1])))
+        x = F.relu(self.fc3_dec_bn(self.fc3_dec(x) + x_conv1.view(-1, self.features_sizes[0])))
         x = self.fc4_dec(x)
         return x_classif, x
 
@@ -1007,6 +986,7 @@ def train(
     display=None,
     val_loader=None,
     supervision="full",
+    writer=None,
 ):
     """
     Training loop to optimize a network for several epochs and a specified loss
@@ -1057,13 +1037,9 @@ def train(
             elif supervision == "semi":
                 outs = net(data)
                 output, rec = outs
-                loss = criterion[0](output, target) + net.aux_loss_weight * criterion[
-                    1
-                ](rec, data)
+                loss = criterion[0](output, target) + net.aux_loss_weight * criterion[1](rec, data)
             else:
-                raise ValueError(
-                    'supervision mode "{}" is unknown.'.format(supervision)
-                )
+                raise ValueError('supervision mode "{}" is unknown.'.format(supervision))
             loss.backward()
             optimizer.step()
 
@@ -1108,6 +1084,8 @@ def train(
                     )
             iter_ += 1
             del (data, target, loss, output)
+
+        #import pdb; pdb.set_trace()
 
         # Update the scheduler
         avg_loss /= len(data_loader)

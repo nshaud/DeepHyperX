@@ -238,7 +238,8 @@ if not viz.check_connection:
 
 hyperparams = vars(args)
 # Load the dataset
-img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS, palette = get_dataset(DATASET, FOLDER)
+img, gt, LABEL_VALUES, RGB_BANDS, palette = get_dataset(DATASET, FOLDER)
+IGNORED_LABELS = [0]
 # Number of classes
 N_CLASSES = len(LABEL_VALUES)
 # Number of bands (last dimension of the image tensor)
@@ -304,6 +305,7 @@ for run in range(N_RUNS):
         test_gt = open_file(TEST_GT)
     else:
         # Sample random training spectra
+        print(SAMPLE_PERCENTAGE)
         train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
     print(
         "{} samples selected (over {})".format(
@@ -318,6 +320,7 @@ for run in range(N_RUNS):
     display_predictions(convert_to_color(train_gt), viz, caption="Train ground truth")
     display_predictions(convert_to_color(test_gt), viz, caption="Test ground truth")
 
+    # TODO: factoriser les modèles sklearn classiques
     if MODEL == "SVM_grid":
         print("Running a grid search SVM")
         # Grid search SVM (linear and RBF)
@@ -343,6 +346,7 @@ for run in range(N_RUNS):
     elif MODEL == "SGD":
         X_train, y_train = build_dataset(img, train_gt, ignored_labels=IGNORED_LABELS)
         X_train, y_train = sklearn.utils.shuffle(X_train, y_train)
+        # TODO: remove this scaler ?
         scaler = sklearn.preprocessing.StandardScaler()
         X_train = scaler.fit_transform(X_train)
         class_weight = "balanced" if CLASS_BALANCING else None
@@ -374,15 +378,21 @@ for run in range(N_RUNS):
         model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
         # Split train set in train/val
         train_gt, val_gt = sample_gt(train_gt, 0.95, mode="random")
+        "{} samples selected (over {})".format(
+            np.count_nonzero(train_gt), np.count_nonzero(gt)
+        )
         # Generate the dataset
-        train_dataset = HyperX(img, train_gt, **hyperparams)
+        from datautils import HSIDataset
+        train_dataset = HSIDataset(img, train_gt, window_size=hyperparams['patch_size'])
+        print("Sample in dataset: {}".format(len(train_dataset)))
         train_loader = data.DataLoader(
             train_dataset,
             batch_size=hyperparams["batch_size"],
             # pin_memory=hyperparams['device'],
             shuffle=True,
         )
-        val_dataset = HyperX(img, val_gt, **hyperparams)
+        #val_dataset = HyperX(img, val_gt, **hyperparams)
+        val_dataset = HSIDataset(img, test_gt, window_size=hyperparams['patch_size'], overlap=0)
         val_loader = data.DataLoader(
             val_dataset,
             # pin_memory=hyperparams['device'],

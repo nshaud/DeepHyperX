@@ -14,7 +14,7 @@ import torch
 
 # Test options
 parser = argparse.ArgumentParser(
-    description="Run deep learning experiments on" " various hyperspectral datasets"
+    description="Run deep learning experiments on various hyperspectral datasets"
 )
 parser.add_argument(
     "--model",

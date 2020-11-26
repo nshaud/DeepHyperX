@@ -222,10 +222,9 @@ def get_random_pos(img, window_shape):
     return x1, x2, y1, y2
 
 
-def padding_image(image, patch_size=None, mode="symmetric", constant_values=0):
+def pad_image(image, padding=None, mode="symmetric", constant=0):
     """Padding an input image.
     Modified at 2020.11.16. If you find any issues, please email at mengxue_zhang@hhu.edu.cn with details.
-
     Args:
         image: 2D+ image with a shape of [h, w, ...],
         The array to pad
@@ -233,19 +232,21 @@ def padding_image(image, patch_size=None, mode="symmetric", constant_values=0):
         The patch size of the algorithm
         mode: optional, str or function, default is "symmetric",
         Including 'constant', 'reflect', 'symmetric', more details see np.pad()
-        constant_values: optional, sequence or scalar, default is 0,
+        constant: optional, sequence or scalar, default is 0,
         Used in 'constant'.  The values to set the padded values for each axis
     Returns:
         padded_image with a shape of [h + patch_size[0] // 2 * 2, w + patch_size[1] // 2 * 2, ...]
-
     """
-    if patch_size is None:
-        patch_size = [1, 1]
-    h = patch_size[0] // 2
-    w = patch_size[1] // 2
-    pad_width = [[h, h], [w, w]]
-    [pad_width.append([0, 0]) for i in image.shape[2:]]
-    padded_image = np.pad(image, pad_width, mode=mode, constant_values=constant_values)
+    if padding is None:
+        return image
+    h, w = padding
+    pad_width = [[h, h], [w, w]] + [[0, 0] for i in image.shape[2:]]
+    if mode == "constant":
+        padded_image = np.pad(
+            image, pad_width, mode=mode, constant_values=constant
+        )
+    else:
+        padded_image = np.pad(image, pad_width, mode=mode)
     return padded_image
 
 
@@ -460,8 +461,9 @@ def sample_gt(gt, train_size, mode='random'):
     
     if mode == 'random':
        train_indices, test_indices = sklearn.model_selection.train_test_split(X, train_size=train_size, stratify=y)
-       train_indices = [list(t) for t in zip(*train_indices)]
-       test_indices = [list(t) for t in zip(*test_indices)]
+       train_indices = tuple([list(t) for t in zip(*train_indices)])
+       test_indices = tuple([list(t) for t in zip(*test_indices)])
+       print(len(train_indices[0]))
        train_gt[train_indices] = gt[train_indices]
        test_gt[test_indices] = gt[test_indices]
     elif mode == 'fixed':
@@ -490,7 +492,7 @@ def sample_gt(gt, train_size, mode='random'):
                 first_half_count = np.count_nonzero(mask[:x, :])
                 second_half_count = np.count_nonzero(mask[x:, :])
                 try:
-                    ratio = first_half_count / second_half_count
+                    ratio = first_half_count / (first_half_count + second_half_count)
                     if ratio > 0.9 * train_size and ratio < 1.1 * train_size:
                         break
                 except ZeroDivisionError:
