@@ -91,7 +91,7 @@ def taurus_sample_loader(folder):
         "background",
         "cores",
     ]
-    ignored_labels = []
+    ignored_labels = [0]
     palette = {0:(255,255,255),
     1:(128,128,128),
     2:(255,0,0)}
