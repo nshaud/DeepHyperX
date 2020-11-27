@@ -11,8 +11,6 @@ import torch.utils.data
 import os
 from tqdm import tqdm
 
-IGNORED_INDEX = 255
-
 try:
     # Python 3
     from urllib.request import urlretrieve
@@ -20,6 +18,7 @@ except ImportError:
     # Python 2
     from urllib import urlretrieve
 
+from datautils import IGNORED_INDEX
 from utils import open_file
 
 DATASETS_CONFIG = {

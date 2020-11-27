@@ -17,7 +17,7 @@ import joblib
 from tqdm import tqdm
 from utils import grouper, sliding_window, count_sliding_window, camel_to_snake
 
-from datasets import IGNORED_INDEX
+from datautils import IGNORED_INDEX
 
 def get_model(name, **kwargs):
     """
