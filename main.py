@@ -328,10 +328,11 @@ for run in range(N_RUNS):
         # Neural network
         model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
         # TODO: Split train set in train/val
-        #train_gt, val_gt = split_ground_truth(train_gt, 0.95, mode="random")
+        # train_gt, val_gt = split_ground_truth(train_gt, 0.95, mode="random")
         # Generate the dataset
         from datautils import HSIDataset
-        train_dataset = HSIDataset(img, train_gt, window_size=hyperparams['patch_size'])
+
+        train_dataset = HSIDataset(img, train_gt, window_size=hyperparams["patch_size"])
         print("Sample in dataset: {}".format(len(train_dataset)))
         train_loader = data.DataLoader(
             train_dataset,
@@ -339,22 +340,24 @@ for run in range(N_RUNS):
             # pin_memory=hyperparams['device'],
             shuffle=True,
         )
-        #val_dataset = HyperX(img, val_gt, **hyperparams)
-        val_dataset = HSIDataset(img, test_gt, window_size=hyperparams['patch_size'], overlap=0)
+        # val_dataset = HyperX(img, val_gt, **hyperparams)
+        val_dataset = HSIDataset(
+            img, test_gt, window_size=hyperparams["patch_size"], overlap=0
+        )
         val_loader = data.DataLoader(
             val_dataset,
             # pin_memory=hyperparams['device'],
             batch_size=hyperparams["batch_size"],
         )
 
-        #print(hyperparams)
-        #print("Network :")
-        #with torch.no_grad():
+        # print(hyperparams)
+        # print("Network :")
+        # with torch.no_grad():
         #    for input, _ in train_loader:
         #        break
         #    summary(model.to(hyperparams["device"]), input.size()[1:])
-            # We would like to use device=hyperparams['device'] altough we have
-            # to wait for torchsummary to be fixed first.
+        # We would like to use device=hyperparams['device'] altough we have
+        # to wait for torchsummary to be fixed first.
 
         if CHECKPOINT is not None:
             model.load_state_dict(torch.load(CHECKPOINT))
@@ -375,6 +378,7 @@ for run in range(N_RUNS):
             )
         except KeyboardInterrupt:
             # Allow the user to stop the training
+            # TODO: save model at this point
             pass
 
         probabilities = test(model, img, hyperparams)
@@ -387,10 +391,10 @@ for run in range(N_RUNS):
         n_classes=N_CLASSES,
     )
 
-    mask = np.zeros(gt.shape, dtype="bool")
-    for l in IGNORED_LABELS:
-        mask[gt == l] = True
-    prediction[mask] = 0
+    # mask = np.zeros(gt.shape, dtype="bool")
+    # for l in IGNORED_LABELS:
+    #     mask[gt == l] = True
+    # prediction[mask] = 0
 
     color_prediction = convert_to_color(prediction)
     display_predictions(

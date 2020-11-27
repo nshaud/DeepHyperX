@@ -13,34 +13,38 @@ import os
 import re
 import torch
 
+
 def get_device(ordinal):
     # Use GPU ?
     if ordinal < 0:
         print("Computation on CPU")
-        device = torch.device('cpu')
+        device = torch.device("cpu")
     elif torch.cuda.is_available():
         print("Computation on CUDA GPU device {}".format(ordinal))
-        device = torch.device('cuda:{}'.format(ordinal))
+        device = torch.device("cuda:{}".format(ordinal))
     else:
-        print("/!\\ CUDA was requested but is not available! Computation will go on CPU. /!\\")
-        device = torch.device('cpu')
+        print(
+            "/!\\ CUDA was requested but is not available! Computation will go on CPU. /!\\"
+        )
+        device = torch.device("cpu")
     return device
 
 
 def open_file(dataset):
     _, ext = os.path.splitext(dataset)
     ext = ext.lower()
-    if ext == '.mat':
+    if ext == ".mat":
         # Load Matlab array
         return io.loadmat(dataset)
-    elif ext == '.tif' or ext == '.tiff':
+    elif ext == ".tif" or ext == ".tiff":
         # Load TIFF file
         return misc.imread(dataset)
-    elif ext == '.hdr':
+    elif ext == ".hdr":
         img = spectral.open_image(dataset)
         return img.load()
     else:
         raise ValueError("Unknown file format: {}".format(ext))
+
 
 def convert_to_color_(arr_2d, palette=None):
     """Convert an array of labels to RGB color-encoded image.
@@ -89,9 +93,10 @@ def convert_from_color_(arr_3d, palette=None):
 
 def display_predictions(pred, writer, gt=None, caption=""):
     writer.add_image("Segmentation/" + caption, pred, dataformats="HWC")
-    #if gt is None:
+    # if gt is None:
     #    vis.images([np.transpose(pred, (2, 0, 1))],
     #                opts={'caption': caption})
+
 
 def display_dataset(img, gt, bands, labels, palette, writer=None):
     """Display the specified dataset.
@@ -108,15 +113,15 @@ def display_dataset(img, gt, bands, labels, palette, writer=None):
     print("Image has dimensions {}x{} and {} channels".format(*img.shape))
     rgb = spectral.get_rgb(img, bands)
     rgb /= np.max(rgb)
-    rgb = np.asarray(255 * rgb, dtype='uint8')
+    rgb = np.asarray(255 * rgb, dtype="uint8")
 
     # Display the RGB composite image
     caption = "HSI/RGB (bands {}, {}, {})".format(*bands)
     # Send to Tensorboard
     writer.add_image(caption, rgb, dataformats="HWC")
 
-def explore_spectrums(img, complete_gt, class_names, writer,
-                      ignored_labels=None):
+
+def explore_spectrums(img, complete_gt, class_names, writer, ignored_labels=None):
     """Plot sampled spectrums with mean + std for each class.
 
     Args:
@@ -147,8 +152,9 @@ def explore_spectrums(img, complete_gt, class_names, writer,
         higher_spectrum = mean_spectrum + std_spectrum
 
         # Plot the mean spectrum with thickness based on std
-        plt.fill_between(range(len(mean_spectrum)), lower_spectrum,
-                         higher_spectrum, color="#3F5D7D")
+        plt.fill_between(
+            range(len(mean_spectrum)), lower_spectrum, higher_spectrum, color="#3F5D7D"
+        )
         plt.plot(mean_spectrum, alpha=1, color="#FFFFFF", lw=2)
         writer.add_figure(f"Spectra/{class_names[c]}", fig)
         mean_spectrums[class_names[c]] = mean_spectrum
@@ -199,26 +205,6 @@ def build_dataset(mat, gt, ignored_labels=None):
     return np.asarray(samples), np.asarray(labels)
 
 
-def get_random_pos(img, window_shape):
-    """ Return the corners of a random window in the input image
-
-    Args:
-        img: 2D (or more) image, e.g. RGB or grayscale image
-        window_shape: (width, height) tuple of the window
-
-    Returns:
-        xmin, xmax, ymin, ymax: tuple of the corners of the window
-
-    """
-    w, h = window_shape
-    W, H = img.shape[:2]
-    x1 = random.randint(0, W - w - 1)
-    x2 = x1 + w
-    y1 = random.randint(0, H - h - 1)
-    y2 = y1 + h
-    return x1, x2, y1, y2
-
-
 def pad_image(image, padding=None, mode="symmetric", constant=0):
     """Padding an input image.
     Modified at 2020.11.16. If you find any issues, please email at mengxue_zhang@hhu.edu.cn with details.
@@ -239,15 +225,13 @@ def pad_image(image, padding=None, mode="symmetric", constant=0):
     h, w = padding
     pad_width = [[h, h], [w, w]] + [[0, 0] for i in image.shape[2:]]
     if mode == "constant":
-        padded_image = np.pad(
-            image, pad_width, mode=mode, constant_values=constant
-        )
+        padded_image = np.pad(image, pad_width, mode=mode, constant_values=constant)
     else:
         padded_image = np.pad(image, pad_width, mode=mode)
     return padded_image
 
 
-def sliding_window(image, step=(10,10), window_size=(20, 20), with_data=True):
+def sliding_window(image, step=(10, 10), window_size=(20, 20), with_data=True):
     """Sliding window generator over an input image.
 
     Args:
@@ -290,12 +274,12 @@ def sliding_window(image, step=(10,10), window_size=(20, 20), with_data=True):
             if y + h > H:
                 y = H - h
             if with_data:
-                yield image[x:x + w, y:y + h], x, y, w, h
+                yield image[x : x + w, y : y + h], x, y, w, h
             else:
                 yield x, y, w, h
 
 
-def count_sliding_window(top, step=10, window_size=(20, 20)):
+def count_sliding_window(top, step=(10,10), window_size=(20, 20)):
     """ Count the number of windows in an image.
 
     Args:
@@ -349,10 +333,7 @@ def metrics(prediction, target, ignored_labels=[], n_classes=None):
 
     n_classes = np.max(target) + 1 if n_classes is None else n_classes
 
-    cm = confusion_matrix(
-        target,
-        prediction,
-        labels=range(n_classes))
+    cm = confusion_matrix(target, prediction, labels=range(n_classes))
 
     results["Confusion matrix"] = cm
 
@@ -367,17 +348,16 @@ def metrics(prediction, target, ignored_labels=[], n_classes=None):
     F1scores = np.zeros(len(cm))
     for i in range(len(cm)):
         try:
-            F1 = 2. * cm[i, i] / (np.sum(cm[i, :]) + np.sum(cm[:, i]))
+            F1 = 2.0 * cm[i, i] / (np.sum(cm[i, :]) + np.sum(cm[:, i]))
         except ZeroDivisionError:
-            F1 = 0.
+            F1 = 0.0
         F1scores[i] = F1
 
     results["F1 scores"] = F1scores
 
     # Compute kappa coefficient
     pa = np.trace(cm) / float(total)
-    pe = np.sum(np.sum(cm, axis=0) * np.sum(cm, axis=1)) / \
-        float(total * total)
+    pe = np.sum(np.sum(cm, axis=0) * np.sum(cm, axis=1)) / float(total * total)
     kappa = (pa - pe) / (1 - pe)
     results["Kappa"] = kappa
 
@@ -404,23 +384,25 @@ def show_results(results, writer, label_values=None, agregated=False):
 
     # TODO: add which ones are true labels and which ones are predicted labels
     fig = plt.figure(figsize=(10, 10))
-    sns.heatmap(cm, xticklabels=label_values, yticklabels=label_values, annot=True, fmt="d")
+    sns.heatmap(
+        cm, xticklabels=label_values, yticklabels=label_values, annot=True, fmt="d"
+    )
     writer.add_figure("Confusion matrix", fig)
     text += "Confusion matrix :\n"
     text += str(cm)
     text += "---\n"
 
     if agregated:
-        text += ("Accuracy: {:.03f} +- {:.03f}\n".format(np.mean(accuracies),
-                                                         np.std(accuracies)))
+        text += "Accuracy: {:.03f} +- {:.03f}\n".format(
+            np.mean(accuracies), np.std(accuracies)
+        )
     else:
         text += "Accuracy : {:.03f}%\n".format(accuracy)
     text += "---\n"
 
     text += "F1 scores :\n"
     if agregated:
-        for label, score, std in zip(label_values, F1_scores_mean,
-                                     F1_scores_std):
+        for label, score, std in zip(label_values, F1_scores_mean, F1_scores_std):
             text += "\t{}: {:.03f} +- {:.03f}\n".format(label, score, std)
     else:
         for label, score in zip(label_values, F1scores):
@@ -428,13 +410,13 @@ def show_results(results, writer, label_values=None, agregated=False):
     text += "---\n"
 
     if agregated:
-        text += ("Kappa: {:.03f} +- {:.03f}\n".format(np.mean(kappas),
-                                                      np.std(kappas)))
+        text += "Kappa: {:.03f} +- {:.03f}\n".format(np.mean(kappas), np.std(kappas))
     else:
         text += "Kappa: {:.03f}\n".format(kappa)
 
-    #vis.text(text.replace('\n', '<br/>'))
+    # vis.text(text.replace('\n', '<br/>'))
     print(text)
+
 
 def compute_imf_weights(ground_truth, n_classes=None, ignored_classes=[]):
     """ Compute inverse median frequency weights for class balancing.
@@ -467,9 +449,11 @@ def compute_imf_weights(ground_truth, n_classes=None, ignored_classes=[]):
     idx = np.nonzero(frequencies)
     median = np.median(frequencies[idx])
     weights[idx] = median / frequencies[idx]
-    weights[frequencies == 0] = 0.
+    weights[frequencies == 0] = 0.0
     return weights
 
+
 def camel_to_snake(name):
-    s = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s).lower()
+    s = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s).lower()
+
