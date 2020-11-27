@@ -403,7 +403,7 @@ def show_results(results, vis, label_values=None, agregated=False):
         F1scores = results["F1 scores"]
         kappa = results["Kappa"]
 
-    vis.heatmap(cm, opts={'title': "Confusion matrix", 
+    vis.heatmap(cm, opts={'title': "Confusion matrix",
                           'marginbottom': 150,
                           'marginleft': 150,
                           'width': 500,
@@ -457,7 +457,7 @@ def sample_gt(gt, train_size, mode='random'):
     test_gt = np.zeros_like(gt)
     if train_size > 1:
        train_size = int(train_size)
-    
+
     if mode == 'random':
        train_indices, test_indices = sklearn.model_selection.train_test_split(X, train_size=train_size, stratify=y)
        train_indices = [list(t) for t in zip(*train_indices)]
@@ -490,8 +490,8 @@ def sample_gt(gt, train_size, mode='random'):
                 first_half_count = np.count_nonzero(mask[:x, :])
                 second_half_count = np.count_nonzero(mask[x:, :])
                 try:
-                    ratio = first_half_count / second_half_count
-                    if ratio > 0.9 * train_size and ratio < 1.1 * train_size:
+                    ratio = first_half_count / (first_half_count + second_half_count)
+                    if ratio > 0.9 * train_size:
                         break
                 except ZeroDivisionError:
                     continue
@@ -518,7 +518,7 @@ def compute_imf_weights(ground_truth, n_classes=None, ignored_classes=[]):
         n_classes: number of classes (optional, defaults to max(ground_truth))
         ignored_classes: id of classes to ignore (optional)
     Returns:
-        numpy array with the IMF coefficients 
+        numpy array with the IMF coefficients
     """
     n_classes = np.max(ground_truth) if n_classes is None else n_classes
     weights = np.zeros(n_classes)
