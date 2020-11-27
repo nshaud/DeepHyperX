@@ -319,11 +319,16 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
     # Remove ignored classes from the ground truth
     for c in ignored_labels:
         mask = gt == c
-        gt[c] = IGNORED_INDEX
-    # TODO: use sklearn to relabel the classes based on what has been ignored
-    # TODO: fix the palette after relabeling
-    # TODO: fix the label values after relabeling
-
+        gt[mask] = IGNORED_INDEX
+    # Relabel the classes based on what has been ignored
+    from sklearn.preprocessing import LabelEncoder
+    le = LabelEncoder()
+    gt = le.fit_transform(gt.ravel()).reshape(gt.shape)
+    # Fix the palette after relabeling
+    palette = {new_idx: palette[old_idx] for new_idx, old_idx in enumerate(le.classes_) if c != IGNORED_INDEX}
+    palette[IGNORED_INDEX] = (0, 0, 0)
+    # Fix the label values after relabeling
+    label_values = [label_values[c] for c in le.classes_ if c != IGNORED_INDEX]
     # Normalization
     img = np.asarray(img, dtype="float32")
     print(img.shape)
