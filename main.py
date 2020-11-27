@@ -240,13 +240,6 @@ N_CLASSES = len(LABEL_VALUES)
 # Number of bands (last dimension of the image tensor)
 N_BANDS = img.shape[-1]
 
-# Parameters for the SVM grid search
-SVM_GRID_PARAMS = [
-    {"kernel": ["rbf"], "gamma": [1e-1, 1e-2, 1e-3], "C": [1, 10, 100, 1000]},
-    {"kernel": ["linear"], "C": [0.1, 1, 10, 100, 1000]},
-    {"kernel": ["poly"], "degree": [3], "gamma": [1e-1, 1e-2, 1e-3]},
-]
-
 if palette is None:
     # Generate color palette
     palette = {0: (0, 0, 0)}
@@ -306,6 +299,7 @@ for run in range(N_RUNS):
         train_gt, test_gt = split_ground_truth(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
     print(train_gt)
     from datautils import count_valid_pixels
+
     print(
         "{} samples selected (over {})".format(
             count_valid_pixels(train_gt), count_valid_pixels(gt)
@@ -319,56 +313,14 @@ for run in range(N_RUNS):
     display_predictions(convert_to_color(train_gt), writer, caption="Train GT")
     display_predictions(convert_to_color(test_gt), writer, caption="Test GT")
 
-    # TODO: factoriser les modèles sklearn classiques
-    if MODEL == "SVM_grid":
-        print("Running a grid search SVM")
-        # Grid search SVM (linear and RBF)
-        X_train, y_train = build_dataset(img, train_gt, ignored_labels=IGNORED_LABELS)
-        class_weight = "balanced" if CLASS_BALANCING else None
-        clf = sklearn.svm.SVC(class_weight=class_weight)
-        clf = sklearn.model_selection.GridSearchCV(
-            clf, SVM_GRID_PARAMS, verbose=5, n_jobs=4
-        )
-        clf.fit(X_train, y_train)
-        print("SVM best parameters : {}".format(clf.best_params_))
-        prediction = clf.predict(img.reshape(-1, N_BANDS))
-        save_model(clf, MODEL, DATASET)
-        prediction = prediction.reshape(img.shape[:2])
-    elif MODEL == "SVM":
-        X_train, y_train = build_dataset(img, train_gt, ignored_labels=IGNORED_LABELS)
-        class_weight = "balanced" if CLASS_BALANCING else None
-        clf = sklearn.svm.SVC(class_weight=class_weight)
-        clf.fit(X_train, y_train)
-        save_model(clf, MODEL, DATASET)
-        prediction = clf.predict(img.reshape(-1, N_BANDS))
-        prediction = prediction.reshape(img.shape[:2])
-    elif MODEL == "SGD":
-        X_train, y_train = build_dataset(img, train_gt, ignored_labels=IGNORED_LABELS)
-        X_train, y_train = sklearn.utils.shuffle(X_train, y_train)
-        # TODO: remove this scaler ?
-        scaler = sklearn.preprocessing.StandardScaler()
-        X_train = scaler.fit_transform(X_train)
-        class_weight = "balanced" if CLASS_BALANCING else None
-        clf = sklearn.linear_model.SGDClassifier(
-            class_weight=class_weight, learning_rate="optimal", tol=1e-3, average=10
-        )
-        clf.fit(X_train, y_train)
-        save_model(clf, MODEL, DATASET)
-        prediction = clf.predict(scaler.transform(img.reshape(-1, N_BANDS)))
-        prediction = prediction.reshape(img.shape[:2])
-    elif MODEL == "nearest":
-        X_train, y_train = build_dataset(img, train_gt, ignored_labels=IGNORED_LABELS)
-        X_train, y_train = sklearn.utils.shuffle(X_train, y_train)
-        class_weight = "balanced" if CLASS_BALANCING else None
-        clf = sklearn.neighbors.KNeighborsClassifier(weights="distance")
-        clf = sklearn.model_selection.GridSearchCV(
-            clf, {"n_neighbors": [1, 3, 5, 10, 20]}, verbose=5, n_jobs=4
-        )
-        clf.fit(X_train, y_train)
-        clf.fit(X_train, y_train)
-        save_model(clf, MODEL, DATASET)
-        prediction = clf.predict(img.reshape(-1, N_BANDS))
-        prediction = prediction.reshape(img.shape[:2])
+    from shallow_models import SKLEARN_MODELS
+    from shallow_models import fit_sklearn_model
+    from shallow_models import infer_from_sklearn_model
+
+    if MODEL in SKLEARN_MODELS:
+        X_train, y_train = build_dataset(img, train_gt)
+        clf = fit_sklearn_model(MODEL, X_train, y_train, exp_name=DATASET, class_balancing=CLASS_BALANCING)
+        prediction = infer_from_sklearn_model(clf, img)
     else:
         if CLASS_BALANCING:
             weights = compute_imf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
