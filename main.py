@@ -38,12 +38,12 @@ from utils import (
     display_predictions,
     explore_spectrums,
     plot_spectrums,
-    sample_gt,
     build_dataset,
     show_results,
     compute_imf_weights,
     get_device,
 )
+from sampling import split_ground_truth
 from datasets import get_dataset, HyperX, open_file, DATASETS_CONFIG
 from models import get_model, train, test, save_model
 
@@ -303,10 +303,12 @@ for run in range(N_RUNS):
     else:
         # Sample random training spectra
         print(SAMPLE_PERCENTAGE)
-        train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
+        train_gt, test_gt = split_ground_truth(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
+    print(train_gt)
+    from datautils import count_valid_pixels
     print(
         "{} samples selected (over {})".format(
-            np.count_nonzero(train_gt), np.count_nonzero(gt)
+            count_valid_pixels(train_gt), count_valid_pixels(gt)
         )
     )
     print(
@@ -373,11 +375,8 @@ for run in range(N_RUNS):
             hyperparams["weights"] = torch.from_numpy(weights).float()
         # Neural network
         model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
-        # Split train set in train/val
-        train_gt, val_gt = sample_gt(train_gt, 0.95, mode="random")
-        "{} samples selected (over {})".format(
-            np.count_nonzero(train_gt), np.count_nonzero(gt)
-        )
+        # TODO: Split train set in train/val
+        #train_gt, val_gt = split_ground_truth(train_gt, 0.95, mode="random")
         # Generate the dataset
         from datautils import HSIDataset
         train_dataset = HSIDataset(img, train_gt, window_size=hyperparams['patch_size'])
