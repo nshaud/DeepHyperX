@@ -36,14 +36,10 @@ def get_model(name, **kwargs):
     n_classes = kwargs["n_classes"]
     n_bands = kwargs["n_bands"]
     weights = torch.ones(n_classes)
-<<<<<<< HEAD
     #weights[torch.LongTensor(kwargs["ignored_labels"])] = 0.0
-    criterion = nn.CrossEntropyLoss(weight=kwargs["weights"], ignore_index=IGNORED_INDEX)
-=======
-    weights[torch.LongTensor(kwargs["ignored_labels"])] = 0.0
->>>>>>> tensorboard
     weights = kwargs.setdefault("weights", weights)
     kwargs["weights"] = weights.to(device)
+    criterion = nn.CrossEntropyLoss(weight=kwargs["weights"], ignore_index=IGNORED_INDEX)
 
     if name == "nn":
         kwargs.setdefault("patch_size", 1)
@@ -67,10 +63,6 @@ def get_model(name, **kwargs):
         model = LeeEtAl(n_bands, n_classes)
         lr = kwargs.setdefault("learning_rate", 0.001)
         optimizer = optim.Adam(model.parameters(), lr=lr)
-<<<<<<< HEAD
-=======
-        criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
->>>>>>> tensorboard
     elif name == "fcn2d":
         kwargs.setdefault("epoch", 100)
         patch_size = kwargs.setdefault("patch_size", 16)
@@ -78,10 +70,6 @@ def get_model(name, **kwargs):
         model = FCN2D(n_bands, n_classes)
         lr = kwargs.setdefault("learning_rate", 0.001)
         optimizer = optim.Adam(model.parameters(), lr=lr)
-<<<<<<< HEAD
-=======
-        criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
->>>>>>> tensorboard
     elif name == "cnn2d":
         kwargs.setdefault("epoch", 100)
         patch_size = kwargs.setdefault("patch_size", 16)
@@ -89,10 +77,6 @@ def get_model(name, **kwargs):
         model = CNN2D(n_bands, n_classes)
         lr = kwargs.setdefault("learning_rate", 0.001)
         optimizer = optim.Adam(model.parameters(), lr=lr)
-<<<<<<< HEAD
-=======
-        criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
->>>>>>> tensorboard
     elif name == "chen":
         patch_size = kwargs.setdefault("patch_size", 27)
         center_pixel = True
@@ -1055,15 +1039,12 @@ def train(
     criterion,
     data_loader,
     epoch,
+    exp_name="",
     scheduler=None,
     device=torch.device("cpu"),
     val_loader=None,
     supervision="full",
-<<<<<<< HEAD
     writer=None,
-=======
-    writer=None
->>>>>>> tensorboard
 ):
     """
     Training loop to optimize a network for several epochs and a specified loss
