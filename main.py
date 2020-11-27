@@ -24,7 +24,6 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import sklearn.svm
 import sklearn.model_selection
-from skimage import io
 
 # Visualization
 import seaborn as sns
@@ -44,7 +43,7 @@ from utils import (
     get_device,
 )
 from sampling import split_ground_truth
-from datasets import get_dataset, HyperX, open_file, DATASETS_CONFIG
+from datasets import get_dataset, open_file, DATASETS_CONFIG
 from models import get_model, train, test, save_model
 
 import argparse

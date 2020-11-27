@@ -8,7 +8,6 @@ from datasets import open_file
 from models import get_model, test
 import numpy as np
 import seaborn as sns
-from skimage import io
 import argparse
 import torch
 
@@ -157,6 +156,7 @@ else:
     prediction = np.argmax(probabilities, axis=-1)
 
 filename = dirname + "/" + basename + ".tif"
+# TODO: use Pillow to save images
 io.imsave(filename, prediction)
 basename = "color_" + basename
 filename = dirname + "/" + basename + ".tif"

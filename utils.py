@@ -13,6 +13,7 @@ import os
 import re
 import torch
 
+from PIL import Image
 
 def get_device(ordinal):
     # Use GPU ?
@@ -30,17 +31,18 @@ def get_device(ordinal):
     return device
 
 
-def open_file(dataset):
-    _, ext = os.path.splitext(dataset)
+def open_file(filepath):
+    _, ext = os.path.splitext(filepath)
     ext = ext.lower()
     if ext == ".mat":
-        # Load Matlab array
-        return io.loadmat(dataset)
-    elif ext == ".tif" or ext == ".tiff":
-        # Load TIFF file
-        return misc.imread(dataset)
+        # Use SciPy to load Matlab data
+        return io.loadmat(filepath)
+    elif ext in [".tiff", ".tif", ".jpg", ".jpeg", ".png"]:
+        # Load JPG/TIFF/PNG file using Pillow
+        return np.array(Image.open(filepath))
     elif ext == ".hdr":
-        img = spectral.open_image(dataset)
+        # Use PySpectral library to load HDR data
+        img = spectral.open_image(filepath)
         return img.load()
     else:
         raise ValueError("Unknown file format: {}".format(ext))
