@@ -499,8 +499,6 @@ class CNN2D(nn.Module):
         self.classifier = nn.Linear(64, n_classes)
 
     def forward(self, x):
-        #print(x.size())
-        x = x[:,0]
         x = self.encoder(x)
         x = self.pooling(x).squeeze()
         x = self.classifier(x)
@@ -533,8 +531,6 @@ class FCN2D(nn.Module):
             nn.Conv2d(16, n_classes, (3, 3), padding=1))
 
     def forward(self, x):
-        #x = x.squeeze()
-        x = x[:,0]
         x = self.encoder(x)
         x = self.decoder(x)
         return x
@@ -1110,6 +1106,7 @@ def train(
             optimizer.zero_grad()
             if supervision == "full":
                 output = net(data)
+                target = target.squeeze()
                 loss = criterion(output, target)
             elif supervision == "semi":
                 outs = net(data)
@@ -1150,7 +1147,7 @@ def train(
             save_model(
                 net,
                 camel_to_snake(str(net.__class__.__name__)),
-                data_loader.dataset.name,
+                exp_name,
                 epoch=e,
                 metric=abs(metric),
             )
@@ -1232,7 +1229,6 @@ def test(net, img, hyperparams):
 def val(net, data_loader, device="cpu", supervision="full"):
     # TODO : fix me using metrics()
     accuracy, total = 0.0, 0.0
-    ignored_labels = data_loader.dataset.ignored_labels
     for batch_idx, (data, target) in enumerate(data_loader):
         with torch.no_grad():
             # Load the data into the GPU if required
@@ -1244,7 +1240,7 @@ def val(net, data_loader, device="cpu", supervision="full"):
                 output, rec = outs
             _, output = torch.max(output, dim=1)
             for out, pred in zip(output.view(-1), target.view(-1)):
-                if out.item() in ignored_labels:
+                if out.item() == IGNORED_INDEX:
                     continue
                 else:
                     accuracy += out.item() == pred.item()

@@ -247,7 +247,7 @@ def pad_image(image, padding=None, mode="symmetric", constant=0):
     return padded_image
 
 
-def sliding_window(image, step=10, window_size=(20, 20), with_data=True):
+def sliding_window(image, step=(10,10), window_size=(20, 20), with_data=True):
     """Sliding window generator over an input image.
 
     Args:
@@ -264,8 +264,9 @@ def sliding_window(image, step=10, window_size=(20, 20), with_data=True):
     # slide a window across the image
     w, h = window_size
     W, H = image.shape[:2]
-    offset_w = (W - w) % step
-    offset_h = (H - h) % step
+    step_w, step_h = step
+    offset_w = (W - w) % step_w
+    offset_h = (H - h) % step_h
     """
     Compensate one for the stop value of range(...). because this function does not include the stop value.
     Two examples are listed as follows.
@@ -282,10 +283,10 @@ def sliding_window(image, step=10, window_size=(20, 20), with_data=True):
 
     Same reason to H, h, offset_h, and y.
     """
-    for x in range(0, W - w + offset_w + 1, step):
+    for x in range(0, W - w + offset_w + 1, step_w):
         if x + w > W:
             x = W - w
-        for y in range(0, H - h + offset_h + 1, step):
+        for y in range(0, H - h + offset_h + 1, step_h):
             if y + h > H:
                 y = H - h
             if with_data:

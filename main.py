@@ -414,6 +414,7 @@ for run in range(N_RUNS):
                 loss,
                 train_loader,
                 hyperparams["epoch"],
+                exp_name=DATASET,
                 scheduler=hyperparams["scheduler"],
                 device=hyperparams["device"],
                 supervision=hyperparams["supervision"],
