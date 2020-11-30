@@ -116,6 +116,12 @@ group_dataset.add_argument(
     default="random",
 )
 group_dataset.add_argument(
+    "--nblocks",
+    type=int,
+    help="Maximum number of blocks for blocks sampling_mode, e.g 8",
+    default=None,
+)
+group_dataset.add_argument(
     "--train_set",
     type=str,
     default=None,
@@ -214,6 +220,8 @@ FOLDER = args.folder
 EPOCH = args.epoch
 # Sampling mode, e.g random sampling
 SAMPLING_MODE = args.sampling_mode
+# Maximum number of blocks for "blocks" sampling_mode, e.g 8
+N_BLOCKS = args.nblocks
 # Pre-computed weights to restore
 CHECKPOINT = args.restore
 # Learning rate for the SGD
@@ -301,7 +309,7 @@ for run in range(N_RUNS):
         test_gt = open_file(TEST_GT)
     else:
         # Sample random training spectra
-        train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
+        train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE, nblocks=N_BLOCKS)
     print(
         "{} samples selected (over {})".format(
             np.count_nonzero(train_gt), np.count_nonzero(gt)
