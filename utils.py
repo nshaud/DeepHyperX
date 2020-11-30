@@ -247,60 +247,6 @@ def metrics(prediction, target):
     return results
 
 
-def show_results(results, writer, label_values=None, agregated=False):
-    text = ""
-
-    if agregated:
-        accuracies = [r["Accuracy"] for r in results]
-        kappas = [r["Kappa"] for r in results]
-        F1_scores = [r["F1 scores"] for r in results]
-
-        F1_scores_mean = np.mean(F1_scores, axis=0)
-        F1_scores_std = np.std(F1_scores, axis=0)
-        cm = np.mean([r["Confusion matrix"] for r in results], axis=0)
-        text += "Agregated results :\n"
-    else:
-        cm = results["Confusion matrix"]
-        accuracy = results["Accuracy"]
-        F1scores = results["F1 scores"]
-        kappa = results["Kappa"]
-
-    # TODO: add which ones are true labels and which ones are predicted labels
-    fig = plt.figure(figsize=(10, 10))
-    sns.heatmap(
-        cm, xticklabels=label_values, yticklabels=label_values, annot=True, fmt="d"
-    )
-    writer.add_figure("Confusion matrix", fig)
-    text += "Confusion matrix :\n"
-    text += str(cm)
-    text += "---\n"
-
-    if agregated:
-        text += "Accuracy: {:.03f} +- {:.03f}\n".format(
-            np.mean(accuracies), np.std(accuracies)
-        )
-    else:
-        text += "Accuracy : {:.03f}%\n".format(accuracy)
-    text += "---\n"
-
-    text += "F1 scores :\n"
-    if agregated:
-        for label, score, std in zip(label_values, F1_scores_mean, F1_scores_std):
-            text += "\t{}: {:.03f} +- {:.03f}\n".format(label, score, std)
-    else:
-        for label, score in zip(label_values, F1scores):
-            text += "\t{}: {:.03f}\n".format(label, score)
-    text += "---\n"
-
-    if agregated:
-        text += "Kappa: {:.03f} +- {:.03f}\n".format(np.mean(kappas), np.std(kappas))
-    else:
-        text += "Kappa: {:.03f}\n".format(kappa)
-
-    # vis.text(text.replace('\n', '<br/>'))
-    print(text)
-
-
 def compute_imf_weights(ground_truth, n_classes=None, ignored_classes=[]):
     """ Compute inverse median frequency weights for class balancing.
 

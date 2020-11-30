@@ -33,7 +33,6 @@ from utils import (
     metrics,
     convert_to_color_,
     convert_from_color_,
-    show_results,
     compute_imf_weights,
     get_device,
 )
@@ -42,6 +41,7 @@ from visualization import (
     plot_spectrums,
     display_dataset,
     display_predictions,
+    show_results,
 )
 from sampling import split_ground_truth
 from datasets import get_dataset, open_file, DATASETS_CONFIG
