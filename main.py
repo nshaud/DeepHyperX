@@ -33,14 +33,15 @@ from utils import (
     metrics,
     convert_to_color_,
     convert_from_color_,
-    display_dataset,
-    display_predictions,
-    explore_spectrums,
-    plot_spectrums,
-    build_dataset,
     show_results,
     compute_imf_weights,
     get_device,
+)
+from visualization import (
+    explore_spectrums,
+    plot_spectrums,
+    display_dataset,
+    display_predictions,
 )
 from sampling import split_ground_truth
 from datasets import get_dataset, open_file, DATASETS_CONFIG
