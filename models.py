@@ -1209,7 +1209,8 @@ def test(net, img, hyperparams):
 
 def val(net, data_loader, device="cpu", supervision="full"):
     # TODO : fix me using metrics()
-    accuracy, total = 0.0, 0.0
+    predictions = []
+    labels = []
     for batch_idx, (data, target) in enumerate(data_loader):
         with torch.no_grad():
             # Load the data into the GPU if required
@@ -1220,10 +1221,11 @@ def val(net, data_loader, device="cpu", supervision="full"):
                 outs = net(data)
                 output, rec = outs
             _, output = torch.max(output, dim=1)
-            for out, pred in zip(output.view(-1), target.view(-1)):
-                if out.item() == IGNORED_INDEX:
-                    continue
-                else:
-                    accuracy += out.item() == pred.item()
-                    total += 1
-    return accuracy / total
+            bs = len(data)
+            print(output.view(bs, -1).to("cpu").numpy().shape)
+            predictions.append(output.view(bs, -1).to("cpu").numpy())
+            labels.append(target.view(bs, -1).to("cpu").numpy())
+    predictions, labels = np.concatenate(predictions, axis=0), np.concatenate(labels)
+    from sklearn.metrics import accuracy_score
+    # TODO: add other scoring functions
+    return accuracy_score(labels.ravel(), predictions.ravel())

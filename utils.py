@@ -203,7 +203,9 @@ def grouper(n, iterable):
         yield chunk
 
 
-def metrics(prediction, target, ignored_labels=[], n_classes=None):
+from datautils import IGNORED_INDEX
+
+def metrics(prediction, target):
     """Compute and print metrics (accuracy, confusion matrix and F1 scores).
 
     Args:
@@ -214,36 +216,25 @@ def metrics(prediction, target, ignored_labels=[], n_classes=None):
     Returns:
         accuracy, F1 score by class, confusion matrix
     """
-    ignored_mask = np.zeros(target.shape[:2], dtype=np.bool)
-    for l in ignored_labels:
-        ignored_mask[target == l] = True
-    ignored_mask = ~ignored_mask
-    target = target[ignored_mask]
-    prediction = prediction[ignored_mask]
+    # Remove ignored pixels from the metrics computation
+    ignored_mask = target == IGNORED_INDEX
+    target = target[~ignored_mask]
+    prediction = prediction[~ignored_mask]
 
     results = {}
 
-    n_classes = np.max(target) + 1 if n_classes is None else n_classes
-
-    cm = confusion_matrix(target, prediction, labels=range(n_classes))
+    cm = confusion_matrix(target, prediction, labels=np.unique(target))
 
     results["Confusion matrix"] = cm
 
     # Compute global accuracy
-    total = np.sum(cm)
-    accuracy = sum([cm[x][x] for x in range(len(cm))])
-    accuracy *= 100 / float(total)
-
-    results["Accuracy"] = accuracy
+    from sklearn.metrics import accuracy_score
+    results["Accuracy"] = accuracy_score(target, prediction)
 
     # Compute F1 score
-    F1scores = np.zeros(len(cm))
-    for i in range(len(cm)):
-        try:
-            F1 = 2.0 * cm[i, i] / (np.sum(cm[i, :]) + np.sum(cm[:, i]))
-        except ZeroDivisionError:
-            F1 = 0.0
-        F1scores[i] = F1
+    from sklearn.metrics import classification_report
+    report = classification_report(target, prediction, labels=np.unique(target), output_dict=True)
+    F1scores = [d['f1-score'] for d in report.items()]
 
     results["F1 scores"] = F1scores
 
