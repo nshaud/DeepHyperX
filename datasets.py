@@ -3,8 +3,9 @@
 This file contains the PyTorch dataset for hyperspectral images and
 related helpers.
 """
-import spectral
 import numpy as np
+import spectral
+import seaborn as sns
 import torch
 import torch.utils
 import torch.utils.data
@@ -110,11 +111,11 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
         ignored_labels: list of int classes to ignore
         rgb_bands: int tuple that correspond to red, green and blue bands
     """
-    palette = None
 
     if dataset_name not in datasets.keys():
         raise ValueError("{} dataset is unknown.".format(dataset_name))
 
+    palette = None
     dataset = datasets[dataset_name]
 
     folder = target_folder + datasets[dataset_name].get("folder", dataset_name + "/")
@@ -313,17 +314,33 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
         img[nan_mask] = 0
         gt[nan_mask] = IGNORED_INDEX
 
+    if palette is None:
+        # Generate color palette
+        ids = np.unique(gt)
+        palette = {
+            id_: tuple(np.asarray(255 * np.array(color), dtype="uint8"))
+            for id_, color in zip(ids, sns.color_palette("hls", len(ids)))
+        }
+
     ignored_labels = list(set(ignored_labels))
     # Remove ignored classes from the ground truth
     for c in ignored_labels:
         mask = gt == c
         gt[mask] = IGNORED_INDEX
+
     # Relabel the classes based on what has been ignored
     from sklearn.preprocessing import LabelEncoder
+
+    mask = gt == IGNORED_INDEX
     le = LabelEncoder()
-    gt = le.fit_transform(gt.ravel()).reshape(gt.shape)
+    gt[~mask] = le.fit_transform(gt[~mask])#.reshape(gt.shape)
+
     # Fix the palette after relabeling
-    palette = {new_idx: palette[old_idx] for new_idx, old_idx in enumerate(le.classes_) if old_idx != IGNORED_INDEX}
+    palette = {
+        new_idx: palette[old_idx]
+        for new_idx, old_idx in enumerate(le.classes_)
+        if old_idx != IGNORED_INDEX
+    }
     palette[IGNORED_INDEX] = (0, 0, 0)
     # Fix the label values after relabeling
     label_values = [label_values[c] for c in le.classes_ if c != IGNORED_INDEX]
