@@ -18,7 +18,7 @@ except ImportError:
     # Python 2
     from urllib import urlretrieve
 
-from utils import open_file
+from utils import open_file, normalise_image
 
 DATASETS_CONFIG = {
     "PaviaC": {
@@ -96,7 +96,7 @@ class TqdmUpTo(tqdm):
         self.update(b * bsize - self.n)  # will also set self.n = b * bsize
 
 
-def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
+def get_dataset(dataset_name, normalization_method, target_folder="./", datasets=DATASETS_CONFIG):
     """Gets the dataset specified by name and return the related components.
     Args:
         dataset_name: string with the name of the dataset
@@ -303,6 +303,10 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
             palette,
         ) = CUSTOM_DATASETS_CONFIG[dataset_name]["loader"](folder)
 
+    # Normalization
+    img = np.asarray(img, dtype="float32")
+    img = normalise_image(img, method=normalization_method)
+
     # Filter NaN out
     nan_mask = np.isnan(img.sum(axis=-1))
     if np.count_nonzero(nan_mask) > 0:
@@ -312,11 +316,8 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
     img[nan_mask] = 0
     gt[nan_mask] = 0
     ignored_labels.append(0)
-
     ignored_labels = list(set(ignored_labels))
-    # Normalization
-    img = np.asarray(img, dtype="float32")
-    img = (img - np.min(img)) / (np.max(img) - np.min(img))
+
     return img, gt, label_values, ignored_labels, rgb_bands, palette
 
 

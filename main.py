@@ -129,6 +129,19 @@ group_dataset.add_argument(
     help="Path to the test set (optional, by default "
     "the test_set is the entire ground truth minus the training)",
 )
+group_dataset.add_argument(
+    "--normalization",
+    type=str,
+    default='MNI',
+    help="Normalization method to use for image preprocessing. Available:\n"
+    "None: Applying none preprocessing."
+    "L2NS: Normalizing with a unit Euclidean norm along each sample."
+    "MNB: Converting the dynamics to [0, 1] along each band."
+    "SNB: Normalizing first- and second-order moments along each band."
+    "MNI: Converting the dynamics to [0, 1] along the whole image."
+    "SNI: Normalizing first- and second-order moments along the whole image.",
+)
+
 # Training options
 group_train = parser.add_argument_group("Training")
 group_train.add_argument(
@@ -225,6 +238,8 @@ TRAIN_GT = args.train_set
 # Testing ground truth file
 TEST_GT = args.test_set
 TEST_STRIDE = args.test_stride
+# Normalization method
+NORM_METHOD = args.normalization
 
 if args.download is not None and len(args.download) > 0:
     for dataset in args.download:
@@ -238,7 +253,7 @@ if not viz.check_connection:
 
 hyperparams = vars(args)
 # Load the dataset
-img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS, palette = get_dataset(DATASET, FOLDER)
+img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS, palette = get_dataset(DATASET, NORM_METHOD, FOLDER)
 # Number of classes
 N_CLASSES = len(LABEL_VALUES)
 # Number of bands (last dimension of the image tensor)
