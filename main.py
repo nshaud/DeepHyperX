@@ -318,8 +318,12 @@ for run in range(N_RUNS):
     from shallow_models import infer_from_sklearn_model
 
     if MODEL in SKLEARN_MODELS:
-        X_train, y_train = build_dataset(img, train_gt)
-        clf = fit_sklearn_model(MODEL, X_train, y_train, exp_name=DATASET, class_balancing=CLASS_BALANCING)
+        from datautils import to_sklearn_datasets
+
+        X_train, y_train = to_sklearn_datasets(img, train_gt)
+        clf = fit_sklearn_model(
+            MODEL, X_train, y_train, exp_name=DATASET, class_balancing=CLASS_BALANCING
+        )
         prediction = infer_from_sklearn_model(clf, img)
     else:
         if CLASS_BALANCING:

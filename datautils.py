@@ -6,8 +6,21 @@ from utils import sliding_window
 
 IGNORED_INDEX = 255
 
+
 def count_valid_pixels(arr, ignored=IGNORED_INDEX):
     return np.count_nonzero(arr != ignored)
+
+
+def to_sklearn_datasets(image, ground_truth):
+    n_bands = image.shape[:-1]
+    # Check that image and ground truth have the same 2D dimensions
+    assert image.shape[:2] == ground_truth.shape[:2]
+
+    valid_pixels = ground_truth != IGNORED_INDEX
+    samples = image[valid_pixels]
+    labels = ground_truth[valid_pixels].ravel()
+    return samples, labels
+
 
 class HSIDataset(torch.utils.data.Dataset):
     def __init__(self, hsi_image, ground_truth, window_size=None, overlap=0):
