@@ -323,7 +323,7 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
     le = LabelEncoder()
     gt = le.fit_transform(gt.ravel()).reshape(gt.shape)
     # Fix the palette after relabeling
-    palette = {new_idx: palette[old_idx] for new_idx, old_idx in enumerate(le.classes_) if c != IGNORED_INDEX}
+    palette = {new_idx: palette[old_idx] for new_idx, old_idx in enumerate(le.classes_) if old_idx != IGNORED_INDEX}
     palette[IGNORED_INDEX] = (0, 0, 0)
     # Fix the label values after relabeling
     label_values = [label_values[c] for c in le.classes_ if c != IGNORED_INDEX]
