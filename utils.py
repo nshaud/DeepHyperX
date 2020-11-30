@@ -134,6 +134,10 @@ def sliding_window(image, step=(10, 10), window_size=(20, 20), with_data=True):
 
     """
     # slide a window across the image
+    if isinstance(window_size, int):
+        window_size = (window_size, window_size)
+    if isinstance(step, int):
+        step = (step, step)
     w, h = window_size
     W, H = image.shape[:2]
     step_w, step_h = step

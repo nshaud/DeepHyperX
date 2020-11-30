@@ -59,9 +59,7 @@ class HSIDataset(torch.utils.data.Dataset):
         )
         # Skip windows that only contains ignored pixels
         self.window_corners = [
-            (x, y)
-            for window, x, y, w, h in windows
-            if count_valid_pixels(window) > 0
+            (x, y) for window, x, y, w, h in windows if count_valid_pixels(window) > 0
         ]
 
     def __len__(self):
