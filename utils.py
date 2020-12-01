@@ -457,13 +457,13 @@ def sample_gt(gt, train_size, mode='random', **kwargs):
         test_gt[train_gt > 0] = 0
 
     elif mode == 'blocks':
-        cat = "/Users/robitaij/postdoc/Lhyrica/Taurus/HGBS_taurusL1495_observed_core_catalog_whd.csv"
-        xpc, ypc, xBc, yBc, sz = genblocks(gt, cat, nblocksmax=kwargs.get('nblocks'))
+
+        xpc, ypc, xBc, yBc, sz = genblocks(gt, nblocksmax=kwargs.get('nblocks'))
 
         ##Train sample
         #Core blocks
         trainlist = range(xpc.size)
-        trainsamp = random.sample(trainlist, k=int(xpc.size * train_size))
+        trainsamp = random.sample(trainlist, k=round(xpc.size * train_size))
         train_mask = blockmask(xpc[trainsamp], ypc[trainsamp], sz, gt.shape)
         train_gt = train_mask * gt
         #Background blocks

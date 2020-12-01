@@ -2,6 +2,7 @@ import numpy as np
 import pylab as plt
 import pandas as pd
 from sklearn.cluster import KMeans
+from skimage.measure import label, regionprops
 import aplpy
 from astropy.coordinates import SkyCoord
 import astropy.units as u
@@ -16,25 +17,26 @@ def blockmask(xpc, ypc, sz, arr):
 def consecutive(data, stepsize=1):
     return np.split(data, np.where(np.diff(data) != stepsize)[0]+1)
 
-def genblocks(mask, cat, nblocksmax=10):
+def genblocks(mask, nblocksmax=10):
 	
 	#########
 	#Transform mask
 	#########
-	fig = aplpy.FITSFigure("/Users/robitaij/postdoc/Lhyrica/Taurus/taurus_L1495_250_sample_mask.fits")
+	
 	mask = np.abs(mask-2)
 	
 	#########
 	#Read core positions
 	#########
-	cores = pd.read_csv(cat, sep=';', header=0)
-	ra = cores['-3'].to_numpy()
-	dec = cores['-4'].to_numpy()
-	coords = SkyCoord(ra+' '+dec,unit=(u.hourangle, u.deg), frame='fk5')
-	majaxis = cores['-32'].to_numpy()
-	minaxis = cores['-33'].to_numpy()
-	angles = cores['-34'].to_numpy()
-	(xp, yp) = fig.world2pixel(coords.ra, coords.dec)
+
+	labels, num = label(mask == 0,return_num=True)
+	xp = []
+	yp = []
+	for region in regionprops(labels):
+		xp.append(region.centroid[1])
+		yp.append(region.centroid[0])
+	xp = np.asarray(xp)
+	yp = np.asarray(yp)
 	
 	#########
 	#Clustering cores with Kmeans
@@ -152,7 +154,5 @@ def genblocks(mask, cat, nblocksmax=10):
 
 	xBc = np.array(xBclist)
 	yBc = np.array(yBclist)
-	
-	plt.tight_layout()
 	
 	return xpc, ypc, xBc, yBc, sz
