@@ -49,155 +49,10 @@ from models import get_model, train, test, save_model
 
 import argparse
 
-if __name__ == "__main__":
-    dataset_names = [
-        v["name"] if "name" in v.keys() else k for k, v in DATASETS_CONFIG.items()
-    ]
-
-    # Argument parser for CLI interaction
-    parser = argparse.ArgumentParser(
-        description="Run deep learning experiments on" " various hyperspectral datasets"
-    )
-    parser.add_argument(
-        "--dataset", type=str, default=None, choices=dataset_names, help="Dataset to use."
-    )
-    parser.add_argument(
-        "--model",
-        type=str,
-        default=None,
-        help="Model to train. Available:\n"
-        "SVM (linear), "
-        "SVM_grid (grid search on linear, poly and RBF kernels), "
-        "baseline (fully connected NN), "
-        "hu (1D CNN), "
-        "hamida (3D CNN + 1D classifier), "
-        "lee (3D FCN), "
-        "chen (3D CNN), "
-        "li (3D CNN), "
-        "he (3D CNN), "
-        "luo (3D CNN), "
-        "sharma (2D CNN), "
-        "boulch (1D semi-supervised CNN), "
-        "liu (3D semi-supervised CNN), "
-        "mou (1D RNN)",
-    )
-    parser.add_argument(
-        "--folder",
-        type=str,
-        help="Folder where to store the "
-        "datasets (defaults to the current working directory).",
-        default="./Datasets/",
-    )
-    parser.add_argument(
-        "--cuda",
-        type=int,
-        default=-1,
-        help="Specify CUDA device (defaults to -1, which learns on CPU)",
-    )
-    parser.add_argument("--runs", type=int, default=1, help="Number of runs (default: 1)")
-    parser.add_argument(
-        "--restore",
-        type=str,
-        default=None,
-        help="Weights to use for initialization, e.g. a checkpoint",
-    )
-
-    # Dataset options
-    group_dataset = parser.add_argument_group("Dataset")
-    group_dataset.add_argument(
-        "--training_sample",
-        type=float,
-        default=10,
-        help="Percentage of samples to use for training (default: 10%%)",
-    )
-    group_dataset.add_argument(
-        "--sampling_mode",
-        type=str,
-        help="Sampling mode" " (random sampling or disjoint, default: random)",
-        default="random",
-    )
-    group_dataset.add_argument(
-        "--train_set",
-        type=str,
-        default=None,
-        help="Path to the train ground truth (optional, this "
-        "supersedes the --sampling_mode option)",
-    )
-    group_dataset.add_argument(
-        "--test_set",
-        type=str,
-        default=None,
-        help="Path to the test set (optional, by default "
-        "the test_set is the entire ground truth minus the training)",
-    )
-    # Training options
-    group_train = parser.add_argument_group("Training")
-    group_train.add_argument(
-        "--epoch",
-        type=int,
-        help="Training epochs (optional, if" " absent will be set by the model)",
-    )
-    group_train.add_argument(
-        "--patch_size",
-        type=int,
-        help="Size of the spatial neighbourhood (optional, if "
-        "absent will be set by the model)",
-    )
-    group_train.add_argument(
-        "--lr", type=float, help="Learning rate, set by the model if not specified."
-    )
-    group_train.add_argument(
-        "--class_balancing",
-        action="store_true",
-        help="Inverse median frequency class balancing (default = False)",
-    )
-    group_train.add_argument(
-        "--batch_size",
-        type=int,
-        help="Batch size (optional, if absent will be set by the model",
-    )
-    group_train.add_argument(
-        "--test_stride",
-        type=int,
-        default=1,
-        help="Sliding window step stride during inference (default = 1)",
-    )
-    # Data augmentation parameters
-    group_da = parser.add_argument_group("Data augmentation")
-    group_da.add_argument(
-        "--flip_augmentation",
-        action="store_true",
-        help="Random flips (if patch_size > 1)",
-    )
-    group_da.add_argument(
-        "--radiation_augmentation",
-        action="store_true",
-        help="Random radiation noise (illumination)",
-    )
-    group_da.add_argument(
-        "--mixture_augmentation", action="store_true", help="Random mixes between spectra"
-    )
-
-    parser.add_argument(
-        "--with_exploration",
-        action="store_true",
-        help="See data exploration visualization",
-    )
-    parser.add_argument(
-        "--download",
-        type=str,
-        default=None,
-        nargs="+",
-        choices=dataset_names,
-        help="Download the specified datasets and quits.",
-    )
-
-    args = parser.parse_args()
-    main(args)
-
 
 def main(args):
     CUDA_DEVICE = get_device(args.cuda)
+    N_JOBS = args.n_jobs
     # % of training samples
     SAMPLE_PERCENTAGE = args.training_sample
     # Data augmentation ?
@@ -326,7 +181,12 @@ def main(args):
 
             X_train, y_train = to_sklearn_datasets(img, train_gt)
             clf = fit_sklearn_model(
-                MODEL, X_train, y_train, exp_name=DATASET, class_balancing=CLASS_BALANCING
+                MODEL,
+                X_train,
+                y_train,
+                exp_name=DATASET,
+                class_balancing=CLASS_BALANCING,
+                n_jobs=N_JOBS,
             )
             prediction = infer_from_sklearn_model(clf, img)
         else:
@@ -349,6 +209,7 @@ def main(args):
                 batch_size=hyperparams["batch_size"],
                 # pin_memory=hyperparams['device'],
                 shuffle=True,
+                num_workers=N_JOBS,
             )
             # val_dataset = HyperX(img, val_gt, **hyperparams)
             val_dataset = HSIDataset(
@@ -358,6 +219,7 @@ def main(args):
                 val_dataset,
                 # pin_memory=hyperparams['device'],
                 batch_size=hyperparams["batch_size"],
+                num_workers=N_JOBS,
             )
 
             # print(hyperparams)
@@ -410,7 +272,160 @@ def main(args):
         )
 
         results.append(run_results)
-        show_results(run_results, writer, label_values=LABEL_VALUES)
+        show_results(run_results, writer)
 
     if N_RUNS > 1:
-        show_results(results, writer, label_values=LABEL_VALUES, agregated=True)
+        show_results(results, writer, agregated=True)
+
+
+if __name__ == "__main__":
+    dataset_names = [
+        v["name"] if "name" in v.keys() else k for k, v in DATASETS_CONFIG.items()
+    ]
+
+    # Argument parser for CLI interaction
+    parser = argparse.ArgumentParser(
+        description="Run deep learning experiments on" " various hyperspectral datasets"
+    )
+    parser.add_argument(
+        "--dataset", type=str, default=None, choices=dataset_names, help="Dataset to use."
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Model to train. Available:\n"
+        "SVM (linear), "
+        "SVM_grid (grid search on linear, poly and RBF kernels), "
+        "baseline (fully connected NN), "
+        "hu (1D CNN), "
+        "hamida (3D CNN + 1D classifier), "
+        "lee (3D FCN), "
+        "chen (3D CNN), "
+        "li (3D CNN), "
+        "he (3D CNN), "
+        "luo (3D CNN), "
+        "sharma (2D CNN), "
+        "boulch (1D semi-supervised CNN), "
+        "liu (3D semi-supervised CNN), "
+        "mou (1D RNN)",
+    )
+    parser.add_argument(
+        "--folder",
+        type=str,
+        help="Folder where to store the "
+        "datasets (defaults to the current working directory).",
+        default="./Datasets/",
+    )
+    parser.add_argument(
+        "--cuda",
+        type=int,
+        default=-1,
+        help="Specify CUDA device (defaults to -1, which learns on CPU)",
+    )
+    parser.add_argument(
+        "--n_jobs",
+        type=int,
+        default=0,
+        help="Parallel threads for sklearn models and data loading/augmentation (0=blocking data loading, 1=asynchronous data loading, n>=2=parallel data loading)",
+    )
+    parser.add_argument("--runs", type=int, default=1, help="Number of runs (default: 1)")
+    parser.add_argument(
+        "--restore",
+        type=str,
+        default=None,
+        help="Weights to use for initialization, e.g. a checkpoint",
+    )
+
+    # Dataset options
+    group_dataset = parser.add_argument_group("Dataset")
+    group_dataset.add_argument(
+        "--training_sample",
+        type=float,
+        default=10,
+        help="Percentage of samples to use for training (default: 10%%)",
+    )
+    group_dataset.add_argument(
+        "--sampling_mode",
+        type=str,
+        help="Sampling mode" " (random sampling or disjoint, default: random)",
+        default="random",
+    )
+    group_dataset.add_argument(
+        "--train_set",
+        type=str,
+        default=None,
+        help="Path to the train ground truth (optional, this "
+        "supersedes the --sampling_mode option)",
+    )
+    group_dataset.add_argument(
+        "--test_set",
+        type=str,
+        default=None,
+        help="Path to the test set (optional, by default "
+        "the test_set is the entire ground truth minus the training)",
+    )
+    # Training options
+    group_train = parser.add_argument_group("Training")
+    group_train.add_argument(
+        "--epoch",
+        type=int,
+        help="Training epochs (optional, if" " absent will be set by the model)",
+    )
+    group_train.add_argument(
+        "--patch_size",
+        type=int,
+        help="Size of the spatial neighbourhood (optional, if "
+        "absent will be set by the model)",
+    )
+    group_train.add_argument(
+        "--lr", type=float, help="Learning rate, set by the model if not specified."
+    )
+    group_train.add_argument(
+        "--class_balancing",
+        action="store_true",
+        help="Inverse median frequency class balancing (default = False)",
+    )
+    group_train.add_argument(
+        "--batch_size",
+        type=int,
+        help="Batch size (optional, if absent will be set by the model",
+    )
+    group_train.add_argument(
+        "--test_stride",
+        type=int,
+        default=1,
+        help="Sliding window step stride during inference (default = 1)",
+    )
+    # Data augmentation parameters
+    group_da = parser.add_argument_group("Data augmentation")
+    group_da.add_argument(
+        "--flip_augmentation",
+        action="store_true",
+        help="Random flips (if patch_size > 1)",
+    )
+    group_da.add_argument(
+        "--radiation_augmentation",
+        action="store_true",
+        help="Random radiation noise (illumination)",
+    )
+    group_da.add_argument(
+        "--mixture_augmentation", action="store_true", help="Random mixes between spectra"
+    )
+
+    parser.add_argument(
+        "--with_exploration",
+        action="store_true",
+        help="See data exploration visualization",
+    )
+    parser.add_argument(
+        "--download",
+        type=str,
+        default=None,
+        nargs="+",
+        choices=dataset_names,
+        help="Download the specified datasets and quits.",
+    )
+
+    args = parser.parse_args()
+    main(args)
