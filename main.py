@@ -49,7 +49,7 @@ from models import get_model, train, test, save_model
 
 import argparse
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     dataset_names = [
         v["name"] if "name" in v.keys() else k for k, v in DATASETS_CONFIG.items()
     ]
@@ -165,7 +165,9 @@ if __name__ == '__main__':
     # Data augmentation parameters
     group_da = parser.add_argument_group("Data augmentation")
     group_da.add_argument(
-        "--flip_augmentation", action="store_true", help="Random flips (if patch_size > 1)"
+        "--flip_augmentation",
+        action="store_true",
+        help="Random flips (if patch_size > 1)",
     )
     group_da.add_argument(
         "--radiation_augmentation",
@@ -177,7 +179,9 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        "--with_exploration", action="store_true", help="See data exploration visualization"
+        "--with_exploration",
+        action="store_true",
+        help="See data exploration visualization",
     )
     parser.add_argument(
         "--download",
@@ -188,9 +192,9 @@ if __name__ == '__main__':
         help="Download the specified datasets and quits.",
     )
 
-
     args = parser.parse_args()
     main(args)
+
 
 def main(args):
     CUDA_DEVICE = get_device(args.cuda)
@@ -249,14 +253,11 @@ def main(args):
             palette[k + 1] = tuple(np.asarray(255 * np.array(color), dtype="uint8"))
     invert_palette = {v: k for k, v in palette.items()}
 
-
     def convert_to_color(x):
         return convert_to_color_(x, palette=palette)
 
-
     def convert_from_color(x):
         return convert_from_color_(x, palette=invert_palette)
-
 
     # Instantiate the experiment based on predefined networks
     hyperparams.update(
@@ -273,7 +274,6 @@ def main(args):
     writer = SummaryWriter(comment=f"-{DATASET}_{MODEL}")
     display_dataset(img, gt, RGB_BANDS, LABEL_VALUES, palette, writer=writer)
     color_gt = convert_to_color(gt)
-
 
     if DATAVIZ:
         # Data exploration : compute and show the mean spectrums
@@ -298,7 +298,9 @@ def main(args):
         else:
             # Sample random training spectra
             print(SAMPLE_PERCENTAGE)
-            train_gt, test_gt = split_ground_truth(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
+            train_gt, test_gt = split_ground_truth(
+                gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE
+            )
         print(train_gt)
         from datautils import count_valid_pixels
 
@@ -338,7 +340,9 @@ def main(args):
             # Generate the dataset
             from datautils import HSIDataset
 
-            train_dataset = HSIDataset(img, train_gt, window_size=hyperparams["patch_size"])
+            train_dataset = HSIDataset(
+                img, train_gt, window_size=hyperparams["patch_size"]
+            )
             print("Sample in dataset: {}".format(len(train_dataset)))
             train_loader = data.DataLoader(
                 train_dataset,
@@ -390,12 +394,7 @@ def main(args):
             probabilities = test(model, img, hyperparams)
             prediction = np.argmax(probabilities, axis=-1)
 
-        run_results = metrics(
-            prediction,
-            test_gt,
-            ignored_labels=hyperparams["ignored_labels"],
-            n_classes=N_CLASSES,
-        )
+        run_results = metrics(prediction, test_gt)
 
         # mask = np.zeros(gt.shape, dtype="bool")
         # for l in IGNORED_LABELS:
