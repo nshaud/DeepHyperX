@@ -394,7 +394,7 @@ def main(args):
             probabilities = test(model, img, hyperparams)
             prediction = np.argmax(probabilities, axis=-1)
 
-        run_results = metrics(prediction, test_gt)
+        run_results = metrics(prediction, test_gt, label_values=LABEL_VALUES)
 
         # mask = np.zeros(gt.shape, dtype="bool")
         # for l in IGNORED_LABELS:

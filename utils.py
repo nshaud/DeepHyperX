@@ -205,14 +205,12 @@ def grouper(n, iterable):
 
 from datautils import IGNORED_INDEX
 
-def metrics(prediction, target):
+def metrics(prediction, target, target_names=None):
     """Compute and print metrics (accuracy, confusion matrix and F1 scores).
 
     Args:
         prediction: list of predicted labels
         target: list of target labels
-        ignored_labels (optional): list of labels to ignore, e.g. 0 for undef
-        n_classes (optional): number of classes, max(target) by default
     Returns:
         accuracy, F1 score by class, confusion matrix
     """
@@ -220,31 +218,23 @@ def metrics(prediction, target):
     ignored_mask = target == IGNORED_INDEX
     target = target[~ignored_mask]
     prediction = prediction[~ignored_mask]
+    
+    if target_names is None:
+        target_names = [str(i) for i in np.unique(target)]
 
-    results = {}
-
-    cm = confusion_matrix(target, prediction, labels=np.unique(target))
-
-    results["Confusion matrix"] = cm
-
-    # Compute global accuracy
-    from sklearn.metrics import accuracy_score
-    results["Accuracy"] = accuracy_score(target, prediction)
-
-    # Compute F1 score
+    # Compute F1 scores and accuracy
     from sklearn.metrics import classification_report
-    report = classification_report(target, prediction, labels=np.unique(target), output_dict=True)
-    F1scores = [d['f1-score'] for d in report.items()]
-
-    results["F1 scores"] = F1scores
+    report = classification_report(target, prediction, output_dict=True, target_names=target_names)
 
     # Compute kappa coefficient
-    pa = np.trace(cm) / float(total)
-    pe = np.sum(np.sum(cm, axis=0) * np.sum(cm, axis=1)) / float(total * total)
-    kappa = (pa - pe) / (1 - pe)
-    results["Kappa"] = kappa
+    from sklearn.metrics import cohen_kappa_score
+    report["kappa"] = cohen_kappa_score(target, prediction)
 
-    return results
+    # Confusion matrix
+    report["Confusion matrix"] = confusion_matrix(target, prediction)
+    
+    report["labels"] = target_names
+    return report
 
 
 def compute_imf_weights(ground_truth, n_classes=None, ignored_classes=[]):

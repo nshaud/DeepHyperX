@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import spectral
+import seaborn as sns
 
 
 def display_predictions(pred, writer, gt=None, caption=""):
@@ -91,9 +92,9 @@ def show_results(results, writer, label_values=None, agregated=False):
     text = ""
 
     if agregated:
-        accuracies = [r["Accuracy"] for r in results]
-        kappas = [r["Kappa"] for r in results]
-        F1_scores = [r["F1 scores"] for r in results]
+        accuracies = [r["accuracy"] for r in results]
+        kappas = [r["kappa"] for r in results]
+        F1_scores = [results[c]["f1-score"] for c in results["labels"]]
 
         F1_scores_mean = np.mean(F1_scores, axis=0)
         F1_scores_std = np.std(F1_scores, axis=0)
@@ -101,14 +102,17 @@ def show_results(results, writer, label_values=None, agregated=False):
         text += "Agregated results :\n"
     else:
         cm = results["Confusion matrix"]
-        accuracy = results["Accuracy"]
-        F1scores = results["F1 scores"]
-        kappa = results["Kappa"]
+        accuracy = results["accuracy"]
+        F1scores = [results[c]["f1-score"] for c in results["labels"]]
+        kappa = results["kappa"]
 
-    # TODO: add which ones are true labels and which ones are predicted labels
     fig = plt.figure(figsize=(10, 10))
     sns.heatmap(
-        cm, xticklabels=label_values, yticklabels=label_values, annot=True, fmt="d"
+        cm,
+        xticklabels=results["labels"],
+        yticklabels=["true " + k for k in results["labels"]],
+        annot=True,
+        fmt="d",
     )
     writer.add_figure("Confusion matrix", fig)
     text += "Confusion matrix :\n"
