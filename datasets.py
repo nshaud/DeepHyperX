@@ -182,11 +182,11 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
         ignored_labels = [0]
 
     elif dataset_name == "Salinas":
-        img = open_file(folder + "Salinas.mat")["Salinas_corrected"]
+        img = open_file(folder + "Salinas_corrected.mat")["salinas_corrected"]
 
         rgb_bands = (43, 21, 11)  # AVIRIS sensor
 
-        gt = open_file(folder + "Salinas_gt.mat")["Salinas_gt"]
+        gt = open_file(folder + "Salinas_gt.mat")["salinas_gt"]
 
         label_values = [
             "Undefined",
