@@ -116,6 +116,12 @@ group_dataset.add_argument(
     default="random",
 )
 group_dataset.add_argument(
+    "--nblocks",
+    type=int,
+    help="Maximum number of blocks for blocks sampling_mode, e.g 8",
+    default=None,
+)
+group_dataset.add_argument(
     "--train_set",
     type=str,
     default=None,
@@ -186,6 +192,12 @@ parser.add_argument(
     choices=dataset_names,
     help="Download the specified datasets and quits.",
 )
+#parser.add_argument(
+#    "--save_prediction",
+#    type=bool,
+#    help="Save prediction image as '.fits'",
+#    default=False,
+#)
 
 
 args = parser.parse_args()
@@ -214,6 +226,8 @@ FOLDER = args.folder
 EPOCH = args.epoch
 # Sampling mode, e.g random sampling
 SAMPLING_MODE = args.sampling_mode
+# Maximum number of blocks for "blocks" sampling_mode, e.g 8
+N_BLOCKS = args.nblocks
 # Pre-computed weights to restore
 CHECKPOINT = args.restore
 # Learning rate for the SGD
@@ -225,6 +239,8 @@ TRAIN_GT = args.train_set
 # Testing ground truth file
 TEST_GT = args.test_set
 TEST_STRIDE = args.test_stride
+# Save prediction
+#SAVE_PRED = args.save_prediction
 
 if args.download is not None and len(args.download) > 0:
     for dataset in args.download:
@@ -301,7 +317,7 @@ for run in range(N_RUNS):
         test_gt = open_file(TEST_GT)
     else:
         # Sample random training spectra
-        train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
+        train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE, nblocks=N_BLOCKS)
     print(
         "{} samples selected (over {})".format(
             np.count_nonzero(train_gt), np.count_nonzero(gt)
@@ -437,6 +453,11 @@ for run in range(N_RUNS):
         gt=convert_to_color(test_gt),
         caption="Final prediction",
     )
+    #if SAVE_PRED == True:
+    #    path = "./predictions/"+DATASET+"/"
+    #    if not os.path.isdir(path):
+    #        os.makedirs(path)
+    #    fits.writeto(path+DATASET)
 
     results.append(run_results)
     show_results(run_results, writer, label_values=LABEL_VALUES)

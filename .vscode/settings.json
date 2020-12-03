@@ -1,4 +1,8 @@
 {
     "python.formatting.provider": "black",
+<<<<<<< HEAD
     "git.ignoreLimitWarning": true
+=======
+    "python.linting.enabled": true
+>>>>>>> 947dd6913681dd608c4321156ca36ad108e73b27
 }

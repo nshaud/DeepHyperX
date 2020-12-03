@@ -12,6 +12,7 @@ from scipy import io, misc
 import os
 import re
 import torch
+from genblocks import genblocks, blockmask
 
 def get_device(ordinal):
     # Use GPU ?
@@ -392,7 +393,7 @@ def show_results(results, writer, label_values=None, agregated=False):
     print(text)
 
 
-def sample_gt(gt, train_size, mode='random'):
+def sample_gt(gt, train_size, mode='random', **kwargs):
     """Extract a fixed percentage of samples from an array of labels.
 
     Args:
@@ -400,7 +401,10 @@ def sample_gt(gt, train_size, mode='random'):
         percentage: [0, 1] float
     Returns:
         train_gt, test_gt: 2D arrays of int labels
-
+	Keywords
+	--------
+	nblocks : integer, optional
+		Maximum number of blocks to sample cores
     """
     indices = np.nonzero(gt)
     X = list(zip(*indices)) # x,y features
@@ -451,6 +455,28 @@ def sample_gt(gt, train_size, mode='random'):
             train_gt[mask] = 0
 
         test_gt[train_gt > 0] = 0
+
+    elif mode == 'blocks':
+
+        xpc, ypc, xBc, yBc, sz = genblocks(gt, nblocksmax=kwargs.get('nblocks'))
+
+        ##Train sample
+        #Core blocks
+        trainlist = range(xpc.size)
+        trainsamp = random.sample(trainlist, k=round(xpc.size * train_size))
+        train_mask = blockmask(xpc[trainsamp], ypc[trainsamp], sz, gt.shape)
+        train_gt = train_mask * gt
+        #Background blocks
+        trainBlist = range(xBc.size)
+        trainBsamp = random.sample(trainBlist, k=int(xBc.size * train_size))
+        trainB_mask = blockmask(xBc[trainBsamp], yBc[trainBsamp], sz, gt.shape)
+        train_gt += (trainB_mask * gt)
+
+        ##Test sample
+        allblocks = blockmask(np.concatenate((xpc,xBc)), np.concatenate((ypc,yBc)), sz, gt.shape)
+        test_mask = allblocks * np.abs(train_mask - 1) * np.abs(trainB_mask - 1)
+        test_gt = gt * test_mask
+		
     else:
         raise ValueError("{} sampling is not implemented yet.".format(mode))
     return train_gt, test_gt
