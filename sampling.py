@@ -1,6 +1,12 @@
 import numpy as np
 
+import random
+
 from sklearn.model_selection import train_test_split
+
+from sklearn.cluster import KMeans
+
+from skimage.measure import label, regionprops
 
 from datautils import IGNORED_INDEX
 
@@ -47,8 +53,159 @@ def random_train_test_split(gt, train_size=0.5):
     test_gt[test_indices] = gt[test_indices]
     return train_gt, test_gt
 
+def blockmask(xpc, ypc, sz, arr):
+    maskblock = np.zeros(arr)
+    for elem in range(xpc.size):   
+        maskblock[int(ypc[elem] - sz):int(ypc[elem] + sz),
+				  int(xpc[elem] - sz):int(xpc[elem] + sz)] += 1
+    return maskblock
 
-def split_ground_truth(ground_truth, train_size, mode="random"):
+def consecutive(data, stepsize=1):
+    return np.split(data, np.where(np.diff(data) != stepsize)[0]+1)
+
+def genblocks(mask, nblocksmax=10):
+	
+    #########
+    #Transform mask
+    #########
+
+    #mask[mask == 2] = 0
+
+    #########
+    #Read core positions
+    #########
+
+    labels, num = label(mask == np.max(mask),return_num=True)
+    print("num=",num)
+    xp = []
+    yp = []
+    for region in regionprops(labels):
+        xp.append(region.centroid[1])
+        yp.append(region.centroid[0])
+    xp = np.asarray(xp)
+    yp = np.asarray(yp)
+    print("xp, yp sizes:",xp.size,yp.size)
+
+    #########
+    #Clustering cores with Kmeans
+    #########
+
+    Xpos = np.zeros((xp.size,2))
+    Xpos[:,0] = xp
+    Xpos[:,1] = yp
+    kmeans = KMeans(n_clusters=nblocksmax)
+    k_pred = kmeans.fit_predict(Xpos)
+
+    #########
+    #Estimate the size of the clusters and keep the smallest
+    #########
+    Sclust = np.zeros(nblocksmax)
+
+    for nk in range(nblocksmax):
+        pos = np.where(k_pred == nk)
+        Sclust[nk] = np.max(np.sqrt(np.abs(xp[pos] - kmeans.cluster_centers_[nk,0])**2. + 
+                                    np.abs(yp[pos] - kmeans.cluster_centers_[nk,1])**2.)) * 2.
+    minSclust = np.min(Sclust)
+
+    sz = int(minSclust/2)
+    print("sz=",sz)
+
+    #########
+    #Sort core blocks
+    #########
+    order = np.argsort(kmeans.cluster_centers_[:,0])
+    xpc = kmeans.cluster_centers_[order,0]
+    ypc = kmeans.cluster_centers_[order,1]
+
+    maskblock = blockmask(xpc, ypc, sz, mask.shape)
+
+    #########
+    #Update block positions
+    #########
+    while (np.where(maskblock == 2)[0].size !=0):
+        corefill = np.zeros(xpc.size)
+        flag = []
+        for elem in range(xpc.size):
+            #blocks outside image frame
+            if ((ypc[elem] - sz) < 0):
+                ypc[elem] += np.abs(ypc[elem] - sz)
+            if ((ypc[elem] + sz) > mask.shape[0]):
+                ypc[elem] = int(mask.shape[0]-sz)
+            if ((xpc[elem] - sz) < 0):
+                xpc[elem] += np.abs(xpc[elem] - sz)
+            if ((xpc[elem] + sz) > mask.shape[1]):
+                xpc[elem] = int(mask.shape[1]-sz)
+            #remove overlaps
+            canv = maskblock[int(ypc[elem] - sz):int(ypc[elem] + sz),
+                             int(xpc[elem] - sz):int(xpc[elem] + sz)]
+            ovl = np.where(canv == 2)
+            if (ovl[0].size > 0):
+                if (ovl[0].size < (sz*1.5)**2):
+                    xu = np.unique(ovl[1])
+                    yu = np.unique(ovl[0])
+                    splitxu = consecutive(xu)
+                    splityu = consecutive(yu)
+                    #for lapse in range(len(splitxu)):
+                    lapse = 0
+                    if (splitxu[lapse].size < splityu[lapse].size) and (splitxu[lapse][0] < sz):
+                        xpc[elem] += (np.max(splitxu[lapse])+1)
+                    if (splityu[lapse].size < splitxu[lapse].size) and (splityu[lapse][0] < sz):
+                        ypc[elem] += (np.max(splityu[lapse])+1)
+                    maskblock = blockmask(xpc, ypc, sz, mask.shape)
+                    nz = np.where(mask[int(ypc[elem] - sz):int(ypc[elem] + sz)
+                                       ,int(xpc[elem] - sz):int(xpc[elem] + sz)] == np.max(mask))[0].size
+                    corefill[elem] = float(nz) / (float(sz)*2.)**2
+                    #canv = maskblock[int(ypc[elem] - sz):int(ypc[elem] + sz),int(xpc[elem] - sz):int(xpc[elem] + sz)]
+                    #ovl = np.where(canv == 2)
+                    #if (ovl[0].size > (sz*1.5)**2):
+                    #    flag.append(elem)
+                else:
+                    flag.append(elem)
+                    nz = np.where(mask[int(ypc[elem] - sz):int(ypc[elem] + sz),
+                                       int(xpc[elem] - sz):int(xpc[elem] + sz)] == np.max(mask))[0].size
+                    corefill[elem] = float(nz) / (float(sz)*2.)**2
+            else:
+                nz = np.where(mask[int(ypc[elem] - sz):int(ypc[elem] + sz),
+                                   int(xpc[elem] - sz):int(xpc[elem] + sz)] == np.max(mask))[0].size
+                corefill[elem] = float(nz) / (float(sz)*2.)**2
+
+        #Filtering low core fill factor        
+        filt = np.where((corefill-np.mean(corefill))/np.std(corefill) < -1.4)[0]
+
+        if filt.size > 0:
+            for elem in filt:
+                flag.append(elem)
+
+        flag = np.unique(flag).tolist()
+        xpc = np.delete(xpc,flag)
+        ypc = np.delete(ypc,flag)
+
+        maskblock = blockmask(xpc, ypc, sz, mask.shape)
+
+    #########
+    #Background blocks
+    #########
+
+    xBclist = []
+    yBclist = []
+
+    xblock = np.int(mask.shape[1] / (sz*2))
+    yblock = np.int(mask.shape[0] / (sz*2))
+
+    for yl in range(yblock):
+        for xl in range(xblock):
+            BGblock = maskblock[yl*sz*2:yl*sz*2+sz*2,xl*sz*2:xl*sz*2+sz*2]
+            if (np.where(BGblock == 1)[0].size == 0):
+                xBclist.append(xl*sz*2+sz)
+                yBclist.append(yl*sz*2+sz)
+
+    xBc = np.array(xBclist)
+    yBc = np.array(yBclist)
+
+    return xpc, ypc, xBc, yBc, sz
+
+
+def split_ground_truth(ground_truth, train_size, mode="random", **kwargs):
     """Extract a fixed percentage of samples from an array of labels.
 
     Args:
@@ -62,6 +219,28 @@ def split_ground_truth(ground_truth, train_size, mode="random"):
         train_gt, test_gt = random_train_test_split(ground_truth, train_size)
     elif mode == "disjoint":
         train_gt, test_gt = middle_train_test_split(ground_truth, train_size)
+    elif mode == 'blocks':
+        train_gt = np.zeros_like(ground_truth)
+        test_gt = np.zeros_like(ground_truth)
+        
+        xpc, ypc, xBc, yBc, sz = genblocks(ground_truth, nblocksmax=kwargs.get('nblocks'))
+
+        ##Train sample
+        #Core blocks
+        trainlist = range(xpc.size)
+        trainsamp = random.sample(trainlist, k=round(xpc.size * train_size))
+        train_mask = blockmask(xpc[trainsamp], ypc[trainsamp], sz, ground_truth.shape)
+        train_gt = train_mask * ground_truth
+        #Background blocks
+        trainBlist = range(xBc.size)
+        trainBsamp = random.sample(trainBlist, k=int(xBc.size * train_size))
+        trainB_mask = blockmask(xBc[trainBsamp], yBc[trainBsamp], sz, ground_truth.shape)
+        train_gt += (trainB_mask * ground_truth)
+
+        ##Test sample
+        allblocks = blockmask(np.concatenate((xpc,xBc)), np.concatenate((ypc,yBc)), sz, ground_truth.shape)
+        test_mask = allblocks * np.abs(train_mask - 1) * np.abs(trainB_mask - 1)
+        test_gt = ground_truth * test_mask
     else:
         raise ValueError("{} sampling is not implemented yet.".format(mode))
     return train_gt, test_gt

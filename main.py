@@ -75,6 +75,8 @@ def main(args):
     EPOCH = args.epoch
     # Sampling mode, e.g random sampling
     SAMPLING_MODE = args.sampling_mode
+    # Maximum number of blocks for "blocks" sampling_mode, e.g 8
+    N_BLOCKS = args.nblocks
     # Pre-computed weights to restore
     CHECKPOINT = args.restore
     # Learning rate for the SGD
@@ -153,8 +155,9 @@ def main(args):
         else:
             # Sample random training spectra
             print(SAMPLE_PERCENTAGE)
+            print(gt.shape)
             train_gt, test_gt = split_ground_truth(
-                gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE
+                gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE, nblocks=N_BLOCKS
             )
         print(train_gt)
         from datautils import count_valid_pixels
@@ -350,6 +353,12 @@ if __name__ == "__main__":
         type=str,
         help="Sampling mode" " (random sampling or disjoint, default: random)",
         default="random",
+    )
+    group_dataset.add_argument(
+    "--nblocks",
+    type=int,
+    help="Maximum number of blocks for blocks sampling_mode, e.g 8",
+    default=None,
     )
     group_dataset.add_argument(
         "--train_set",
