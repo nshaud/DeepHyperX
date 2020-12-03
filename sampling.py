@@ -220,8 +220,8 @@ def split_ground_truth(ground_truth, train_size, mode="random", **kwargs):
     elif mode == "disjoint":
         train_gt, test_gt = middle_train_test_split(ground_truth, train_size)
     elif mode == 'blocks':
-        train_gt = np.zeros_like(ground_truth)
-        test_gt = np.zeros_like(ground_truth)
+        train_gt = np.full_like(ground_truth, IGNORED_INDEX)
+        test_gt = np.full_like(ground_truth, IGNORED_INDEX)
         
         xpc, ypc, xBc, yBc, sz = genblocks(ground_truth, nblocksmax=kwargs.get('nblocks'))
 
@@ -230,17 +230,20 @@ def split_ground_truth(ground_truth, train_size, mode="random", **kwargs):
         trainlist = range(xpc.size)
         trainsamp = random.sample(trainlist, k=round(xpc.size * train_size))
         train_mask = blockmask(xpc[trainsamp], ypc[trainsamp], sz, ground_truth.shape)
-        train_gt = train_mask * ground_truth
+        idx = np.where(train_mask == 1)
+        train_gt[idx] = ground_truth[idx]
         #Background blocks
         trainBlist = range(xBc.size)
         trainBsamp = random.sample(trainBlist, k=int(xBc.size * train_size))
         trainB_mask = blockmask(xBc[trainBsamp], yBc[trainBsamp], sz, ground_truth.shape)
-        train_gt += (trainB_mask * ground_truth)
+        idxB = np.where(trainB_mask == 1)
+        train_gt[idxB] = ground_truth[idxB]
 
         ##Test sample
         allblocks = blockmask(np.concatenate((xpc,xBc)), np.concatenate((ypc,yBc)), sz, ground_truth.shape)
         test_mask = allblocks * np.abs(train_mask - 1) * np.abs(trainB_mask - 1)
-        test_gt = ground_truth * test_mask
+        idxall = np.where(test_mask == 1)
+        test_gt[idxall] = ground_truth[idxall]
     else:
         raise ValueError("{} sampling is not implemented yet.".format(mode))
     return train_gt, test_gt
