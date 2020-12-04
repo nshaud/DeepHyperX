@@ -2,6 +2,7 @@
 import random
 import numpy as np
 from sklearn.metrics import confusion_matrix
+from sklearn.preprocessing._data import _handle_zeros_in_scale as handle_zeros
 import sklearn.model_selection
 import seaborn as sns
 import itertools
@@ -12,6 +13,7 @@ from scipy import io, misc
 import os
 import re
 import torch
+
 
 def get_device(ordinal):
     # Use GPU ?
@@ -222,9 +224,59 @@ def get_random_pos(img, window_shape):
     return x1, x2, y1, y2
 
 
-def padding_image(image, patch_size=None, mode="symmetric", constant_values=0):
+def normalise_image(image, method='None'):
+    """Normalise an image.
+
+    Args:
+        image: A 3D image with a shape of [h, w, b] or 2D image with a shape of [h * w, b],
+        The array to pad
+        method: optional, used to normalise a HSI, default is None,
+        including six categories as follows:
+        1) None: Applying none preprocessing.
+        2) L2NS (L2Normalize for each Sample): Normalizing with a unit Euclidean norm along each sample,
+        Similar to sklearn.preprocessing.Normalizer().fit_transform(image) while worked on the b dimension.
+        3) MNB (MinMaxNormalize for each Band): Converting the dynamics to [0, 1] along each band,
+        Similar to sklearn.preprocessing.MinMaxScaler().fit_transform(image) while worked on the h * w dimension.
+        4) SNB (StandardNormalize for each Band): Normalizing first- and second-order moments along each band,
+        Similar to sklearn.preprocessing.StandardScaler().fit_transform(image) while worked on the h * w dimension.
+        5) MNI (MinMaxNormalize for total Image): Converting the dynamics to [0, 1] along the whole image,
+        Similar to sklearn.preprocessing.MinMaxScaler().fit_transform(image) while worked on the h * w * b dimension.
+        6) SNI (StandardNormalize for total Image): Normalizing first- and second-order moments along the whole image,
+        Similar to sklearn.preprocessing.StandardScaler().fit_transform(image) while worked on the h * w * b dimension.
+    Returns:
+        normalised_image with the same shape of the input
+
+    """
+    allowed_methods = ['NONE', 'L2NS', 'MNB', 'SNB', 'MNI', 'SNI']
+    method = method.upper()
+    if method not in allowed_methods:
+        raise ValueError('unknown normalization method "%s"' % (method,))
+
+    shp = image.shape
+    if len(shp) >= 3:
+        image = image.reshape(-1, shp[-1])
+
+    if method == 'L2NS':
+        scale = handle_zeros(np.linalg.norm(image, axis=1, keepdims=True))
+        image = image / scale
+    elif method == 'MNB':
+        scale = handle_zeros(np.max(image, axis=0, keepdims=True) - np.min(image, axis=0, keepdims=True))
+        image = (image - np.min(image, axis=0, keepdims=True)) / scale
+    elif method == 'SNB':
+        scale = handle_zeros(np.std(image, axis=0, keepdims=True))
+        image = (image - np.mean(image, axis=0, keepdims=True)) / scale
+    elif method == 'MNI':
+        scale = handle_zeros(np.max(image, axis=(0, 1), keepdims=True) - np.min(image, axis=(0, 1), keepdims=True))
+        image = (image - np.min(image, axis=(0, 1), keepdims=True)) / scale
+    elif method == 'SNI':
+        scale = handle_zeros(np.std(image, axis=(0, 1), keepdims=True))
+        image = (image - np.mean(image, axis=(0, 1), keepdims=True)) / scale
+
+    return np.reshape(image, shp)
+
+
+def padding_image(image, patch_size=None, mode="symmetric", **kwargs):
     """Padding an input image.
-    Modified at 2020.11.16. If you find any issues, please email at mengxue_zhang@hhu.edu.cn with details.
 
     Args:
         image: 2D+ image with a shape of [h, w, ...],
@@ -233,8 +285,6 @@ def padding_image(image, patch_size=None, mode="symmetric", constant_values=0):
         The patch size of the algorithm
         mode: optional, str or function, default is "symmetric",
         Including 'constant', 'reflect', 'symmetric', more details see np.pad()
-        constant_values: optional, sequence or scalar, default is 0,
-        Used in 'constant'.  The values to set the padded values for each axis
     Returns:
         padded_image with a shape of [h + patch_size[0] // 2 * 2, w + patch_size[1] // 2 * 2, ...]
 
@@ -245,7 +295,7 @@ def padding_image(image, patch_size=None, mode="symmetric", constant_values=0):
     w = patch_size[1] // 2
     pad_width = [[h, h], [w, w]]
     [pad_width.append([0, 0]) for i in image.shape[2:]]
-    padded_image = np.pad(image, pad_width, mode=mode, constant_values=constant_values)
+    padded_image = np.pad(image, pad_width, mode=mode, **kwargs)
     return padded_image
 
 
