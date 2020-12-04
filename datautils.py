@@ -74,3 +74,19 @@ class HSIDataset(torch.utils.data.Dataset):
         target = self.ground_truth[x : x + w, y : y + h]
         # TODO: data augmentation
         return torch.from_numpy(data), torch.from_numpy(target)
+
+
+class HSITestDataset(HSIDataset):
+    def __init__(self, hsi_image, window_size=None, overlap=0):
+        ground_truth = np.zeros(hsi_image.shape[:2], dtype="int64")
+        super(HSITestDataset, self).__init__(
+            hsi_image, ground_truth, window_size=window_size, overlap=overlap
+        )
+
+    def __getitem__(self, idx):
+        w, h = self.window_size
+        x, y = self.window_corners[idx]
+        data = self.data[x : x + w, y : y + h].transpose((2, 0, 1))
+        # TODO: test time augmentation?
+        coords = np.array([[x, x + w], [y, y + h]])
+        return torch.from_numpy(data), torch.from_numpy(coords)

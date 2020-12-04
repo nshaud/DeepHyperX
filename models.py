@@ -19,6 +19,7 @@ from utils import grouper, sliding_window, count_sliding_window, camel_to_snake
 
 from datautils import IGNORED_INDEX
 
+
 def get_model(name, **kwargs):
     """
     Instantiate and obtain a model with adequate hyperparameters
@@ -1154,57 +1155,54 @@ def save_model(model, model_name, dataset_name, **kwargs):
         joblib.dump(model, model_dir + filename + ".pkl")
 
 
-def test(net, img, hyperparams):
+def test(
+    net,
+    image,
+    center_pixel=False,
+    window_size=None,
+    batch_size=100,
+    overlap=0.0,
+    # TODO: automatically find n_classes
+    n_classes=None,
+    device="cpu",
+    n_jobs=0,
+):
     """
     Test a model on a specific image
     """
-    net.eval()
-    patch_size = hyperparams["patch_size"]
-    center_pixel = hyperparams["center_pixel"]
-    batch_size, device = hyperparams["batch_size"], hyperparams["device"]
-    n_classes = hyperparams["n_classes"]
+    net = net.to(device)
+    net = net.eval()
 
-    kwargs = {
-        "step": hyperparams["test_stride"],
-        "window_size": (patch_size, patch_size),
-    }
-    probs = np.zeros(img.shape[:2] + (n_classes,))
+    from datautils import HSITestDataset
 
-    iterations = count_sliding_window(img, **kwargs) // batch_size
-    for batch in tqdm(
-        grouper(batch_size, sliding_window(img, **kwargs)),
-        total=(iterations),
-        desc="Inference on the image",
-    ):
-        with torch.no_grad():
-            if patch_size == 1:
-                data = [b[0][0, 0] for b in batch]
-                data = np.copy(data)
-                data = torch.from_numpy(data)
-            else:
-                data = [b[0] for b in batch]
-                data = np.copy(data)
-                data = data.transpose(0, 3, 1, 2)
-                data = torch.from_numpy(data)
-                data = data.unsqueeze(1)
+    ds = HSITestDataset(image, window_size=window_size, overlap=overlap)
+    import torch.utils
 
-            indices = [b[1:] for b in batch]
+    test_loader = torch.utils.data.DataLoader(
+        ds, shuffle=False, batch_size=batch_size, num_workers=n_jobs
+    )
+
+    # Output probability vectors: same shape as ground truth but each vector
+    # has n_classes values (one activation per class)
+    probabilities = np.zeros(ds.ground_truth.shape[:2] + (n_classes,), dtype="float32")
+
+    with torch.no_grad():
+        for data, coords in tqdm(test_loader, desc="Inference on the image"):
             data = data.to(device)
+            # Forward pass
             output = net(data)
+
             if isinstance(output, tuple):
                 output = output[0]
-            output = output.to("cpu")
+            output = output.to("cpu").numpy()
+            coords = coords.numpy()
 
-            if patch_size == 1 or center_pixel:
-                output = output.numpy()
-            else:
-                output = np.transpose(output.numpy(), (0, 2, 3, 1))
-            for (x, y, w, h), out in zip(indices, output):
-                if center_pixel:
-                    probs[x + w // 2, y + h // 2] += out
-                else:
-                    probs[x : x + w, y : y + h] += out
-    return probs
+            # TODO: deal with center_pixel scenario
+            for out, coordinates in zip(output, coords):
+                x1, x2 = coordinates[0]
+                y1, y2 = coordinates[1]
+                probabilities[x1:x2, y1:y2] = output
+    return probabilities
 
 
 def val(net, data_loader, device="cpu", supervision="full"):

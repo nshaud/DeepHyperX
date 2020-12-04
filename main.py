@@ -87,7 +87,7 @@ def main(args):
     TRAIN_GT = args.train_set
     # Testing ground truth file
     TEST_GT = args.test_set
-    TEST_STRIDE = args.test_stride
+    TEST_OVERLAP = args.test_overlap
 
     if args.download is not None and len(args.download) > 0:
         for dataset in args.download:
@@ -204,7 +204,7 @@ def main(args):
             from datautils import HSIDataset
 
             train_dataset = HSIDataset(
-                img, train_gt, window_size=hyperparams["patch_size"]
+                img, train_gt, window_size=hyperparams["patch_size"],
             )
             print("Sample in dataset: {}".format(len(train_dataset)))
             train_loader = data.DataLoader(
@@ -259,7 +259,7 @@ def main(args):
             probabilities = test(model, img, hyperparams)
             prediction = np.argmax(probabilities, axis=-1)
 
-        run_results = metrics(prediction, test_gt, label_values=LABEL_VALUES)
+        run_results = metrics(prediction, test_gt, target_names=LABEL_VALUES)
 
         # mask = np.zeros(gt.shape, dtype="bool")
         # for l in IGNORED_LABELS:
@@ -401,10 +401,10 @@ if __name__ == "__main__":
         help="Batch size (optional, if absent will be set by the model",
     )
     group_train.add_argument(
-        "--test_stride",
-        type=int,
-        default=1,
-        help="Sliding window step stride during inference (default = 1)",
+        "--test_overlap",
+        type=float,
+        default=0,
+        help="Sliding window overlap stride during inference (max 1, default = 0)",
     )
     # Data augmentation parameters
     group_da = parser.add_argument_group("Data augmentation")
