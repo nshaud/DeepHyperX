@@ -253,10 +253,19 @@ def main(args):
                 )
             except KeyboardInterrupt:
                 # Allow the user to stop the training
-                # TODO: save model at this point
+                # TODO: move interruption inside training function?
                 pass
 
-            probabilities = test(model, img, hyperparams)
+            from utils import camel_to_snake
+            save_model(
+                model,
+                camel_to_snake(str(model.__class__.__name__)),
+                DATASET,
+                epoch="last",
+                metric="",
+            )
+
+            probabilities = test(model, img)
             prediction = np.argmax(probabilities, axis=-1)
 
         run_results = metrics(prediction, test_gt, target_names=LABEL_VALUES)
