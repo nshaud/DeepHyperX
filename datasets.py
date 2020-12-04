@@ -96,7 +96,7 @@ class TqdmUpTo(tqdm):
         self.update(b * bsize - self.n)  # will also set self.n = b * bsize
 
 
-def get_dataset(dataset_name, normalization_method, target_folder="./", datasets=DATASETS_CONFIG):
+def get_dataset(dataset_name, normalization_method="MNI", target_folder="./", datasets=DATASETS_CONFIG):
     """Gets the dataset specified by name and return the related components.
     Args:
         dataset_name: string with the name of the dataset
