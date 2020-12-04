@@ -18,7 +18,7 @@ except ImportError:
     # Python 2
     from urllib import urlretrieve
 
-from utils import open_file
+from utils import open_file, normalise_image
 
 DATASETS_CONFIG = {
     "PaviaC": {
@@ -96,10 +96,12 @@ class TqdmUpTo(tqdm):
         self.update(b * bsize - self.n)  # will also set self.n = b * bsize
 
 
-def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
+def get_dataset(dataset_name, normalization_method='MNI', target_folder="./", datasets=DATASETS_CONFIG):
     """Gets the dataset specified by name and return the related components.
     Args:
         dataset_name: string with the name of the dataset
+        normalization_method (optional): string option used to normalise a HSI,
+        defaults to MNI (MinMaxNormalize for total Image).
         target_folder (optional): folder to store the datasets, defaults to ./
         datasets (optional): dataset configuration dictionary, defaults to prebuilt one
     Returns:
@@ -316,7 +318,7 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
     ignored_labels = list(set(ignored_labels))
     # Normalization
     img = np.asarray(img, dtype="float32")
-    img = (img - np.min(img)) / (np.max(img) - np.min(img))
+    img = normalise_image(img, method=normalization_method)
     return img, gt, label_values, ignored_labels, rgb_bands, palette
 
 
