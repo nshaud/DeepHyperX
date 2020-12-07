@@ -15,6 +15,7 @@ import torch
 
 from PIL import Image
 
+
 def get_device(ordinal):
     # Use GPU ?
     if ordinal < 0:

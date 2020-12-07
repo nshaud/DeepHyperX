@@ -91,7 +91,9 @@ def get_model(name, **kwargs):
         center_pixel = True
         model = LiEtAl(n_bands, n_classes, n_planes=16, patch_size=patch_size)
         lr = kwargs.setdefault("learning_rate", 0.01)
-        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
+        optimizer = optim.SGD(
+            model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005
+        )
         epoch = kwargs.setdefault("epoch", 200)
         # kwargs.setdefault('scheduler', optim.lr_scheduler.MultiStepLR(optimizer, milestones=[epoch // 2, (5 * epoch) // 6], gamma=0.1))
     elif name == "hu":
@@ -323,9 +325,13 @@ class HamidaEtAl(nn.Module):
         dilation = (dilation, 1, 1)
 
         if patch_size == 3:
-            self.conv1 = nn.Conv3d(1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=1)
+            self.conv1 = nn.Conv3d(
+                1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=1
+            )
         else:
-            self.conv1 = nn.Conv3d(1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=0)
+            self.conv1 = nn.Conv3d(
+                1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=0
+            )
         # Next pooling is applied using a layer identical to the previous one
         # with the difference of a 1D kernel size (1,1,3) and a larger stride
         # equal to 2 in order to reduce the spectral dimension
@@ -402,8 +408,12 @@ class LeeEtAl(nn.Module):
         # image uses an inception module that locally convolves the input
         # image with two convolutional filters with different sizes
         # (1x1xB and 3x3xB where B is the number of spectral bands)
-        self.conv_3x3 = nn.Conv3d(1, 128, (in_channels, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1))
-        self.conv_1x1 = nn.Conv3d(1, 128, (in_channels, 1, 1), stride=(1, 1, 1), padding=0)
+        self.conv_3x3 = nn.Conv3d(
+            1, 128, (in_channels, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1)
+        )
+        self.conv_1x1 = nn.Conv3d(
+            1, 128, (in_channels, 1, 1), stride=(1, 1, 1), padding=0
+        )
 
         # We use two modules from the residual learning approach
         # Residual block 1
@@ -463,6 +473,7 @@ class LeeEtAl(nn.Module):
         x = self.conv8(x)
         return x
 
+
 class CNN2D(nn.Module):
     """
     Baseline 2D Convolutional Neural Network
@@ -470,16 +481,17 @@ class CNN2D(nn.Module):
 
     def __init__(self, in_channels, n_classes):
         super(CNN2D, self).__init__()
-        
+
         self.encoder = nn.Sequential(
             nn.Conv2d(in_channels, 16, (3, 3), padding=1),
-            nn.MaxPool2d((2,2)),
+            nn.MaxPool2d((2, 2)),
             nn.ReLU(),
             nn.Conv2d(16, 32, (3, 3), padding=1),
-            nn.MaxPool2d((2,2)),
+            nn.MaxPool2d((2, 2)),
             nn.ReLU(),
             nn.Conv2d(32, 64, (3, 3), padding=1),
-            nn.ReLU())
+            nn.ReLU(),
+        )
         self.pooling = nn.AdaptiveAvgPool2d(1)
         self.classifier = nn.Linear(64, n_classes)
 
@@ -489,6 +501,7 @@ class CNN2D(nn.Module):
         x = self.classifier(x)
         return x
 
+
 class FCN2D(nn.Module):
     """
     Baseline 2D Fully Convolutional Network
@@ -496,16 +509,17 @@ class FCN2D(nn.Module):
 
     def __init__(self, in_channels, n_classes):
         super(FCN2D, self).__init__()
-        
+
         self.encoder = nn.Sequential(
             nn.Conv2d(in_channels, 16, (3, 3), padding=1),
-            nn.MaxPool2d((2,2)),
+            nn.MaxPool2d((2, 2)),
             nn.ReLU(),
             nn.Conv2d(16, 32, (3, 3), padding=1),
-            nn.MaxPool2d((2,2)),
+            nn.MaxPool2d((2, 2)),
             nn.ReLU(),
             nn.Conv2d(32, 64, (3, 3), padding=1),
-            nn.ReLU())
+            nn.ReLU(),
+        )
         self.decoder = nn.Sequential(
             nn.UpsamplingBilinear2d(scale_factor=2),
             nn.Conv2d(64, 32, (3, 3), padding=1),
@@ -513,7 +527,8 @@ class FCN2D(nn.Module):
             nn.UpsamplingBilinear2d(scale_factor=2),
             nn.Conv2d(32, 16, (3, 3), padding=1),
             nn.ReLU(),
-            nn.Conv2d(16, n_classes, (3, 3), padding=1))
+            nn.Conv2d(16, n_classes, (3, 3), padding=1),
+        )
 
     def forward(self, x):
         x = self.encoder(x)
@@ -920,8 +935,12 @@ class LiuEtAl(nn.Module):
 
         # x = F.relu(self.fc1_dec_bn(self.fc1_dec(x) + x_enc))
         x = F.relu(self.fc1_dec(x))
-        x = F.relu(self.fc2_dec_bn(self.fc2_dec(x) + x_pool1.view(-1, self.features_sizes[1])))
-        x = F.relu(self.fc3_dec_bn(self.fc3_dec(x) + x_conv1.view(-1, self.features_sizes[0])))
+        x = F.relu(
+            self.fc2_dec_bn(self.fc2_dec(x) + x_pool1.view(-1, self.features_sizes[1]))
+        )
+        x = F.relu(
+            self.fc3_dec_bn(self.fc3_dec(x) + x_conv1.view(-1, self.features_sizes[0]))
+        )
         x = self.fc4_dec(x)
         return x_classif, x
 
@@ -1081,7 +1100,9 @@ def train(
         avg_loss = 0.0
 
         # Run the training loop for one epoch
-        for batch_idx, (data, target) in tqdm(enumerate(data_loader), total=len(data_loader)):
+        for batch_idx, (data, target) in tqdm(
+            enumerate(data_loader), total=len(data_loader)
+        ):
             # Load the data into the GPU if required
             data, target = data.to(device), target.to(device)
 
@@ -1093,7 +1114,9 @@ def train(
             elif supervision == "semi":
                 outs = net(data)
                 output, rec = outs
-                loss = criterion[0](output, target) + net.aux_loss_weight * criterion[1](rec, data)
+                loss = criterion[0](output, target) + net.aux_loss_weight * criterion[1](
+                    rec, data
+                )
             else:
                 raise ValueError('supervision mode "{}" is unknown.'.format(supervision))
             loss.backward()
@@ -1107,7 +1130,7 @@ def train(
             n_iter += 1
             del (data, target, loss, output)
 
-        #import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         # Update the scheduler
         avg_loss /= len(data_loader)
@@ -1136,17 +1159,16 @@ def train(
 
 
 def save_model(model, model_name, dataset_name, **kwargs):
+    # TODO: rewrite me
     model_dir = "./checkpoints/" + model_name + "/" + dataset_name + "/"
     """
     Using strftime in case it triggers exceptions on windows 10 system
     """
-    time_str = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+    time_str = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     if not os.path.isdir(model_dir):
         os.makedirs(model_dir, exist_ok=True)
     if isinstance(model, torch.nn.Module):
-        filename = time_str + "_epoch{epoch}_{metric:.2f}".format(
-            **kwargs
-        )
+        filename = time_str + "_epoch{epoch}_{metric:.2f}".format(**kwargs)
         tqdm.write("Saving neural network weights in {}".format(filename))
         torch.save(model.state_dict(), model_dir + filename + ".pth")
     else:

@@ -351,6 +351,7 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
     img = (img - np.min(img)) / (np.max(img) - np.min(img))
     return img, gt, label_values, rgb_bands, palette
 
+
 # TODO: delete
 
 # class HyperX(torch.utils.data.Dataset):
