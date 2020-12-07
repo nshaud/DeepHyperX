@@ -1,10 +1,10 @@
+IGNORED_INDEX = 255
+
 import numpy as np
 import torch
 
 from utils import pad_image
 from utils import sliding_window
-
-IGNORED_INDEX = 255
 
 
 def count_valid_pixels(arr, ignored=IGNORED_INDEX):
