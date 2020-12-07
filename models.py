@@ -1227,7 +1227,7 @@ def test(
             for out, coordinates in zip(output, coords):
                 x1, x2 = coordinates[0]
                 y1, y2 = coordinates[1]
-                probabilities[x1:x2, y1:y2] = out.transpose((1, 2, 0))
+                probabilities[x1:x2, y1:y2] += out.transpose((1, 2, 0))
     return probabilities
 
 
