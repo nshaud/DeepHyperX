@@ -37,7 +37,7 @@ def get_model(name, **kwargs):
     n_classes = kwargs["n_classes"]
     n_bands = kwargs["n_bands"]
     weights = torch.ones(n_classes)
-    #weights[torch.LongTensor(kwargs["ignored_labels"])] = 0.0
+    # weights[torch.LongTensor(kwargs["ignored_labels"])] = 0.0
     weights = kwargs.setdefault("weights", weights)
     kwargs["weights"] = weights.to(device)
     criterion = nn.CrossEntropyLoss(weight=kwargs["weights"], ignore_index=IGNORED_INDEX)

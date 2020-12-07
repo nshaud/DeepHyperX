@@ -195,7 +195,7 @@ def main(args):
             prediction = infer_from_sklearn_model(clf, img)
         else:
             if CLASS_BALANCING:
-                weights = compute_imf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
+                weights = compute_imf_weights(train_gt, n_classes=N_CLASSES)
                 hyperparams["weights"] = torch.from_numpy(weights).float()
             # Neural network
             model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)

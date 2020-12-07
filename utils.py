@@ -171,7 +171,7 @@ def sliding_window(image, step=(10, 10), window_size=(20, 20), with_data=True):
                 yield x, y, w, h
 
 
-def count_sliding_window(top, step=(10,10), window_size=(20, 20)):
+def count_sliding_window(top, step=(10, 10), window_size=(20, 20)):
     """ Count the number of windows in an image.
 
     Args:
@@ -205,6 +205,7 @@ def grouper(n, iterable):
 
 from datautils import IGNORED_INDEX
 
+
 def metrics(prediction, target, target_names=None):
     """Compute and print metrics (accuracy, confusion matrix and F1 scores).
 
@@ -218,26 +219,30 @@ def metrics(prediction, target, target_names=None):
     ignored_mask = target == IGNORED_INDEX
     target = target[~ignored_mask]
     prediction = prediction[~ignored_mask]
-    
+
     if target_names is None:
         target_names = [str(i) for i in np.unique(target)]
 
     # Compute F1 scores and accuracy
     from sklearn.metrics import classification_report
-    report = classification_report(target, prediction, output_dict=True, target_names=target_names)
+
+    report = classification_report(
+        target, prediction, output_dict=True, target_names=target_names
+    )
 
     # Compute kappa coefficient
     from sklearn.metrics import cohen_kappa_score
+
     report["kappa"] = cohen_kappa_score(target, prediction)
 
     # Confusion matrix
     report["Confusion matrix"] = confusion_matrix(target, prediction)
-    
+
     report["labels"] = target_names
     return report
 
 
-def compute_imf_weights(ground_truth, n_classes=None, ignored_classes=[]):
+def compute_imf_weights(ground_truth, n_classes=None):
     """ Compute inverse median frequency weights for class balancing.
 
     For each class i, it computes its frequency f_i, i.e the ratio between
@@ -253,15 +258,15 @@ def compute_imf_weights(ground_truth, n_classes=None, ignored_classes=[]):
     Returns:
         numpy array with the IMF coefficients 
     """
-    n_classes = np.max(ground_truth) if n_classes is None else n_classes
+    from datautils import IGNORED_INDEX
+
+    valid_pixels = ground_truth != IGNORED_INDEX
+    pixels = ground_truth[valid_pixels]
+
+    n_classes = np.max(pixels) if n_classes is None else n_classes
     weights = np.zeros(n_classes)
-    frequencies = np.zeros(n_classes)
-
-    for c in range(0, n_classes):
-        if c in ignored_classes:
-            continue
-        frequencies[c] = np.count_nonzero(ground_truth == c)
-
+    frequencies = np.array([np.count_nonzero(pixels == c) for c in range(0, n_classes)], dtype="float32")
+    print(frequencies)
     # Normalize the pixel counts to obtain frequencies
     frequencies /= np.sum(frequencies)
     # Obtain the median on non-zero frequencies
@@ -269,6 +274,7 @@ def compute_imf_weights(ground_truth, n_classes=None, ignored_classes=[]):
     median = np.median(frequencies[idx])
     weights[idx] = median / frequencies[idx]
     weights[frequencies == 0] = 0.0
+    print(weights)
     return weights
 
 
