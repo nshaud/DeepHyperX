@@ -87,6 +87,7 @@ def main(args):
     TRAIN_GT = args.train_set
     # Testing ground truth file
     TEST_GT = args.test_set
+    TRAIN_OVERLAP = args.train_overlap
     TEST_OVERLAP = args.test_overlap
 
     if args.download is not None and len(args.download) > 0:
@@ -204,7 +205,7 @@ def main(args):
             from datautils import HSIDataset
 
             train_dataset = HSIDataset(
-                img, train_gt, window_size=hyperparams["patch_size"],
+                img, train_gt, window_size=hyperparams["patch_size"], overlap=TRAIN_OVERLAP
             )
             print("Sample in dataset: {}".format(len(train_dataset)))
             train_loader = data.DataLoader(
@@ -216,7 +217,7 @@ def main(args):
             )
             # val_dataset = HyperX(img, val_gt, **hyperparams)
             val_dataset = HSIDataset(
-                img, test_gt, window_size=hyperparams["patch_size"], overlap=0
+                img, test_gt, window_size=hyperparams["patch_size"], overlap=0.0
             )
             val_loader = data.DataLoader(
                 val_dataset,
@@ -262,12 +263,21 @@ def main(args):
                 camel_to_snake(str(model.__class__.__name__)),
                 DATASET,
                 epoch="last",
-                metric="",
+                metric=0,
             )
 
-            probabilities = test(model, img)
+            probabilities = test(model, img, window_size=hyperparams["patch_size"], n_classes=len(LABEL_VALUES), overlap=TEST_OVERLAP)
             prediction = np.argmax(probabilities, axis=-1)
 
+        from utils import pad_image
+        window_size = PATCH_SIZE
+        if isinstance(window_size, int):
+            window_size = (window_size, window_size)
+        padding = (window_size[0] // 2, window_size[1] // 2)
+        from datautils import IGNORED_INDEX
+        test_gt = pad_image(
+            test_gt, padding=padding, mode="constant", constant=IGNORED_INDEX,
+        ).astype("int64")
         run_results = metrics(prediction, test_gt, target_names=LABEL_VALUES)
 
         # mask = np.zeros(gt.shape, dtype="bool")
@@ -408,6 +418,12 @@ if __name__ == "__main__":
         "--batch_size",
         type=int,
         help="Batch size (optional, if absent will be set by the model",
+    )
+    group_train.add_argument(
+        "--train_overlap",
+        type=float,
+        default=0,
+        help="Sliding window overlap stride during training (max 1, default = 0)"
     )
     group_train.add_argument(
         "--test_overlap",

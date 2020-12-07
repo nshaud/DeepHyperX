@@ -1201,7 +1201,7 @@ def test(
             for out, coordinates in zip(output, coords):
                 x1, x2 = coordinates[0]
                 y1, y2 = coordinates[1]
-                probabilities[x1:x2, y1:y2] = output
+                probabilities[x1:x2, y1:y2] = out.transpose((1, 2, 0))
     return probabilities
 
 
@@ -1220,10 +1220,11 @@ def val(net, data_loader, device="cpu", supervision="full"):
                 output, rec = outs
             _, output = torch.max(output, dim=1)
             bs = len(data)
-            print(output.view(bs, -1).to("cpu").numpy().shape)
+            # TODO: remove ignored index in accuracy computation
             predictions.append(output.view(bs, -1).to("cpu").numpy())
             labels.append(target.view(bs, -1).to("cpu").numpy())
     predictions, labels = np.concatenate(predictions, axis=0), np.concatenate(labels)
     from sklearn.metrics import accuracy_score
+
     # TODO: add other scoring functions
     return accuracy_score(labels.ravel(), predictions.ravel())
