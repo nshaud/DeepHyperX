@@ -1173,9 +1173,13 @@ def test(
     net = net.to(device)
     net = net.eval()
 
-    from datautils import HSITestDataset
+    if center_pixel:
+        from datautils import HSICenterPixelTestDataset
+        ds = HSICenterPixelTestDataset(image, window_size=window_size)
+    else:
+        from datautils import HSITestDataset
+        ds = HSITestDataset(image, window_size=window_size, overlap=overlap)
 
-    ds = HSITestDataset(image, window_size=window_size, overlap=overlap)
     import torch.utils
 
     test_loader = torch.utils.data.DataLoader(
