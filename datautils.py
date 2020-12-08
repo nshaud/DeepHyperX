@@ -1,10 +1,10 @@
+IGNORED_INDEX = 255
+
 import numpy as np
 import torch
 
 from utils import pad_image
 from utils import sliding_window
-
-IGNORED_INDEX = 255
 
 
 def count_valid_pixels(arr, ignored=IGNORED_INDEX):
@@ -23,7 +23,7 @@ def to_sklearn_datasets(image, ground_truth):
 
 
 class HSIDataset(torch.utils.data.Dataset):
-    def __init__(self, hsi_image, ground_truth, window_size=None, overlap=0):
+    def __init__(self, hsi_image, ground_truth, window_size=None, overlap=0, step=None):
         super(HSIDataset, self).__init__()
         # Transform singular window size into a tuple
         if isinstance(window_size, int):
@@ -39,14 +39,19 @@ class HSIDataset(torch.utils.data.Dataset):
         self.window_size = window_size
         self.ignored_mask = self.ground_truth == IGNORED_INDEX
 
-        # Overlap percentage defines how much two successive windows intersect
-        # This directly gives the step size of the sliding window:
-        #   0% overlap => step size = window size
-        #   50% overlap => step size = 0.5 * window size
-        #   90% overlap => step size = 0.9 * window size
-        assert overlap >= 0 and overlap < 1
-        step_h = int((1 - overlap) * window_size[0])
-        step_w = int((1 - overlap) * window_size[1])
+        if step is None:
+            # Overlap percentage defines how much two successive windows intersect
+            # This directly gives the step size of the sliding window:
+            #   0% overlap => step size = window size
+            #   50% overlap => step size = 0.5 * window size
+            #   90% overlap => step size = 0.9 * window size
+            assert overlap >= 0 and overlap < 1
+            step_h = int((1 - overlap) * window_size[0])
+            step_w = int((1 - overlap) * window_size[1])
+        elif isinstance(step, int):
+            step_h, step_w = (step, step)
+        else:
+            step_h, step_w = step
 
         # Extract window corner indices
         windows = list(
@@ -74,3 +79,48 @@ class HSIDataset(torch.utils.data.Dataset):
         target = self.ground_truth[x : x + w, y : y + h]
         # TODO: data augmentation
         return torch.from_numpy(data), torch.from_numpy(target)
+
+
+class HSITestDataset(HSIDataset):
+    def __init__(self, hsi_image, window_size=None, overlap=0, step=None):
+        ground_truth = np.zeros(hsi_image.shape[:2], dtype="int64")
+        super(HSITestDataset, self).__init__(
+            hsi_image, ground_truth, window_size=window_size, overlap=overlap, step=step
+        )
+
+    def __getitem__(self, idx):
+        w, h = self.window_size
+        x, y = self.window_corners[idx]
+        data = self.data[x : x + w, y : y + h].transpose((2, 0, 1))
+        # TODO: test time augmentation?
+        coords = np.array([[x, x + w], [y, y + h]])
+        return torch.from_numpy(data), torch.from_numpy(coords)
+
+
+class HSICenterPixelDataset(HSIDataset):
+    def __init__(self, hsi_image, ground_truth, window_size=None):
+        step = (1, 1)
+        super(HSICenterPixelDataset, self).__init__(
+            hsi_image, ground_truth, window_size=window_size, step=step
+        )
+
+    def __getitem__(self, idx):
+        data, target = super(HSICenterPixelDataset, self).__getitem__(idx)
+        w, h = self.window_size
+        target = target[..., w // 2, h // 2]
+        return data, target
+
+class HSICenterPixelTestDataset(HSICenterPixelDataset):
+    def __init__(self, hsi_image, window_size=None):
+        ground_truth = np.zeros(hsi_image.shape[:2], dtype="int64")
+        super(HSICenterPixelTestDataset, self).__init__(
+            hsi_image, ground_truth, window_size=window_size
+        )
+
+    def __getitem__(self, idx):
+        w, h = self.window_size
+        x, y = self.window_corners[idx]
+        data = self.data[x : x + w, y : y + h].transpose((2, 0, 1))
+        # TODO: test time augmentation?
+        coords = np.array([[x, x + w], [y, y + h]])
+        return torch.from_numpy(data), torch.from_numpy(coords)

@@ -19,6 +19,7 @@ from utils import grouper, sliding_window, count_sliding_window, camel_to_snake
 
 from datautils import IGNORED_INDEX
 
+
 def get_model(name, **kwargs):
     """
     Instantiate and obtain a model with adequate hyperparameters
@@ -36,7 +37,7 @@ def get_model(name, **kwargs):
     n_classes = kwargs["n_classes"]
     n_bands = kwargs["n_bands"]
     weights = torch.ones(n_classes)
-    #weights[torch.LongTensor(kwargs["ignored_labels"])] = 0.0
+    # weights[torch.LongTensor(kwargs["ignored_labels"])] = 0.0
     weights = kwargs.setdefault("weights", weights)
     kwargs["weights"] = weights.to(device)
     criterion = nn.CrossEntropyLoss(weight=kwargs["weights"], ignore_index=IGNORED_INDEX)
@@ -90,7 +91,9 @@ def get_model(name, **kwargs):
         center_pixel = True
         model = LiEtAl(n_bands, n_classes, n_planes=16, patch_size=patch_size)
         lr = kwargs.setdefault("learning_rate", 0.01)
-        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
+        optimizer = optim.SGD(
+            model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005
+        )
         epoch = kwargs.setdefault("epoch", 200)
         # kwargs.setdefault('scheduler', optim.lr_scheduler.MultiStepLR(optimizer, milestones=[epoch // 2, (5 * epoch) // 6], gamma=0.1))
     elif name == "hu":
@@ -322,9 +325,13 @@ class HamidaEtAl(nn.Module):
         dilation = (dilation, 1, 1)
 
         if patch_size == 3:
-            self.conv1 = nn.Conv3d(1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=1)
+            self.conv1 = nn.Conv3d(
+                1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=1
+            )
         else:
-            self.conv1 = nn.Conv3d(1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=0)
+            self.conv1 = nn.Conv3d(
+                1, 20, (3, 3, 3), stride=(1, 1, 1), dilation=dilation, padding=0
+            )
         # Next pooling is applied using a layer identical to the previous one
         # with the difference of a 1D kernel size (1,1,3) and a larger stride
         # equal to 2 in order to reduce the spectral dimension
@@ -401,8 +408,12 @@ class LeeEtAl(nn.Module):
         # image uses an inception module that locally convolves the input
         # image with two convolutional filters with different sizes
         # (1x1xB and 3x3xB where B is the number of spectral bands)
-        self.conv_3x3 = nn.Conv3d(1, 128, (in_channels, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1))
-        self.conv_1x1 = nn.Conv3d(1, 128, (in_channels, 1, 1), stride=(1, 1, 1), padding=0)
+        self.conv_3x3 = nn.Conv3d(
+            1, 128, (in_channels, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1)
+        )
+        self.conv_1x1 = nn.Conv3d(
+            1, 128, (in_channels, 1, 1), stride=(1, 1, 1), padding=0
+        )
 
         # We use two modules from the residual learning approach
         # Residual block 1
@@ -462,6 +473,7 @@ class LeeEtAl(nn.Module):
         x = self.conv8(x)
         return x
 
+
 class CNN2D(nn.Module):
     """
     Baseline 2D Convolutional Neural Network
@@ -469,16 +481,17 @@ class CNN2D(nn.Module):
 
     def __init__(self, in_channels, n_classes):
         super(CNN2D, self).__init__()
-        
+
         self.encoder = nn.Sequential(
             nn.Conv2d(in_channels, 16, (3, 3), padding=1),
-            nn.MaxPool2d((2,2)),
+            nn.MaxPool2d((2, 2)),
             nn.ReLU(),
             nn.Conv2d(16, 32, (3, 3), padding=1),
-            nn.MaxPool2d((2,2)),
+            nn.MaxPool2d((2, 2)),
             nn.ReLU(),
             nn.Conv2d(32, 64, (3, 3), padding=1),
-            nn.ReLU())
+            nn.ReLU(),
+        )
         self.pooling = nn.AdaptiveAvgPool2d(1)
         self.classifier = nn.Linear(64, n_classes)
 
@@ -488,6 +501,7 @@ class CNN2D(nn.Module):
         x = self.classifier(x)
         return x
 
+
 class FCN2D(nn.Module):
     """
     Baseline 2D Fully Convolutional Network
@@ -495,16 +509,17 @@ class FCN2D(nn.Module):
 
     def __init__(self, in_channels, n_classes):
         super(FCN2D, self).__init__()
-        
+
         self.encoder = nn.Sequential(
             nn.Conv2d(in_channels, 16, (3, 3), padding=1),
-            nn.MaxPool2d((2,2)),
+            nn.MaxPool2d((2, 2)),
             nn.ReLU(),
             nn.Conv2d(16, 32, (3, 3), padding=1),
-            nn.MaxPool2d((2,2)),
+            nn.MaxPool2d((2, 2)),
             nn.ReLU(),
             nn.Conv2d(32, 64, (3, 3), padding=1),
-            nn.ReLU())
+            nn.ReLU(),
+        )
         self.decoder = nn.Sequential(
             nn.UpsamplingBilinear2d(scale_factor=2),
             nn.Conv2d(64, 32, (3, 3), padding=1),
@@ -512,7 +527,8 @@ class FCN2D(nn.Module):
             nn.UpsamplingBilinear2d(scale_factor=2),
             nn.Conv2d(32, 16, (3, 3), padding=1),
             nn.ReLU(),
-            nn.Conv2d(16, n_classes, (3, 3), padding=1))
+            nn.Conv2d(16, n_classes, (3, 3), padding=1),
+        )
 
     def forward(self, x):
         x = self.encoder(x)
@@ -919,8 +935,12 @@ class LiuEtAl(nn.Module):
 
         # x = F.relu(self.fc1_dec_bn(self.fc1_dec(x) + x_enc))
         x = F.relu(self.fc1_dec(x))
-        x = F.relu(self.fc2_dec_bn(self.fc2_dec(x) + x_pool1.view(-1, self.features_sizes[1])))
-        x = F.relu(self.fc3_dec_bn(self.fc3_dec(x) + x_conv1.view(-1, self.features_sizes[0])))
+        x = F.relu(
+            self.fc2_dec_bn(self.fc2_dec(x) + x_pool1.view(-1, self.features_sizes[1]))
+        )
+        x = F.relu(
+            self.fc3_dec_bn(self.fc3_dec(x) + x_conv1.view(-1, self.features_sizes[0]))
+        )
         x = self.fc4_dec(x)
         return x_classif, x
 
@@ -1080,7 +1100,9 @@ def train(
         avg_loss = 0.0
 
         # Run the training loop for one epoch
-        for batch_idx, (data, target) in tqdm(enumerate(data_loader), total=len(data_loader)):
+        for batch_idx, (data, target) in tqdm(
+            enumerate(data_loader), total=len(data_loader)
+        ):
             # Load the data into the GPU if required
             data, target = data.to(device), target.to(device)
 
@@ -1092,7 +1114,9 @@ def train(
             elif supervision == "semi":
                 outs = net(data)
                 output, rec = outs
-                loss = criterion[0](output, target) + net.aux_loss_weight * criterion[1](rec, data)
+                loss = criterion[0](output, target) + net.aux_loss_weight * criterion[1](
+                    rec, data
+                )
             else:
                 raise ValueError('supervision mode "{}" is unknown.'.format(supervision))
             loss.backward()
@@ -1106,7 +1130,7 @@ def train(
             n_iter += 1
             del (data, target, loss, output)
 
-        #import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         # Update the scheduler
         avg_loss /= len(data_loader)
@@ -1135,17 +1159,16 @@ def train(
 
 
 def save_model(model, model_name, dataset_name, **kwargs):
+    # TODO: rewrite me
     model_dir = "./checkpoints/" + model_name + "/" + dataset_name + "/"
     """
     Using strftime in case it triggers exceptions on windows 10 system
     """
-    time_str = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+    time_str = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     if not os.path.isdir(model_dir):
         os.makedirs(model_dir, exist_ok=True)
     if isinstance(model, torch.nn.Module):
-        filename = time_str + "_epoch{epoch}_{metric:.2f}".format(
-            **kwargs
-        )
+        filename = time_str + "_epoch{epoch}_{metric:.2f}".format(**kwargs)
         tqdm.write("Saving neural network weights in {}".format(filename))
         torch.save(model.state_dict(), model_dir + filename + ".pth")
     else:
@@ -1154,57 +1177,58 @@ def save_model(model, model_name, dataset_name, **kwargs):
         joblib.dump(model, model_dir + filename + ".pkl")
 
 
-def test(net, img, hyperparams):
+def test(
+    net,
+    image,
+    center_pixel=False,
+    window_size=None,
+    batch_size=100,
+    overlap=0.0,
+    # TODO: automatically find n_classes
+    n_classes=None,
+    device="cpu",
+    n_jobs=0,
+):
     """
     Test a model on a specific image
     """
-    net.eval()
-    patch_size = hyperparams["patch_size"]
-    center_pixel = hyperparams["center_pixel"]
-    batch_size, device = hyperparams["batch_size"], hyperparams["device"]
-    n_classes = hyperparams["n_classes"]
+    net = net.to(device)
+    net = net.eval()
 
-    kwargs = {
-        "step": hyperparams["test_stride"],
-        "window_size": (patch_size, patch_size),
-    }
-    probs = np.zeros(img.shape[:2] + (n_classes,))
+    if center_pixel:
+        from datautils import HSICenterPixelTestDataset
+        ds = HSICenterPixelTestDataset(image, window_size=window_size)
+    else:
+        from datautils import HSITestDataset
+        ds = HSITestDataset(image, window_size=window_size, overlap=overlap)
 
-    iterations = count_sliding_window(img, **kwargs) // batch_size
-    for batch in tqdm(
-        grouper(batch_size, sliding_window(img, **kwargs)),
-        total=(iterations),
-        desc="Inference on the image",
-    ):
-        with torch.no_grad():
-            if patch_size == 1:
-                data = [b[0][0, 0] for b in batch]
-                data = np.copy(data)
-                data = torch.from_numpy(data)
-            else:
-                data = [b[0] for b in batch]
-                data = np.copy(data)
-                data = data.transpose(0, 3, 1, 2)
-                data = torch.from_numpy(data)
-                data = data.unsqueeze(1)
+    import torch.utils
 
-            indices = [b[1:] for b in batch]
+    test_loader = torch.utils.data.DataLoader(
+        ds, shuffle=False, batch_size=batch_size, num_workers=n_jobs
+    )
+
+    # Output probability vectors: same shape as ground truth but each vector
+    # has n_classes values (one activation per class)
+    probabilities = np.zeros(ds.ground_truth.shape[:2] + (n_classes,), dtype="float32")
+
+    with torch.no_grad():
+        for data, coords in tqdm(test_loader, desc="Inference on the image"):
             data = data.to(device)
+            # Forward pass
             output = net(data)
+
             if isinstance(output, tuple):
                 output = output[0]
-            output = output.to("cpu")
+            output = output.to("cpu").numpy()
+            coords = coords.numpy()
 
-            if patch_size == 1 or center_pixel:
-                output = output.numpy()
-            else:
-                output = np.transpose(output.numpy(), (0, 2, 3, 1))
-            for (x, y, w, h), out in zip(indices, output):
-                if center_pixel:
-                    probs[x + w // 2, y + h // 2] += out
-                else:
-                    probs[x : x + w, y : y + h] += out
-    return probs
+            # TODO: deal with center_pixel scenario
+            for out, coordinates in zip(output, coords):
+                x1, x2 = coordinates[0]
+                y1, y2 = coordinates[1]
+                probabilities[x1:x2, y1:y2] += out.transpose((1, 2, 0))
+    return probabilities
 
 
 def val(net, data_loader, device="cpu", supervision="full"):
@@ -1222,10 +1246,11 @@ def val(net, data_loader, device="cpu", supervision="full"):
                 output, rec = outs
             _, output = torch.max(output, dim=1)
             bs = len(data)
-            print(output.view(bs, -1).to("cpu").numpy().shape)
+            # TODO: remove ignored index in accuracy computation
             predictions.append(output.view(bs, -1).to("cpu").numpy())
             labels.append(target.view(bs, -1).to("cpu").numpy())
     predictions, labels = np.concatenate(predictions, axis=0), np.concatenate(labels)
     from sklearn.metrics import accuracy_score
+
     # TODO: add other scoring functions
     return accuracy_score(labels.ravel(), predictions.ravel())

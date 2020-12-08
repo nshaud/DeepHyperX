@@ -88,8 +88,9 @@ def plot_spectrums(spectrums, writer, title=""):
     writer.add_figure(title, fig)
 
 
-def show_results(results, writer, label_values=None, agregated=False):
+def show_results(results, writer, agregated=False):
     text = ""
+    label_values = results["labels"]
 
     if agregated:
         accuracies = [r["accuracy"] for r in results]

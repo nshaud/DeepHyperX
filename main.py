@@ -87,7 +87,8 @@ def main(args):
     TRAIN_GT = args.train_set
     # Testing ground truth file
     TEST_GT = args.test_set
-    TEST_STRIDE = args.test_stride
+    TRAIN_OVERLAP = args.train_overlap
+    TEST_OVERLAP = args.test_overlap
 
     if args.download is not None and len(args.download) > 0:
         for dataset in args.download:
@@ -194,7 +195,7 @@ def main(args):
             prediction = infer_from_sklearn_model(clf, img)
         else:
             if CLASS_BALANCING:
-                weights = compute_imf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
+                weights = compute_imf_weights(train_gt, n_classes=N_CLASSES)
                 hyperparams["weights"] = torch.from_numpy(weights).float()
             # Neural network
             model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
@@ -204,7 +205,7 @@ def main(args):
             from datautils import HSIDataset
 
             train_dataset = HSIDataset(
-                img, train_gt, window_size=hyperparams["patch_size"]
+                img, train_gt, window_size=hyperparams["patch_size"], overlap=TRAIN_OVERLAP
             )
             print("Sample in dataset: {}".format(len(train_dataset)))
             train_loader = data.DataLoader(
@@ -216,7 +217,7 @@ def main(args):
             )
             # val_dataset = HyperX(img, val_gt, **hyperparams)
             val_dataset = HSIDataset(
-                img, test_gt, window_size=hyperparams["patch_size"], overlap=0
+                img, test_gt, window_size=hyperparams["patch_size"], overlap=0.0
             )
             val_loader = data.DataLoader(
                 val_dataset,
@@ -253,13 +254,31 @@ def main(args):
                 )
             except KeyboardInterrupt:
                 # Allow the user to stop the training
-                # TODO: save model at this point
+                # TODO: move interruption inside training function?
                 pass
 
-            probabilities = test(model, img, hyperparams)
+            from utils import camel_to_snake
+            save_model(
+                model,
+                camel_to_snake(str(model.__class__.__name__)),
+                DATASET,
+                epoch="last",
+                metric=0,
+            )
+
+            probabilities = test(model, img, window_size=hyperparams["patch_size"], n_classes=len(LABEL_VALUES), overlap=TEST_OVERLAP)
             prediction = np.argmax(probabilities, axis=-1)
 
-        run_results = metrics(prediction, test_gt, label_values=LABEL_VALUES)
+        from utils import pad_image
+        window_size = PATCH_SIZE
+        if isinstance(window_size, int):
+            window_size = (window_size, window_size)
+        padding = (window_size[0] // 2, window_size[1] // 2)
+        from datautils import IGNORED_INDEX
+        test_gt = pad_image(
+            test_gt, padding=padding, mode="constant", constant=IGNORED_INDEX,
+        ).astype("int64")
+        run_results = metrics(prediction, test_gt, target_names=LABEL_VALUES)
 
         # mask = np.zeros(gt.shape, dtype="bool")
         # for l in IGNORED_LABELS:
@@ -401,10 +420,16 @@ if __name__ == "__main__":
         help="Batch size (optional, if absent will be set by the model",
     )
     group_train.add_argument(
-        "--test_stride",
-        type=int,
-        default=1,
-        help="Sliding window step stride during inference (default = 1)",
+        "--train_overlap",
+        type=float,
+        default=0,
+        help="Sliding window overlap stride during training (max 1, default = 0)"
+    )
+    group_train.add_argument(
+        "--test_overlap",
+        type=float,
+        default=0,
+        help="Sliding window overlap stride during inference (max 1, default = 0)",
     )
     # Data augmentation parameters
     group_da = parser.add_argument_group("Data augmentation")
