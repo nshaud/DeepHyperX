@@ -42,7 +42,7 @@ def get_model(name, **kwargs):
         kwargs.setdefault("patch_size", 1)
         center_pixel = True
         model = Baseline(n_bands, n_classes, kwargs.setdefault("dropout", False))
-        lr = kwargs.setdefault("learning_rate", 0.0001)
+        lr = kwargs.setdefault("lr", 0.0001)
         optimizer = optim.Adam(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
         kwargs.setdefault("epoch", 100)
@@ -51,7 +51,7 @@ def get_model(name, **kwargs):
         patch_size = kwargs.setdefault("patch_size", 5)
         center_pixel = True
         model = HamidaEtAl(n_bands, n_classes, patch_size=patch_size)
-        lr = kwargs.setdefault("learning_rate", 0.01)
+        lr = kwargs.setdefault("lr", 0.01)
         optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=0.0005)
         kwargs.setdefault("batch_size", 100)
         criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
@@ -60,14 +60,14 @@ def get_model(name, **kwargs):
         patch_size = kwargs.setdefault("patch_size", 5)
         center_pixel = False
         model = LeeEtAl(n_bands, n_classes)
-        lr = kwargs.setdefault("learning_rate", 0.001)
+        lr = kwargs.setdefault("lr", 0.001)
         optimizer = optim.Adam(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
     elif name == "chen":
         patch_size = kwargs.setdefault("patch_size", 27)
         center_pixel = True
         model = ChenEtAl(n_bands, n_classes, patch_size=patch_size)
-        lr = kwargs.setdefault("learning_rate", 0.003)
+        lr = kwargs.setdefault("lr", 0.003)
         optimizer = optim.SGD(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
         kwargs.setdefault("epoch", 400)
@@ -76,7 +76,7 @@ def get_model(name, **kwargs):
         patch_size = kwargs.setdefault("patch_size", 5)
         center_pixel = True
         model = LiEtAl(n_bands, n_classes, n_planes=16, patch_size=patch_size)
-        lr = kwargs.setdefault("learning_rate", 0.01)
+        lr = kwargs.setdefault("lr", 0.01)
         optimizer = optim.SGD(
             model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005
         )
@@ -88,7 +88,7 @@ def get_model(name, **kwargs):
         center_pixel = True
         model = HuEtAl(n_bands, n_classes)
         # From what I infer from the paper (Eq.7 and Algorithm 1), it is standard SGD with lr = 0.01
-        lr = kwargs.setdefault("learning_rate", 0.01)
+        lr = kwargs.setdefault("lr", 0.01)
         optimizer = optim.SGD(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss(weight=kwargs["weights"])
         kwargs.setdefault("epoch", 100)
@@ -100,7 +100,7 @@ def get_model(name, **kwargs):
         # The input of our network is the HSI 3D patch in the size of 7×7×Band
         kwargs.setdefault("patch_size", 7)
         kwargs.setdefault("batch_size", 40)
-        lr = kwargs.setdefault("learning_rate", 0.01)
+        lr = kwargs.setdefault("lr", 0.01)
         center_pixel = True
         model = HeEtAl(n_bands, n_classes, patch_size=kwargs["patch_size"])
         # For Adagrad, we need to load the model on GPU before creating the optimizer
@@ -112,7 +112,7 @@ def get_model(name, **kwargs):
         # the  decay  term  of  0.09  and  batch  size  of  100.
         kwargs.setdefault("patch_size", 3)
         kwargs.setdefault("batch_size", 100)
-        lr = kwargs.setdefault("learning_rate", 0.1)
+        lr = kwargs.setdefault("lr", 0.1)
         center_pixel = True
         model = LuoEtAl(n_bands, n_classes, patch_size=kwargs["patch_size"])
         optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=0.09)
