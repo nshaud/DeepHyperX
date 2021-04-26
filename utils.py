@@ -12,6 +12,7 @@ from scipy import io, misc
 import os
 import re
 import torch
+from astropy.io import fits
 
 from PIL import Image
 
@@ -45,6 +46,10 @@ def open_file(filepath):
         # Use PySpectral library to load HDR data
         img = spectral.open_image(filepath)
         return img.load()
+    elif ext == ".fits":
+        # Use astropy library to load data
+        img = fits.open(filepath)
+        return img[0].data
     else:
         raise ValueError("Unknown file format: {}".format(ext))
 
