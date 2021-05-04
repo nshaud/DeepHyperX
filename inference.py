@@ -10,6 +10,7 @@ import numpy as np
 import seaborn as sns
 import argparse
 import torch
+from astropy.io import fits
 
 # Test options
 parser = argparse.ArgumentParser(
@@ -96,6 +97,12 @@ group_train.add_argument(
     type=int,
     help="Batch size (optional, if absent will be set by the model",
 )
+group_train.add_argument(
+    "--test_overlap",
+    type=float,
+    default=0,
+    help="Sliding window overlap stride during inference (max 1, default = 0)",
+)
 
 args = parser.parse_args()
 CUDA_DEVICE = get_device(args.cuda)
@@ -106,6 +113,7 @@ N_CLASSES = args.n_classes
 INFERENCE = args.image
 TEST_STRIDE = args.test_stride
 CHECKPOINT = args.checkpoint
+TEST_OVERLAP = args.test_overlap
 
 img_filename = os.path.basename(INFERENCE)
 basename = MODEL + img_filename
@@ -152,12 +160,15 @@ if MODEL in ["SVM", "SVM_grid", "SGD", "nearest"]:
 else:
     model, _, _, hyperparams = get_model(MODEL, **hyperparams)
     model.load_state_dict(torch.load(CHECKPOINT))
-    probabilities = test(model, img, hyperparams)
+    #probabilities = test(model, img, hyperparams)
+    probabilities = test(model, img, window_size=hyperparams["patch_size"], n_classes=hyperparams["n_classes"], overlap=TEST_OVERLAP)
     prediction = np.argmax(probabilities, axis=-1)
 
-filename = dirname + "/" + basename + ".tif"
+#filename = dirname + "/" + basename + ".fits"
+filename = dirname + "/" + basename
 # TODO: use Pillow to save images
-io.imsave(filename, prediction)
+fits.writeto(filename, prediction, overwrite=True)
+'''io.imsave(filename, prediction)
 basename = "color_" + basename
 filename = dirname + "/" + basename + ".tif"
-io.imsave(filename, convert_to_color(prediction))
+io.imsave(filename, convert_to_color(prediction))'''
