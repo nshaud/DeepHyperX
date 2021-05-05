@@ -21,6 +21,22 @@ def to_sklearn_datasets(image, ground_truth):
     labels = ground_truth[valid_pixels].ravel()
     return samples, labels
 
+class MultiDataset(torch.utils.data.Dataset):
+    def __init__(self, ids, data_files=DATA_FOLDER, gt_files=GT_FOLDER, window_size=None,
+                 overlap=0, step=None):
+        super(MultiDataset, self).__init__()
+        # Transform singular window size into a tuple
+        if isinstance(window_size, int):
+            window_size = (window_size, window_size)
+        
+        # List of files
+        self.data_files = [DATA_FOLDER.format(id) for id in ids]
+        self.label_files = [LABEL_FOLDER.format(id) for id in ids]
+
+        # Sanity check : raise an error if some files do not exist
+        for f in self.data_files + self.label_files:
+            if not os.path.isfile(f):
+                raise KeyError('{} is not a file !'.format(f))
 
 class HSIDataset(torch.utils.data.Dataset):
     def __init__(self, hsi_image, ground_truth, window_size=None, overlap=0, step=None):
