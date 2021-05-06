@@ -46,6 +46,7 @@ from visualization import (
 from sampling import split_ground_truth
 from datasets import get_dataset, open_file, DATASETS_CONFIG
 from models import get_model, train, test, save_model
+from utils import open_file
 
 import argparse
 
@@ -102,7 +103,10 @@ def main(args):
     # Number of classes
     N_CLASSES = len(LABEL_VALUES)
     # Number of bands (last dimension of the image tensor)
-    N_BANDS = img.shape[-1]
+    if isinstance(img,list):
+        N_BANDS = open_file(img[0]).shape[-1]
+    else:
+        N_BANDS = img.shape[-1]
 
     if palette is None:
         # Generate color palette
@@ -130,8 +134,13 @@ def main(args):
 
     # Show the image and the ground truth
     writer = SummaryWriter(comment=f"-{DATASET}_{MODEL}")
-    display_dataset(img, gt, RGB_BANDS, LABEL_VALUES, palette, writer=writer)
-    color_gt = convert_to_color(gt)
+    if isinstance(img,list):
+        display_dataset(open_file(img[0]),open_file(gt[0]).astype("uint8"), 
+                        RGB_BANDS, LABEL_VALUES, palette, writer=writer)
+    else:
+        display_dataset(img,gt, RGB_BANDS, LABEL_VALUES, palette, writer=writer)
+        
+    #color_gt = convert_to_color(gt)
 
     if DATAVIZ:
         # Data exploration : compute and show the mean spectrums
@@ -143,69 +152,19 @@ def main(args):
     results = []
     # run the experiment several times
     for run in range(N_RUNS):
-        if TRAIN_GT is not None and TEST_GT is not None:
-            train_gt = open_file(TRAIN_GT)
-            test_gt = open_file(TEST_GT)
-        elif TRAIN_GT is not None:
-            train_gt = open_file(TRAIN_GT)
-            test_gt = np.copy(gt)
-            w, h = test_gt.shape
-            test_gt[(train_gt > 0)[:w, :h]] = 0
-        elif TEST_GT is not None:
-            test_gt = open_file(TEST_GT)
-        else:
-            # Sample random training spectra
-            print(SAMPLE_PERCENTAGE)
-            print(gt.shape)
-            train_gt, test_gt = split_ground_truth(
-                gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE, nblocks=N_BLOCKS
+        if isinstance(img,list):
+            print(
+                "Running an experiment with the {} model".format(MODEL),
+                "run {}/{}".format(run + 1, N_RUNS),
             )
-        print(train_gt)
-        from datautils import count_valid_pixels
-
-        print(
-            "{} samples selected (over {})".format(
-                count_valid_pixels(train_gt), count_valid_pixels(gt)
-            )
-        )
-        print(
-            "Running an experiment with the {} model".format(MODEL),
-            "run {}/{}".format(run + 1, N_RUNS),
-        )
-
-        display_predictions(convert_to_color(train_gt), writer, caption="Train GT")
-        display_predictions(convert_to_color(test_gt), writer, caption="Test GT")
-
-        from shallow_models import SKLEARN_MODELS
-        from shallow_models import fit_sklearn_model
-        from shallow_models import infer_from_sklearn_model
-
-        if MODEL in SKLEARN_MODELS:
-            from datautils import to_sklearn_datasets
-
-            X_train, y_train = to_sklearn_datasets(img, train_gt)
-            clf = fit_sklearn_model(
-                MODEL,
-                X_train,
-                y_train,
-                exp_name=DATASET,
-                class_balancing=CLASS_BALANCING,
-                n_jobs=N_JOBS,
-            )
-            prediction = infer_from_sklearn_model(clf, img)
-        else:
-            if CLASS_BALANCING:
-                weights = compute_imf_weights(train_gt, n_classes=N_CLASSES)
-                hyperparams["weights"] = torch.from_numpy(weights).float()
-            # Neural network
-            model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
-            # TODO: Split train set in train/val
-            # train_gt, val_gt = split_ground_truth(train_gt, 0.95, mode="random")
-            # Generate the dataset
-            from datautils import HSIDataset
-
-            train_dataset = HSIDataset(
-                img, train_gt, window_size=hyperparams["patch_size"], overlap=TRAIN_OVERLAP
+            
+            display_predictions(convert_to_color(open_file(gt[0]).astype("uint8")), 
+                                writer, caption="Ground Truth")
+            
+            from datautils import MultiDataset
+            
+            train_dataset = MultiDataset(
+                img, gt, window_size=hyperparams["patch_size"]
             )
             print("Sample in dataset: {}".format(len(train_dataset)))
             train_loader = data.DataLoader(
@@ -216,8 +175,8 @@ def main(args):
                 num_workers=N_JOBS,
             )
             # val_dataset = HyperX(img, val_gt, **hyperparams)
-            val_dataset = HSIDataset(
-                img, test_gt, window_size=hyperparams["patch_size"], overlap=0.0
+            val_dataset = MultiDataset(
+                img, gt, window_size=hyperparams["patch_size"]
             )
             val_loader = data.DataLoader(
                 val_dataset,
@@ -225,76 +184,164 @@ def main(args):
                 batch_size=hyperparams["batch_size"],
                 num_workers=N_JOBS,
             )
-
-            # print(hyperparams)
-            # print("Network :")
-            # with torch.no_grad():
-            #    for input, _ in train_loader:
-            #        break
-            #    summary(model.to(hyperparams["device"]), input.size()[1:])
-            # We would like to use device=hyperparams['device'] altough we have
-            # to wait for torchsummary to be fixed first.
-
-            if CHECKPOINT is not None:
-                model.load_state_dict(torch.load(CHECKPOINT))
-
-            try:
-                train(
-                    model,
-                    optimizer,
-                    loss,
-                    train_loader,
-                    hyperparams["epoch"],
-                    exp_name=DATASET,
-                    scheduler=hyperparams["scheduler"],
-                    device=hyperparams["device"],
-                    supervision=hyperparams["supervision"],
-                    val_loader=val_loader,
-                    writer=writer,
+        else:
+            if TRAIN_GT is not None and TEST_GT is not None:
+                train_gt = open_file(TRAIN_GT)
+                test_gt = open_file(TEST_GT)
+            elif TRAIN_GT is not None:
+                train_gt = open_file(TRAIN_GT)
+                test_gt = np.copy(gt)
+                w, h = test_gt.shape
+                test_gt[(train_gt > 0)[:w, :h]] = 0
+            elif TEST_GT is not None:
+                test_gt = open_file(TEST_GT)
+            else:
+                # Sample random training spectra
+                print(SAMPLE_PERCENTAGE)
+                print(gt.shape)
+                train_gt, test_gt = split_ground_truth(
+                    gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE, nblocks=N_BLOCKS
                 )
-            except KeyboardInterrupt:
-                # Allow the user to stop the training
-                # TODO: move interruption inside training function?
-                pass
+            print(train_gt)
+            from datautils import count_valid_pixels
 
-            from utils import camel_to_snake
-            save_model(
-                model,
-                camel_to_snake(str(model.__class__.__name__)),
-                DATASET,
-                epoch="last",
-                metric=0,
+            print(
+                "{} samples selected (over {})".format(
+                    count_valid_pixels(train_gt), count_valid_pixels(gt)
+                )
+            )
+            print(
+                "Running an experiment with the {} model".format(MODEL),
+                "run {}/{}".format(run + 1, N_RUNS),
             )
 
-            probabilities = test(model, img, window_size=hyperparams["patch_size"], n_classes=len(LABEL_VALUES), overlap=TEST_OVERLAP)
-            prediction = np.argmax(probabilities, axis=-1)
+            display_predictions(convert_to_color(train_gt), writer, caption="Train GT")
+            display_predictions(convert_to_color(test_gt), writer, caption="Test GT")
 
-        from utils import pad_image
-        window_size = PATCH_SIZE
-        if isinstance(window_size, int):
-            window_size = (window_size, window_size)
-        padding = (window_size[0] // 2, window_size[1] // 2)
-        from datautils import IGNORED_INDEX
-        test_gt = pad_image(
-            test_gt, padding=padding, mode="constant", constant=IGNORED_INDEX,
-        ).astype("int64")
-        run_results = metrics(prediction, test_gt, target_names=LABEL_VALUES)
+            from shallow_models import SKLEARN_MODELS
+            from shallow_models import fit_sklearn_model
+            from shallow_models import infer_from_sklearn_model
 
-        # mask = np.zeros(gt.shape, dtype="bool")
-        # for l in IGNORED_LABELS:
-        #     mask[gt == l] = True
-        # prediction[mask] = 0
+            if MODEL in SKLEARN_MODELS:
+                from datautils import to_sklearn_datasets
 
+                X_train, y_train = to_sklearn_datasets(img, train_gt)
+                clf = fit_sklearn_model(
+                    MODEL,
+                    X_train,
+                    y_train,
+                    exp_name=DATASET,
+                    class_balancing=CLASS_BALANCING,
+                    n_jobs=N_JOBS,
+                )
+                prediction = infer_from_sklearn_model(clf, img)
+            else:
+                if CLASS_BALANCING:
+                    weights = compute_imf_weights(train_gt, n_classes=N_CLASSES)
+                    hyperparams["weights"] = torch.from_numpy(weights).float()
+                # TODO: Split train set in train/val
+                # train_gt, val_gt = split_ground_truth(train_gt, 0.95, mode="random")
+                # Generate the dataset
+                from datautils import HSIDataset
+
+                train_dataset = HSIDataset(
+                    img, train_gt, window_size=hyperparams["patch_size"], overlap=TRAIN_OVERLAP
+                )
+                print("Sample in dataset: {}".format(len(train_dataset)))
+                train_loader = data.DataLoader(
+                    train_dataset,
+                    batch_size=hyperparams["batch_size"],
+                    # pin_memory=hyperparams['device'],
+                    shuffle=True,
+                    num_workers=N_JOBS,
+                )
+                # val_dataset = HyperX(img, val_gt, **hyperparams)
+                val_dataset = HSIDataset(
+                    img, test_gt, window_size=hyperparams["patch_size"], overlap=0.0
+                )
+                val_loader = data.DataLoader(
+                    val_dataset,
+                    # pin_memory=hyperparams['device'],
+                    batch_size=hyperparams["batch_size"],
+                    num_workers=N_JOBS,
+                )
+
+                # print(hyperparams)
+                # print("Network :")
+                # with torch.no_grad():
+                #    for input, _ in train_loader:
+                #        break
+                #    summary(model.to(hyperparams["device"]), input.size()[1:])
+                # We would like to use device=hyperparams['device'] altough we have
+                # to wait for torchsummary to be fixed first.
+                
+        # Neural network
+        model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
+
+        if CHECKPOINT is not None:
+            model.load_state_dict(torch.load(CHECKPOINT))
+
+        try:
+            train(
+                model,
+                optimizer,
+                loss,
+                train_loader,
+                hyperparams["epoch"],
+                exp_name=DATASET,
+                scheduler=hyperparams["scheduler"],
+                device=hyperparams["device"],
+                supervision=hyperparams["supervision"],
+                val_loader=val_loader,
+                writer=writer,
+            )
+        except KeyboardInterrupt:
+            # Allow the user to stop the training
+            # TODO: move interruption inside training function?
+            pass
+
+        from utils import camel_to_snake
+        save_model(
+            model,
+            camel_to_snake(str(model.__class__.__name__)),
+            DATASET,
+            epoch="last",
+            metric=0,
+        )
+        if isinstance(img,list):
+            probabilities = test(model, open_file(img[0]), window_size=hyperparams["patch_size"],
+                                 n_classes=len(LABEL_VALUES), overlap=TEST_OVERLAP)
+        else:
+            probabilities = test(model, img, window_size=hyperparams["patch_size"],
+                                 n_classes=len(LABEL_VALUES), overlap=TEST_OVERLAP)
+        prediction = np.argmax(probabilities, axis=-1)
+        
+        if isinstance(img, np.ndarray):
+            from utils import pad_image
+            window_size = PATCH_SIZE
+            if isinstance(window_size, int):
+                window_size = (window_size, window_size)
+            padding = (window_size[0] // 2, window_size[1] // 2)
+            from datautils import IGNORED_INDEX
+            test_gt = pad_image(
+                test_gt, padding=padding, mode="constant", constant=IGNORED_INDEX,
+            ).astype("int64")
+            run_results = metrics(prediction, test_gt, target_names=LABEL_VALUES)
+
+            # mask = np.zeros(gt.shape, dtype="bool")
+            # for l in IGNORED_LABELS:
+            #     mask[gt == l] = True
+            # prediction[mask] = 0
+
+            results.append(run_results)
+            show_results(run_results, writer)
+        
         color_prediction = convert_to_color(prediction)
         display_predictions(
             color_prediction,
             writer,
-            gt=convert_to_color(test_gt),
             caption="Final prediction",
         )
-
-        results.append(run_results)
-        show_results(run_results, writer)
 
     if N_RUNS > 1:
         show_results(results, writer, agregated=True)

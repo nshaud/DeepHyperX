@@ -175,7 +175,16 @@ def sliding_window(image, step=(10, 10), window_size=(20, 20), with_data=True):
                 yield image[x : x + w, y : y + h], x, y, w, h
             else:
                 yield x, y, w, h
-
+				
+def get_random_pos(img, window_shape):
+    """ Extract of 2D random patch of shape window_shape in the image """
+    w, h = window_shape
+    W, H = img.shape[:2]
+    x1 = random.randint(0, W - w - 1)
+    x2 = x1 + w
+    y1 = random.randint(0, H - h - 1)
+    y2 = y1 + h
+    return x1, x2, y1, y2
 
 def count_sliding_window(top, step=(10, 10), window_size=(20, 20)):
     """ Count the number of windows in an image.

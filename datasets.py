@@ -304,51 +304,53 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
             label_values,
             palette,
         ) = CUSTOM_DATASETS_CONFIG[dataset_name]["loader"](folder)
+    
+    if isinstance(img,np.ndarray):
+        # Filter NaN out
 
-    # Filter NaN out
-    nan_mask = np.isnan(img.sum(axis=-1))
-    if np.count_nonzero(nan_mask) > 0:
-        print(
-            "Warning: NaN have been found in the data. It is preferable to remove them beforehand. Learning on NaN data is disabled."
-        )
-        img[nan_mask] = 0
-        gt[nan_mask] = IGNORED_INDEX
+        nan_mask = np.isnan(img.sum(axis=-1))
+        if np.count_nonzero(nan_mask) > 0:
+            print(
+                "Warning: NaN have been found in the data. It is preferable to remove them beforehand. Learning on NaN data is disabled."
+            )
+            img[nan_mask] = 0
+            gt[nan_mask] = IGNORED_INDEX
 
-    if palette is None:
-        # Generate color palette
-        ids = np.unique(gt)
+        if palette is None:
+            # Generate color palette
+            ids = np.unique(gt)
+            palette = {
+                id_: tuple(np.asarray(255 * np.array(color), dtype="uint8"))
+                for id_, color in zip(ids, sns.color_palette("hls", len(ids)))
+            }
+
+        ignored_labels = list(set(ignored_labels))
+        # Remove ignored classes from the ground truth
+        for c in ignored_labels:
+            mask = gt == c
+            gt[mask] = IGNORED_INDEX
+
+        # Relabel the classes based on what has been ignored
+        from sklearn.preprocessing import LabelEncoder
+
+        mask = gt == IGNORED_INDEX
+        le = LabelEncoder()
+        gt[~mask] = le.fit_transform(gt[~mask])#.reshape(gt.shape)
+
+        # Fix the palette after relabeling
         palette = {
-            id_: tuple(np.asarray(255 * np.array(color), dtype="uint8"))
-            for id_, color in zip(ids, sns.color_palette("hls", len(ids)))
+            new_idx: palette[old_idx]
+            for new_idx, old_idx in enumerate(le.classes_)
+            if old_idx != IGNORED_INDEX
         }
-
-    ignored_labels = list(set(ignored_labels))
-    # Remove ignored classes from the ground truth
-    for c in ignored_labels:
-        mask = gt == c
-        gt[mask] = IGNORED_INDEX
-
-    # Relabel the classes based on what has been ignored
-    from sklearn.preprocessing import LabelEncoder
-
-    mask = gt == IGNORED_INDEX
-    le = LabelEncoder()
-    gt[~mask] = le.fit_transform(gt[~mask])#.reshape(gt.shape)
-
-    # Fix the palette after relabeling
-    palette = {
-        new_idx: palette[old_idx]
-        for new_idx, old_idx in enumerate(le.classes_)
-        if old_idx != IGNORED_INDEX
-    }
-    palette[IGNORED_INDEX] = (0, 0, 0)
-    # Fix the label values after relabeling
-    label_values = [label_values[c] for c in le.classes_ if c != IGNORED_INDEX]
-    # Normalization
-    img = np.asarray(img, dtype="float32")
-    print(img.shape)
-    # TODO: make this configurable
-    img = (img - np.min(img)) / (np.max(img) - np.min(img))
+        palette[IGNORED_INDEX] = (0, 0, 0)
+        # Fix the label values after relabeling
+        label_values = [label_values[c] for c in le.classes_ if c != IGNORED_INDEX]
+        # Normalization
+        img = np.asarray(img, dtype="float32")
+        print(img.shape)
+        # TODO: make this configurable
+        img = (img - np.min(img)) / (np.max(img) - np.min(img))
     return img, gt, label_values, rgb_bands, palette
 
 

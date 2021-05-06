@@ -13,6 +13,12 @@ CUSTOM_DATASETS_CONFIG = {
         "gt": "simu2048_gauss_mask.fits",
         "download": False,
         "loader": lambda folder: simu_loader("./simu/"),
+    },
+	"Multi_image": {
+        "img": "Multiple images",
+        "gt": "Multiple masks",
+        "download": False,
+        "loader": lambda folder: multi_loader("/Users/robitaij/postdoc/Lhyrica/simu/"),
     }
 }
     
@@ -60,6 +66,23 @@ def simu_loader(folder):
     img = fits.open(folder + "simu2048_gauss.fits")[0].data
     gt = fits.open(folder + "simu2048_gauss_mask.fits")[0].data
     gt = gt.astype("uint8")
+
+    rgb_bands = (0,0,0)
+
+    label_values = [
+    	"Unclassified",
+        "background",
+        "cores",
+    ]
+    ignored_labels = [0]
+    palette = {0:(255,255,255),
+    1:(128,128,128),
+    2:(255,0,0)}
+    return img, gt, rgb_bands, ignored_labels, label_values, palette
+
+def multi_loader(folder):
+    img = [folder+"simu2048_gauss.fits",folder+"simu2048_gauss2.fits"]
+    gt = [folder+"simu2048_gauss_mask.fits",folder+"simu2048_gauss2_mask.fits"]
 
     rgb_bands = (0,0,0)
 
