@@ -18,7 +18,7 @@ CUSTOM_DATASETS_CONFIG = {
         "img": "Multiple images",
         "gt": "Multiple masks",
         "download": False,
-        "loader": lambda folder: multi_loader("/Users/robitaij/postdoc/Lhyrica/simu/"),
+        "loader": lambda folder: multi_loader("./simu/"),
     }
 }
     
