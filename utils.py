@@ -6,7 +6,6 @@ import sklearn.model_selection
 import seaborn as sns
 import itertools
 import spectral
-import visdom
 import matplotlib.pyplot as plt
 from scipy import io, misc
 import os
@@ -38,7 +37,11 @@ def open_file(filepath):
     ext = ext.lower()
     if ext == ".mat":
         # Use SciPy to load Matlab data
-        return io.loadmat(filepath)
+        mat = io.loadmat(filepath)
+        for k in mat.keys():
+            # Return first ndarray found
+            if isinstance(mat[k], np.ndarray):
+                return mat[k]
     elif ext in [".tiff", ".tif", ".jpg", ".jpeg", ".png"]:
         # Load JPG/TIFF/PNG file using Pillow
         return np.array(Image.open(filepath))
