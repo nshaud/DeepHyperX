@@ -1,4 +1,0 @@
-{
-    "python.formatting.provider": "black",
-    "python.pythonPath": "/home/altay/.venvs/research/bin/python"
-}
