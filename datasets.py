@@ -60,9 +60,13 @@ class RawDataset(object):
         self.folder = folder
         self.ignored_labels = config.get("ignored_labels", [])
         self.labels = config["labels"]
+        # Load data in memory
         self.data = [self.load_data(image["name"]) for image in config["data"]]
+        # Load ground truth in memory
         self.masks = [self.load_mask(mask["name"]) for mask in config["masks"]]
-        self.rgb_bands = tuple(map(int, config["rgb"].split(",")))
+        self.bands = self.data[0].shape[-1] # number of spectral wavelengths
+        # TODO: assert that all data have same number of bands
+        self.rgb_bands = tuple(map(int, config["rgb"].split(","))) # bands to use for RGB composite
 
         self.palette = config.get("palette", None) # TODO
         if self.palette is None:
@@ -90,3 +94,43 @@ class RawDataset(object):
     # Principles:
     # - we don't check for NaNs
     # - we don't change data without user input
+
+    def to_sklearn_datasets(self):
+        all_pixels, all_labels = [], []
+        for image, ground_truth in zip(self.data, self.masks):
+            # Check that image and ground truth have the same 2D dimensions
+            assert image.shape[:2] == ground_truth.shape[:2]
+
+            valid_pixels = ground_truth != IGNORED_INDEX
+            all_pixels.append(image[valid_pixels])
+            all_labels.append(ground_truth[valid_pixels].ravel())
+        samples = np.concatenate(all_pixels)
+        labels = np.concatenate(all_labels)
+        return samples, labels
+        
+    
+ksc = RawDataset("PaviaC")
+print(ksc.__dict__)
+
+    # # Relabel the classes based on what has been ignored
+    # from sklearn.preprocessing import LabelEncoder
+
+    # mask = gt == IGNORED_INDEX
+    # le = LabelEncoder()
+    # gt[~mask] = le.fit_transform(gt[~mask])#.reshape(gt.shape)
+
+    # # Fix the palette after relabeling
+    # palette = {
+    #     new_idx: palette[old_idx]
+    #     for new_idx, old_idx in enumerate(le.classes_)
+    #     if old_idx != IGNORED_INDEX
+    # }
+    # palette[IGNORED_INDEX] = (0, 0, 0)
+    # # Fix the label values after relabeling
+    # label_values = [label_values[c] for c in le.classes_ if c != IGNORED_INDEX]
+    # # Normalization
+    # img = np.asarray(img, dtype="float32")
+    # print(img.shape)
+    # # TODO: make this configurable
+    # img = (img - np.min(img)) / (np.max(img) - np.min(img))
+    # return img, gt, label_values, rgb_bands, palette

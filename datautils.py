@@ -11,20 +11,15 @@ def count_valid_pixels(arr, ignored=IGNORED_INDEX):
     return np.count_nonzero(arr != ignored)
 
 
-def to_sklearn_datasets(image, ground_truth):
-    n_bands = image.shape[:-1]
-    # Check that image and ground truth have the same 2D dimensions
-    assert image.shape[:2] == ground_truth.shape[:2]
-
-    valid_pixels = ground_truth != IGNORED_INDEX
-    samples = image[valid_pixels]
-    labels = ground_truth[valid_pixels].ravel()
-    return samples, labels
-
-
 class HSIDataset(torch.utils.data.Dataset):
-    def __init__(self, hsi_image, ground_truth, window_size=None, overlap=0, step=None):
+    def __init__(self, hsi_images, masks, window_size=None, overlap=0, step=None):
         super(HSIDataset, self).__init__()
+        # Single image/mask pair are wrapped in a list
+        if not isinstance(hsi_images, list):
+            data = [data]
+        if not isinstance(masks, list):
+            masks = [masks]
+
         # Transform singular window size into a tuple
         if isinstance(window_size, int):
             window_size = (window_size, window_size)
@@ -32,12 +27,16 @@ class HSIDataset(torch.utils.data.Dataset):
         # Padding = half the size of the window
         padding = (window_size[0] // 2, window_size[1] // 2)
         # Pad image and ground truth
-        self.data = pad_image(hsi_image, padding=padding).astype("float32")
-        self.ground_truth = pad_image(
-            ground_truth, padding=padding, mode="constant", constant=IGNORED_INDEX,
-        ).astype("int64")
+        self.data = [
+            pad_image(image, padding=padding).astype("float32") for image in hsi_images
+        ]
+        self.masks = [
+            pad_image(
+                mask, padding=padding, mode="constant", constant=IGNORED_INDEX
+            ).astype("int64")
+            for mask in masks
+        ]
         self.window_size = window_size
-        self.ignored_mask = self.ground_truth == IGNORED_INDEX
 
         if step is None:
             # Overlap percentage defines how much two successive windows intersect
@@ -53,19 +52,23 @@ class HSIDataset(torch.utils.data.Dataset):
         else:
             step_h, step_w = step
 
+        self.window_corners = []
         # Extract window corner indices
-        windows = list(
-            sliding_window(
-                self.ground_truth,
-                step=(step_h, step_w),
-                window_size=window_size,
-                with_data=True,
+        for idx, (_, mask) in enumerate(zip(self.data, self.masks)):
+            windows = list(
+                sliding_window(
+                    mask,
+                    step=(step_h, step_w),
+                    window_size=window_size,
+                    with_data=True,
+                )
             )
-        )
-        # Skip windows that only contains ignored pixels
-        self.window_corners = [
-            (x, y) for window, x, y, w, h in windows if count_valid_pixels(window) > 0
-        ]
+            # Skip windows that only contains ignored pixels
+            self.window_corners += [
+                (idx, (x, y))
+                for window, x, y, w, h in windows
+                if count_valid_pixels(window) > 0
+            ]
 
     def __len__(self):
         # Dataset length is the number of windows
@@ -73,19 +76,19 @@ class HSIDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         w, h = self.window_size
-        x, y = self.window_corners[idx]
+        data_idx, (x, y) = self.window_corners[idx]
         # Extract window from image/ground truth
-        data = self.data[x : x + w, y : y + h].transpose((2, 0, 1))
-        target = self.ground_truth[x : x + w, y : y + h]
+        data = self.data[data_idx][x : x + w, y : y + h].transpose((2, 0, 1))
+        target = self.masks[data_idx][x : x + w, y : y + h]
         # TODO: data augmentation
         return torch.from_numpy(data), torch.from_numpy(target)
 
 
 class HSITestDataset(HSIDataset):
     def __init__(self, hsi_image, window_size=None, overlap=0, step=None):
-        ground_truth = np.zeros(hsi_image.shape[:2], dtype="int64")
+        masks = np.zeros(hsi_image.shape[:2], dtype="int64")
         super(HSITestDataset, self).__init__(
-            hsi_image, ground_truth, window_size=window_size, overlap=overlap, step=step
+            hsi_image, masks, window_size=window_size, overlap=overlap, step=step
         )
 
     def __getitem__(self, idx):
@@ -98,10 +101,10 @@ class HSITestDataset(HSIDataset):
 
 
 class HSICenterPixelDataset(HSIDataset):
-    def __init__(self, hsi_image, ground_truth, window_size=None):
+    def __init__(self, hsi_image, masks, window_size=None):
         step = (1, 1)
         super(HSICenterPixelDataset, self).__init__(
-            hsi_image, ground_truth, window_size=window_size, step=step
+            hsi_image, masks, window_size=window_size, step=step
         )
 
     def __getitem__(self, idx):
@@ -110,11 +113,12 @@ class HSICenterPixelDataset(HSIDataset):
         target = target[..., w // 2, h // 2]
         return data, target
 
+
 class HSICenterPixelTestDataset(HSICenterPixelDataset):
     def __init__(self, hsi_image, window_size=None):
-        ground_truth = np.zeros(hsi_image.shape[:2], dtype="int64")
+        masks = np.zeros(hsi_image.shape[:2], dtype="int64")
         super(HSICenterPixelTestDataset, self).__init__(
-            hsi_image, ground_truth, window_size=window_size
+            hsi_image, masks, window_size=window_size
         )
 
     def __getitem__(self, idx):

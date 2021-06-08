@@ -16,7 +16,7 @@ from astropy.io import fits
 from PIL import Image
 
 
-def get_device(ordinal):
+def find_cuda_device(ordinal):
     # Use GPU ?
     if ordinal < 0:
         print("Computation on CPU")

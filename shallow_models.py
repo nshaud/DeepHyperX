@@ -1,4 +1,7 @@
 import sklearn
+import sklearn.linear_model
+import sklearn.model_selection
+import sklearn.svm
 
 from models import save_model
 
