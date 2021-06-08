@@ -15,6 +15,20 @@ SKLEARN_MODELS = ["SVM", "SGD", "nearest"]
 def fit_sklearn_model(
     model, X_train, y_train, exp_name="", class_balancing=False, n_jobs=0
 ):
+    """
+        Fits a scikit-learn compatible model on a training set.
+
+        Arguments:
+        - model (sklearn.Estimator): a supervised scikit-learn machine learning model to fit
+        - X_train (np.array): training samples in a NumPy array (number of samples x number of bands, float)
+        - y_train (np.array): training labels in a NumPy array (number of samples, int)
+        - exp_name (optional, str): experience description (default="")
+        - class_balancing (optional, bool): set to True to rebalance the dataset with class weighting (see sklearn.svm.SVC, default=False)
+        - n_jobs (optional, int): number of parallel jobs to run (see sklearn documentation, default=0 for no parallelism)
+
+        Returns:
+        - the fitted sklearn estimator
+    """
     class_weight = "balanced" if class_balancing else None
     if model not in SKLEARN_MODELS:
         raise NotImplementedError(
@@ -56,6 +70,16 @@ def fit_sklearn_model(
 
 
 def infer_from_sklearn_model(clf, hsi_image):
+    """
+        Applies inference of a fitted sklearn estimator on an hyperspectral image.
+
+        Arguments:
+        - clf (sklearn.Estimator): a (fitted) supervised scikit-learn model
+        - hsi_image (np.array): an hyperspectral image in NumPy array format (width x height x number of bands, float)
+
+        Returns:
+        - np.array: prediction mask (width x height, int)
+    """
     n_bands = hsi_image.shape[-1]
     prediction = clf.predict(hsi_image.reshape(-1, n_bands))
     prediction = prediction.reshape(hsi_image.shape[:2])
