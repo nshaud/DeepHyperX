@@ -1,0 +1,160 @@
+Botswana:
+  folder: Botswana
+  data:
+    - name: Botswana.mat
+      url: http://www.ehu.es/ccwintco/uploads/7/72/Botswana.mat
+  masks:
+    - name: Botswana_gt.mat
+      url: http://www.ehu.es/ccwintco/uploads/5/58/Botswana_gt.mat
+  labels:
+    - Undefined
+    - Water
+    - Hippo grass
+    - Floodplain grasses 1
+    - Floodplain grasses 2
+    - Reeds
+    - Riparian
+    - Firescar
+    - Island interior
+    - Acacia woodlands
+    - Acacia shrublands
+    - Acacia grasslands
+    - Short mopane
+    - Mixed mopane
+    - Exposed soils
+  rgb: 75, 33, 15
+  ignored_labels:
+  - 0
+
+IndianPines:
+  folder: IndianPines
+  data:
+    - name: Indian_pines_corrected.mat
+      url: http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat
+  masks:
+    - name: Indian_pines_gt.mat
+      url: http://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat
+  labels: 
+    - Undefined
+    - Alfalfa
+    - Corn-notill
+    - Corn-mintill
+    - Corn
+    - Grass-pasture
+    - Grass-trees
+    - Grass-pasture-mowed
+    - Hay-windrowed
+    - Oats
+    - Soybean-notill
+    - Soybean-mintill
+    - Soybean-clean
+    - Wheat
+    - Woods
+    - Buildings-Grass-Trees-Drives
+    - Stone-Steel-Towers
+  rgb: 43, 21, 11 # AVIRIS sensor
+  ignored_labels:
+  - 0
+
+KSC:
+  folder: KSC
+  data:
+  - name: KSC.mat
+    url: http://www.ehu.es/ccwintco/uploads/2/26/KSC.mat
+  masks:
+  - name: KSC_gt.mat
+    url: http://www.ehu.es/ccwintco/uploads/a/a6/KSC_gt.mat
+  labels:
+    - Undefined
+    - Scrub
+    - Willow swamp
+    - Cabbage palm hammock
+    - Cabbage palm/oak hammock
+    - Slash pine
+    - Oak/broadleaf hammock
+    - Hardwood swamp
+    - Graminoid marsh
+    - Spartina marsh
+    - Cattail marsh
+    - Salt marsh
+    - Mud flats
+    - Water
+  rgb: 43, 21, 11 # AVIRIS sensor
+  ignored_labels:
+  - 0
+
+PaviaC:
+  folder: PaviaC
+  data:
+  - name: Pavia.mat
+    url: http://www.ehu.eus/ccwintco/uploads/e/e3/Pavia.mat
+  masks:
+  - name: Pavia_gt.mat
+    url: http://www.ehu.eus/ccwintco/uploads/5/53/Pavia_gt.mat
+  labels:
+    - Undefined
+    - Water
+    - Trees
+    - Asphalt
+    - Self-Blocking Bricks
+    - Bitumen
+    - Tiles
+    - Shadows
+    - Meadows
+    - Bare Soil
+  rgb: 55, 41, 12
+  ignored_labels:
+  - 0
+
+PaviaU:
+  folder: PaviaU
+  data:
+  - name: PaviaU.mat
+    url: http://www.ehu.eus/ccwintco/uploads/e/ee/PaviaU.mat
+  masks:
+  - name: PaviaU_gt.mat
+    url: http://www.ehu.eus/ccwintco/uploads/5/50/PaviaU_gt.mat
+  labels:
+    - Undefined
+    - Asphalt
+    - Meadows
+    - Gravel
+    - Trees
+    - Painted metal sheets
+    - Bare Soil
+    - Bitumen
+    - Self-Blocking Bricks
+    - Shadows
+  rgb: 55, 41, 12
+  ignored_labels:
+  - 0
+  
+Salinas:
+  folder: Salinas
+  data:
+  - name: Salinas_corrected.mat
+    url: http://www.ehu.eus/ccwintco/uploads/a/a3/Salinas_corrected.mat
+  masks:
+  - name: Salinas_gt.mat
+    url: http://www.ehu.eus/ccwintco/uploads/f/fa/Salinas_gt.mat
+  labels:
+    - Undefined
+    - Brocoli_green_weeds_1
+    - Brocoli_green_weeds_2
+    - Fallow
+    - Fallow_rough_plow
+    - Fallow_smooth
+    - Stubble
+    - Celery
+    - Grapes_untrained
+    - Soil_vinyard_develop
+    - Corn_senesced_green_weeds
+    - Lettuce_romaine_4wk
+    - Lettuce_romaine_5wk
+    - Lettuce_romaine_6wk
+    - Lettuce_romaine_7wk
+    - Vinyard_untrained
+    - Vinyard_vertical_trellis
+  rgb: 43, 21, 11 # AVIRIS
+  ignored_labels:
+  - 0
