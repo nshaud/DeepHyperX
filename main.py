@@ -186,10 +186,10 @@ def main(args):
             )
         else:
             if TRAIN_GT is not None and TEST_GT is not None:
-                train_gt = open_file(TRAIN_GT)
-                test_gt = open_file(TEST_GT)
+                train_gt = open_file(TRAIN_GT).astype("uint8")
+                test_gt = open_file(TEST_GT).astype("uint8")
             elif TRAIN_GT is not None:
-                train_gt = open_file(TRAIN_GT)
+                train_gt = open_file(TRAIN_GT).astype("uint8")
                 test_gt = np.copy(gt)
                 w, h = test_gt.shape
                 test_gt[(train_gt > 0)[:w, :h]] = 0
