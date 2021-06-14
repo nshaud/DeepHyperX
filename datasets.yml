@@ -1,11 +1,12 @@
 Botswana:
   folder: Botswana
   data:
-    - name: Botswana.mat
-      url: http://www.ehu.es/ccwintco/uploads/7/72/Botswana.mat
-  masks:
-    - name: Botswana_gt.mat
-      url: http://www.ehu.es/ccwintco/uploads/5/58/Botswana_gt.mat
+    - image:
+        name: Botswana.mat
+        url: http://www.ehu.es/ccwintco/uploads/7/72/Botswana.mat
+      mask:
+        name: Botswana_gt.mat
+        url: http://www.ehu.es/ccwintco/uploads/5/58/Botswana_gt.mat
   labels:
     - Undefined
     - Water
@@ -29,11 +30,12 @@ Botswana:
 IndianPines:
   folder: IndianPines
   data:
-    - name: Indian_pines_corrected.mat
-      url: http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat
-  masks:
-    - name: Indian_pines_gt.mat
-      url: http://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat
+    - image:
+        name: Indian_pines_corrected.mat
+        url: http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat
+      mask:
+        name: Indian_pines_gt.mat
+        url: http://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat
   labels: 
     - Undefined
     - Alfalfa
@@ -59,11 +61,12 @@ IndianPines:
 KSC:
   folder: KSC
   data:
-  - name: KSC.mat
-    url: http://www.ehu.es/ccwintco/uploads/2/26/KSC.mat
-  masks:
-  - name: KSC_gt.mat
-    url: http://www.ehu.es/ccwintco/uploads/a/a6/KSC_gt.mat
+    - image:
+        name: KSC.mat
+        url: http://www.ehu.es/ccwintco/uploads/2/26/KSC.mat
+      mask:
+        name: KSC_gt.mat
+        url: http://www.ehu.es/ccwintco/uploads/a/a6/KSC_gt.mat
   labels:
     - Undefined
     - Scrub
@@ -86,11 +89,12 @@ KSC:
 PaviaC:
   folder: PaviaC
   data:
-  - name: Pavia.mat
-    url: http://www.ehu.eus/ccwintco/uploads/e/e3/Pavia.mat
-  masks:
-  - name: Pavia_gt.mat
-    url: http://www.ehu.eus/ccwintco/uploads/5/53/Pavia_gt.mat
+    - image:
+        name: Pavia.mat
+        url: http://www.ehu.eus/ccwintco/uploads/e/e3/Pavia.mat
+      mask:
+        name: Pavia_gt.mat
+        url: http://www.ehu.eus/ccwintco/uploads/5/53/Pavia_gt.mat
   labels:
     - Undefined
     - Water
@@ -109,11 +113,12 @@ PaviaC:
 PaviaU:
   folder: PaviaU
   data:
-  - name: PaviaU.mat
-    url: http://www.ehu.eus/ccwintco/uploads/e/ee/PaviaU.mat
-  masks:
-  - name: PaviaU_gt.mat
-    url: http://www.ehu.eus/ccwintco/uploads/5/50/PaviaU_gt.mat
+    - image:
+        name: PaviaU.mat
+        url: http://www.ehu.eus/ccwintco/uploads/e/ee/PaviaU.mat
+      mask:
+        name: PaviaU_gt.mat
+        url: http://www.ehu.eus/ccwintco/uploads/5/50/PaviaU_gt.mat
   labels:
     - Undefined
     - Asphalt
@@ -132,11 +137,12 @@ PaviaU:
 Salinas:
   folder: Salinas
   data:
-  - name: Salinas_corrected.mat
-    url: http://www.ehu.eus/ccwintco/uploads/a/a3/Salinas_corrected.mat
-  masks:
-  - name: Salinas_gt.mat
-    url: http://www.ehu.eus/ccwintco/uploads/f/fa/Salinas_gt.mat
+    - image:
+        name: Salinas_corrected.mat
+        url: http://www.ehu.eus/ccwintco/uploads/a/a3/Salinas_corrected.mat
+      mask:
+        name: Salinas_gt.mat
+        url: http://www.ehu.eus/ccwintco/uploads/f/fa/Salinas_gt.mat
   labels:
     - Undefined
     - Brocoli_green_weeds_1

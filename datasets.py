@@ -21,8 +21,11 @@ with open(DEFAULT_CONFIG_FILE, "r") as f:
 
 
 def download_from_url(target, url):
-    with TqdmUpTo(unit="B", unit_scale=True, miniters=1, desc="Downloading {}".format(target)) as t:
+    with TqdmUpTo(
+        unit="B", unit_scale=True, miniters=1, desc="Downloading {}".format(target)
+    ) as t:
         urlretrieve(url, filename=target, reporthook=t.update_to)
+
 
 class TqdmUpTo(tqdm):
     """Provides `update_to(n)` which uses `tqdm.update(delta_n)`."""
@@ -40,40 +43,87 @@ class TqdmUpTo(tqdm):
             self.total = tsize
         self.update(b * bsize - self.n)  # will also set self.n = b * bsize
 
+
 class RawDataset(object):
-    def __init__(self, name, datadir="./Datasets", download=False):
+    @classmethod
+    def fromconfig(cls, name, datadir="./Datasets", download=False):
         config = CONFIGURATION[name]
 
         # Download if required or if data directory does not exist
         folder = os.path.join(datadir, config["folder"])
         directory_exists = os.path.isdir(folder)
         if download or not directory_exists:
-            # Create folder if need
+            # Create folder if needed
             if not directory_exists:
                 os.makedirs(folder)
             # Download files (#TODO: deal with the case where no URL is available)
-            for image in config["data"]:
+            for data in config["data"]:
+                image = data["image"]
+                print(data)
                 download_from_url(os.path.join(folder, image["name"]), image["url"])
-            for mask in config["masks"]:
-                download_from_url(os.path.join(folder, mask["name"]), mask["url"])
-        
+                if "mask" in data.keys():
+                    mask = data["mask"]
+                    download_from_url(os.path.join(folder, mask["name"]), mask["url"])
+
+        images, masks = [], []
+        train_ids, test_ids = [], []
+        for idx, data in enumerate(config["data"]):
+            images.append(data["image"]["name"])
+            masks.append(data["mask"]["name"])
+            # List test identifiers
+            is_test = data.get("test", False)
+            if is_test:
+                test_ids.append(idx)
+            else:
+                train_ids.append(idx)
+
+        kwargs = {
+            "ignored_labels": config.get("ignored_labels", []),
+            "labels": config["labels"],
+            "rgb": tuple(
+                map(int, config["rgb"].split(","))
+            ),  # bands to use for RGB composite,
+            "palette": config.get("palette", None),
+        }
+
+        # Split dataset if specified in configuration
+        train_data = [images[idx] for idx in train_ids]
+        train_masks = [masks[idx] for idx in train_ids]
+        test_data = [images[idx] for idx in test_ids]
+        test_masks = [masks[idx] for idx in test_ids]
+
+        train_dataset = RawDataset(train_data, train_masks, folder, **kwargs)
+        if len(test_data) > 0:
+            test_dataset = RawDataset(test_data, test_masks, folder, **kwargs)
+            return train_dataset, test_dataset
+        else:
+            return train_dataset
+
+    def __init__(
+        self,
+        data,
+        masks,
+        folder,
+        labels=None,
+        ignored_labels=None,
+        rgb=None,
+        palette=None,
+    ):
         self.folder = folder
-        self.ignored_labels = config.get("ignored_labels", [])
-        self.labels = config["labels"]
+        self.labels = labels
+        self.ignored_labels = ignored_labels
+        self.rgb = rgb
+
         # Load data in memory
-        self.data = [self.load_data(image["name"]) for image in config["data"]]
-        # Load ground truth in memory
-        self.masks = [self.load_mask(mask["name"]) for mask in config["masks"]]
+        self.data = [self.load_data(filename) for filename in data]
+        self.masks = [self.load_mask(filename) for filename in masks]
+
         self.bands = self.data[0].shape[-1]  # number of spectral wavelengths
         # Consistency check
         self.check_consistency()
 
-        self.rgb_bands = tuple(
-            map(int, config["rgb"].split(","))
-        )  # bands to use for RGB composite
-
-        self.palette = config.get("palette", None)  # TODO
-        if self.palette is None:
+        self.rgb_bands = rgb
+        if palette is None:
             # Generate color palette using seaborn HLS
             ids = range(len(self.labels))
             self.palette = {
@@ -82,17 +132,21 @@ class RawDataset(object):
             }
         self.palette[IGNORED_INDEX] = (0, 0, 0)
 
+    @property
+    def datalen(self):
+        return len(self.data)
+
     def load_data(self, filename):
         path = os.path.join(self.folder, filename)
         image = open_file(path)
         return image
-    
+
     def load_mask(self, filename):
         path = os.path.join(self.folder, filename)
         mask = open_file(path)
         # Remove ignored classes from the ground truth
         for idx in self.ignored_labels:
-             mask[mask == idx] = IGNORED_INDEX
+            mask[mask == idx] = IGNORED_INDEX
         return mask
 
     # Principles:
@@ -110,16 +164,17 @@ class RawDataset(object):
         return samples, labels
 
     def check_consistency(self):
-        n_bands = self.data[0].shape[-1]
         assert len(self.data) == len(self.masks)
         for image, mask in zip(self.data, self.masks):
             # Image and label mask have same dimensions
             assert image.shape[:2] == mask.shape[:2]
             # All images have the same number of bands
-            assert image.shape[-1] == n_bands
+            assert image.shape[-1] == self.bands
+
+    # def split(self):
 
 
-ksc = RawDataset("PaviaC")
+ksc = RawDataset.fromconfig("PaviaC")
 print(ksc.__dict__)
 
     # # Relabel the classes based on what has been ignored
