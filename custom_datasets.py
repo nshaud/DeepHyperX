@@ -14,11 +14,11 @@ CUSTOM_DATASETS_CONFIG = {
         "download": False,
         "loader": lambda folder: taurus_test_loader("/Users/robitaij/postdoc/Lhyrica/Taurus/"),
     },
-    "Taurus250_sample": {
+    "Taurus": {
         "img": "taurus_L1495_250_sample.fits",
         "gt": "taurus_L1495_250_sample_mask.fits",
         "download": False,
-        "loader": lambda folder: taurus_sample_loader("/Users/robitaij/postdoc/Lhyrica/Taurus/"),
+        "loader": lambda folder: taurus_sample_loader(folder),
     }
 }
 

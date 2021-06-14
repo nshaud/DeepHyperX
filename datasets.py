@@ -64,11 +64,15 @@ class RawDataset(object):
         self.data = [self.load_data(image["name"]) for image in config["data"]]
         # Load ground truth in memory
         self.masks = [self.load_mask(mask["name"]) for mask in config["masks"]]
-        self.bands = self.data[0].shape[-1] # number of spectral wavelengths
-        # TODO: assert that all data have same number of bands
-        self.rgb_bands = tuple(map(int, config["rgb"].split(","))) # bands to use for RGB composite
+        self.bands = self.data[0].shape[-1]  # number of spectral wavelengths
+        # Consistency check
+        self.check_consistency()
 
-        self.palette = config.get("palette", None) # TODO
+        self.rgb_bands = tuple(
+            map(int, config["rgb"].split(","))
+        )  # bands to use for RGB composite
+
+        self.palette = config.get("palette", None)  # TODO
         if self.palette is None:
             # Generate color palette using seaborn HLS
             ids = range(len(self.labels))
@@ -98,17 +102,23 @@ class RawDataset(object):
     def to_sklearn_datasets(self):
         all_pixels, all_labels = [], []
         for image, ground_truth in zip(self.data, self.masks):
-            # Check that image and ground truth have the same 2D dimensions
-            assert image.shape[:2] == ground_truth.shape[:2]
-
             valid_pixels = ground_truth != IGNORED_INDEX
             all_pixels.append(image[valid_pixels])
             all_labels.append(ground_truth[valid_pixels].ravel())
         samples = np.concatenate(all_pixels)
         labels = np.concatenate(all_labels)
         return samples, labels
-        
-    
+
+    def check_consistency(self):
+        n_bands = self.data[0].shape[-1]
+        assert len(self.data) == len(self.masks)
+        for image, mask in zip(self.data, self.masks):
+            # Image and label mask have same dimensions
+            assert image.shape[:2] == mask.shape[:2]
+            # All images have the same number of bands
+            assert image.shape[-1] == n_bands
+
+
 ksc = RawDataset("PaviaC")
 print(ksc.__dict__)
 
