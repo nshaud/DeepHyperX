@@ -71,6 +71,13 @@ def get_model(name, **kwargs):
         model = FCN2D(n_bands, n_classes)
         lr = kwargs.setdefault("learning_rate", 0.001)
         optimizer = optim.Adam(model.parameters(), lr=lr)
+    elif name == "fcn2d_expand":
+        kwargs.setdefault("epoch", 100)
+        patch_size = kwargs.setdefault("patch_size", 16)
+        center_pixel = False
+        model = FCN2D(n_bands, n_classes)
+        lr = kwargs.setdefault("learning_rate", 0.001)
+        optimizer = optim.Adam(model.parameters(), lr=lr)
     elif name == "fcn2d_reduce":
         kwargs.setdefault("epoch", 100)
         patch_size = kwargs.setdefault("patch_size", 16)
@@ -535,6 +542,45 @@ class FCN2D(nn.Module):
             nn.Conv2d(32, 16, (3, 3), padding=1),
             nn.ReLU(),
             nn.Conv2d(16, n_classes, (3, 3), padding=1),
+        )
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x
+	
+class FCN2D_expand(nn.Module):
+    """
+    Baseline 2D Fully Convolutional Network
+    """
+
+    def __init__(self, in_channels, n_classes):
+        super(FCN2D, self).__init__()
+
+        self.encoder = nn.Sequential(
+            nn.Conv2d(in_channels, 8, (3, 3), padding=1),
+            nn.MaxPool2d((2, 2)),
+            nn.ReLU(),
+            nn.Conv2d(8, 16, (3, 3), padding=1),
+            nn.MaxPool2d((2, 2)),
+            nn.ReLU(),
+            nn.Conv2d(16, 32, (3, 3), padding=1),
+            nn.MaxPool2d((2, 2)),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, (3, 3), padding=1),
+            nn.ReLU(),
+        )
+        self.decoder = nn.Sequential(
+            nn.UpsamplingBilinear2d(scale_factor=2),
+            nn.Conv2d(64, 32, (3, 3), padding=1),
+            nn.ReLU(),
+            nn.UpsamplingBilinear2d(scale_factor=2),
+            nn.Conv2d(32, 16, (3, 3), padding=1),
+            nn.ReLU(),
+            nn.UpsamplingBilinear2d(scale_factor=2),
+            nn.Conv2d(16, 8, (3, 3), padding=1),
+            nn.ReLU(),
+            nn.Conv2d(8, n_classes, (3, 3), padding=1),
         )
 
     def forward(self, x):
