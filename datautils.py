@@ -8,7 +8,6 @@ from utils import pad_image
 from utils import sliding_window
 from utils import open_file
 from utils import get_random_pos
-from sklearn.preprocessing import LabelEncoder
 
 
 def count_valid_pixels(arr, ignored=IGNORED_INDEX):
@@ -40,32 +39,32 @@ class MultiDataset(torch.utils.data.Dataset):
         
     def __len__(self):
         # Default epoch size is 5 000 samples
-        return 5000
+        W, H = self.data_files[0].shape[:2]
+        w, h = self.window_size
+        nwin = (W*H)/w*h
+        return np.int32(nwin*len(self.data_files)/10)
     
-    def __getitem__(self, i):
+    def __getitem__(self, idx):
         # Pick a random image
         random_idx = random.randint(0, len(self.data_files) - 1)
         
         # Read data
-        data = open_file(self.data_files[random_idx])
-        data = np.asarray(data, dtype="float32")
+        #data = open_file(self.data_files[random_idx])
+        #data = np.asarray(data, dtype="float32")
+        data = self.data_files[random_idx]
            
         # Read ground truth
-        label = open_file(self.gt_files[random_idx])
-        label = label.astype("int64")
-        
-        # Relabel the classes based on what has been ignored
-        mask = label == IGNORED_INDEX
-        le = LabelEncoder()
-        label[~mask] = le.fit_transform(label[~mask])#.reshape(gt.shape)
+        #label = open_file(self.gt_files[random_idx])
+        #label = label.astype("int64")
+        label = self.gt_files[random_idx]
 
         # Get a random patch
         x1, x2, y1, y2 = get_random_pos(data, self.window_size)
         data_p = data[x1:x2,y1:y2].transpose((2, 0, 1))
-        label_p = label[x1:x2,y1:y2]
+        label_p = label[x1:x2,y1:y2].astype("int64")
         
         #Normalisation
-        data_p = (data_p - np.min(data_p)) / (np.max(data_p) - np.min(data_p))
+        #data_p = (data_p - np.min(data_p)) / (np.max(data_p) - np.min(data_p))
 
         # Return the torch.Tensor values
         return (torch.from_numpy(data_p),
