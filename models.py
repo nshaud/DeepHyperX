@@ -548,7 +548,7 @@ class FCN2D(nn.Module):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
-	
+
 class FCN2D_expand(nn.Module):
     """
     Baseline 2D Fully Convolutional Network
@@ -587,7 +587,7 @@ class FCN2D_expand(nn.Module):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
-    
+
 class FCN2D_reduce(nn.Module):
     """
     Baseline 2D Fully Convolutional Network

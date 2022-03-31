@@ -6,7 +6,7 @@ import sklearn.model_selection
 import seaborn as sns
 import itertools
 import spectral
-import visdom
+#import visdom
 import matplotlib.pyplot as plt
 from scipy import io, misc
 import os

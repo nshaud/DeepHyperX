@@ -104,7 +104,7 @@ def main(args):
     N_CLASSES = len(LABEL_VALUES)
     # Number of bands (last dimension of the image tensor)
     if isinstance(img,list):
-        N_BANDS = open_file(img[0]).shape[-1]
+        N_BANDS = img[0].shape[-1]
     else:
         N_BANDS = img.shape[-1]
 
@@ -135,7 +135,7 @@ def main(args):
     # Show the image and the ground truth
     writer = SummaryWriter(comment=f"-{DATASET}_{MODEL}")
     if isinstance(img,list):
-        display_dataset(open_file(img[0]),open_file(gt[0]).astype("uint8"), 
+        display_dataset(img[0],gt[0], 
                         RGB_BANDS, LABEL_VALUES, palette, writer=writer)
     else:
         display_dataset(img,gt, RGB_BANDS, LABEL_VALUES, palette, writer=writer)
@@ -158,7 +158,7 @@ def main(args):
                 "run {}/{}".format(run + 1, N_RUNS),
             )
             
-            display_predictions(convert_to_color(open_file(gt[0]).astype("uint8")), 
+            display_predictions(convert_to_color(gt[0]), 
                                 writer, caption="Ground Truth")
             
             from datautils import MultiDataset
@@ -186,10 +186,10 @@ def main(args):
             )
         else:
             if TRAIN_GT is not None and TEST_GT is not None:
-                train_gt = open_file(TRAIN_GT)
-                test_gt = open_file(TEST_GT)
+                train_gt = open_file(TRAIN_GT).astype("uint8")
+                test_gt = open_file(TEST_GT).astype("uint8")
             elif TRAIN_GT is not None:
-                train_gt = open_file(TRAIN_GT)
+                train_gt = open_file(TRAIN_GT).astype("uint8")
                 test_gt = np.copy(gt)
                 w, h = test_gt.shape
                 test_gt[(train_gt > 0)[:w, :h]] = 0
@@ -309,7 +309,7 @@ def main(args):
             metric=0,
         )
         if isinstance(img,list):
-            probabilities = test(model, open_file(img[0]), window_size=hyperparams["patch_size"],
+            probabilities = test(model, img[0], window_size=hyperparams["patch_size"],
                                  n_classes=len(LABEL_VALUES), overlap=TEST_OVERLAP)
         else:
             probabilities = test(model, img, window_size=hyperparams["patch_size"],
