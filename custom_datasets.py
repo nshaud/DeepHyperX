@@ -22,8 +22,8 @@ CUSTOM_DATASETS_CONFIG = {
         "loader": lambda folder: NGC2264_mwl_loader("./NGC2264/"),
     },
     "Multifractal_simu": {
-        "img": "simu2048_sort_norm_cent.fits",
-        "gt": "simu2048_sort_mask_getsf_fp.fits",
+        "img": "simu2048_gauss_norm_cent.fits",
+        "gt": "simu2048_gauss_mask.fits",
         "download": False,
         "loader": lambda folder: simu_loader("./simu/"),
     },
@@ -31,10 +31,10 @@ CUSTOM_DATASETS_CONFIG = {
         "img": "Multiple images",
         "gt": "Multiple masks",
         "download": False,
-        "loader": lambda folder: multi_loader("./simu/"),
+        "loader": lambda folder: multi_loader("./simu/list2/"),
     },
 	"Benchmark": {
-        "img": "sky_c175_density_dhx.fits",
+        "img": "sky_c175.hi.surface.density.r11p0_norm_dhx.fits",
         "gt": "sky_c250_mask.fits",
         "download": False,
         "loader": lambda folder: benchmark_loader("./benchmark/"),
@@ -118,8 +118,8 @@ def NGC2264_mwl_loader(folder):
     return img, gt, rgb_bands, ignored_labels, label_values, palette
 
 def simu_loader(folder):
-    img = fits.open(folder + "simu2048_sort_norm_cent.fits")[0].data
-    gt = fits.open(folder + "simu2048_sort_mask_getsf_fp.fits")[0].data
+    img = fits.open(folder + "simu2048_gauss_norm_cent.fits")[0].data
+    gt = fits.open(folder + "simu2048_gauss_mask.fits")[0].data
     gt = gt.astype("uint8")
 
     rgb_bands = (0,0,0)
@@ -136,8 +136,11 @@ def simu_loader(folder):
     return img, gt, rgb_bands, ignored_labels, label_values, palette
 
 def multi_loader(folder):
-    imgpath = [folder+"simu2048_gauss_minmaxnorm_dhx.fits",folder+"simu2048_gauss4_minmaxnorm_dhx.fits",folder+"simu2048_sort_minmaxnorm_dhx.fits"]
-    gtpath = [folder+"simu2048_gauss_mask.fits",folder+"simu2048_gauss4_mask.fits",folder+"simu2048_sort_mask_getsf_fp.fits"]
+        imgpath = []
+        gtpath = []
+    for ii in range(20):
+        imgpath.append(folder+"simu2048list_gauss{}_norm.fits".format(ii))
+        gtpath.append(folder+"simu2048list_gauss{}_mask.fits".format(ii))
     
     # Load all data
     imglist = []
@@ -161,7 +164,7 @@ def multi_loader(folder):
     return imglist, gtlist, rgb_bands, ignored_labels, label_values, palette
 
 def benchmark_loader(folder):
-    img = fits.open(folder + "sky_c175_density_dhx.fits")[0].data
+    img = fits.open(folder + "sky_c175.hi.surface.density.r11p0_norm_dhx.fits")[0].data
     gt = fits.open(folder + "sky_c250_mask.fits")[0].data
     gt = gt.astype("uint8")
 

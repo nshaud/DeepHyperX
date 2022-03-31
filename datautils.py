@@ -41,8 +41,8 @@ class MultiDataset(torch.utils.data.Dataset):
         # Default epoch size is 5 000 samples
         W, H = self.data_files[0].shape[:2]
         w, h = self.window_size
-        nwin = (W*H)/w*h
-        return np.int32(nwin*len(self.data_files)/10)
+        nwin = (W*H)/(w*h)
+        return np.int32(nwin*len(self.data_files))
     
     def __getitem__(self, idx):
         # Pick a random image
