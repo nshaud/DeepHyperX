@@ -136,8 +136,8 @@ def simu_loader(folder):
     return img, gt, rgb_bands, ignored_labels, label_values, palette
 
 def multi_loader(folder):
-        imgpath = []
-        gtpath = []
+    imgpath = []
+    gtpath = []
     for ii in range(20):
         imgpath.append(folder+"simu2048list_gauss{}_norm.fits".format(ii))
         gtpath.append(folder+"simu2048list_gauss{}_mask.fits".format(ii))
