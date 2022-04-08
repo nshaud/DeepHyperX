@@ -25,13 +25,13 @@ CUSTOM_DATASETS_CONFIG = {
         "img": "simu2048_gauss_norm_cent.fits",
         "gt": "simu2048_gauss_mask.fits",
         "download": False,
-        "loader": lambda folder: simu_loader("./simu/"),
+        "loader": lambda folder: simu_loader("/Users/robitaij/postdoc/Lhyrica/simu/"),
     },
 	"Multi_image": {
         "img": "Multiple images",
         "gt": "Multiple masks",
         "download": False,
-        "loader": lambda folder: multi_loader("./simu/list2/"),
+        "loader": lambda folder: multi_loader("/Users/robitaij/postdoc/Lhyrica/simu/list2/"),
     },
 	"Benchmark": {
         "img": "sky_c175.hi.surface.density.r11p0_norm_dhx.fits",
@@ -136,9 +136,9 @@ def simu_loader(folder):
     return img, gt, rgb_bands, ignored_labels, label_values, palette
 
 def multi_loader(folder):
-        imgpath = []
-        gtpath = []
-    for ii in range(20):
+    imgpath = []
+    gtpath = []
+    for ii in range(11):
         imgpath.append(folder+"simu2048list_gauss{}_norm.fits".format(ii))
         gtpath.append(folder+"simu2048list_gauss{}_mask.fits".format(ii))
     
