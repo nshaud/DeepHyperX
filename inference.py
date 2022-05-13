@@ -124,7 +124,7 @@ if MAT is not None:
     img = img[MAT]
 # Normalization
 img = np.asarray(img, dtype="float32")
-img = (img - np.min(img)) / (np.max(img) - np.min(img))
+#img = (img - np.min(img)) / (np.max(img) - np.min(img))
 N_BANDS = img.shape[-1]
 hyperparams = vars(args)
 hyperparams.update(
@@ -159,7 +159,8 @@ if MODEL in ["SVM", "SVM_grid", "SGD", "nearest"]:
     prediction = prediction.reshape(img.shape[:2])
 else:
     model, _, _, hyperparams = get_model(MODEL, **hyperparams)
-    model.load_state_dict(torch.load(CHECKPOINT))
+    #model.load_state_dict(torch.load(CHECKPOINT))
+    model.load_state_dict(torch.load(CHECKPOINT, map_location=torch.device('cpu')))
     #probabilities = test(model, img, hyperparams)
     probabilities = test(model, img, window_size=hyperparams["patch_size"], n_classes=hyperparams["n_classes"], overlap=TEST_OVERLAP)
     prediction = np.argmax(probabilities, axis=-1)

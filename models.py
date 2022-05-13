@@ -558,29 +558,30 @@ class FCN2D_expand(nn.Module):
         super(FCN2D, self).__init__()
 
         self.encoder = nn.Sequential(
-            nn.Conv2d(in_channels, 8, (3, 3), padding=1),
-            nn.MaxPool2d((2, 2)),
-            nn.ReLU(),
-            nn.Conv2d(8, 16, (3, 3), padding=1),
+            nn.Conv2d(in_channels, 16, (7, 7), padding=3),
             nn.MaxPool2d((2, 2)),
             nn.ReLU(),
             nn.Conv2d(16, 32, (3, 3), padding=1),
             nn.MaxPool2d((2, 2)),
             nn.ReLU(),
             nn.Conv2d(32, 64, (3, 3), padding=1),
+			nn.BatchNorm2d(64)
+			nn.MaxPool2d((2, 2)),
             nn.ReLU(),
+			nn.Conv2d(64, 128, (3, 3), padding=1),
+			nn.ReLU(),
         )
         self.decoder = nn.Sequential(
+			nn.UpsamplingBilinear2d(scale_factor=2),
+            nn.Conv2d(128, 64, (3, 3), padding=1),
+            nn.ReLU(),
             nn.UpsamplingBilinear2d(scale_factor=2),
             nn.Conv2d(64, 32, (3, 3), padding=1),
             nn.ReLU(),
             nn.UpsamplingBilinear2d(scale_factor=2),
             nn.Conv2d(32, 16, (3, 3), padding=1),
             nn.ReLU(),
-            nn.UpsamplingBilinear2d(scale_factor=2),
-            nn.Conv2d(16, 8, (3, 3), padding=1),
-            nn.ReLU(),
-            nn.Conv2d(8, n_classes, (3, 3), padding=1),
+            nn.Conv2d(16, n_classes, (3, 3), padding=1),
         )
 
     def forward(self, x):
