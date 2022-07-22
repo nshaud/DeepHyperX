@@ -138,9 +138,11 @@ def simu_loader(folder):
 def multi_loader(folder):
     imgpath = []
     gtpath = []
-    for ii in range(20):
-        imgpath.append(folder+"simu2048list_gauss{}_norm.fits".format(ii))
-        gtpath.append(folder+"simu2048list_gauss{}_mask.fits".format(ii))
+    for ii in range(100):
+        imgpath.append(folder+"var_dist_list/simu2048list_gauss{}_norm.fits".format(ii))
+        gtpath.append(folder+"var_dist_list/simu2048list_gauss{}_mask.fits".format(ii))
+        imgpath.append(folder+"no_cores/simu2048list_gauss{}_norm.fits".format(ii))
+        gtpath.append(folder+"no_cores/simu2048list_gauss{}_mask.fits".format(ii))
     
     # Load all data
     imglist = []
