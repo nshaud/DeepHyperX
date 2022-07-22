@@ -102,9 +102,11 @@ def main(args):
     IGNORED_LABELS = [0]
     # Number of classes
     N_CLASSES = len(LABEL_VALUES)
+    print('N_CLASSES =', len(LABEL_VALUES))
     # Number of bands (last dimension of the image tensor)
     if isinstance(img,list):
-        N_BANDS = img[0].shape[-1]
+        N_BANDS = img[0][0].data.shape[-1]
+        print('N_BANDS = ',img[0][0].data.shape[-1])
     else:
         N_BANDS = img.shape[-1]
 
@@ -135,7 +137,7 @@ def main(args):
     # Show the image and the ground truth
     writer = SummaryWriter(comment=f"-{DATASET}_{MODEL}")
     if isinstance(img,list):
-        display_dataset(img[0],gt[0], 
+        display_dataset(img[0][0].data,gt[0][0].data, 
                         RGB_BANDS, LABEL_VALUES, palette, writer=writer)
     else:
         display_dataset(img,gt, RGB_BANDS, LABEL_VALUES, palette, writer=writer)
@@ -158,7 +160,7 @@ def main(args):
                 "run {}/{}".format(run + 1, N_RUNS),
             )
             
-            display_predictions(convert_to_color(gt[0]), 
+            display_predictions(convert_to_color(gt[0][0].data), 
                                 writer, caption="Ground Truth")
             
             from datautils import MultiDataset
@@ -309,7 +311,7 @@ def main(args):
             metric=0,
         )
         if isinstance(img,list):
-            probabilities = test(model, img[0], window_size=hyperparams["patch_size"],
+            probabilities = test(model, img[0][0].data, window_size=hyperparams["patch_size"],
                                  n_classes=len(LABEL_VALUES), overlap=TEST_OVERLAP)
         else:
             probabilities = test(model, img, window_size=hyperparams["patch_size"],

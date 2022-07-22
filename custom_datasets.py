@@ -138,17 +138,17 @@ def simu_loader(folder):
 def multi_loader(folder):
     imgpath = []
     gtpath = []
-    for ii in range(11):
+    for ii in range(20):
         imgpath.append(folder+"simu2048list_gauss{}_norm.fits".format(ii))
         gtpath.append(folder+"simu2048list_gauss{}_mask.fits".format(ii))
     
     # Load all data
     imglist = []
     for ii in imgpath:
-        imglist.append(np.asarray(open_file(ii), dtype="float32"))
+        imglist.append(fits.open(ii,memmap=True))
     gtlist = []
     for ii in gtpath:
-        gtlist.append(np.asarray(open_file(ii), dtype="uint8"))
+        gtlist.append(fits.open(ii,memmap=True))
 
     rgb_bands = (0,0,0)
 

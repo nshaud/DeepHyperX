@@ -8,6 +8,7 @@ from utils import pad_image
 from utils import sliding_window
 from utils import open_file
 from utils import get_random_pos
+from astropy.io import fits
 
 
 def count_valid_pixels(arr, ignored=IGNORED_INDEX):
@@ -39,7 +40,7 @@ class MultiDataset(torch.utils.data.Dataset):
         
     def __len__(self):
         # Default epoch size is 5 000 samples
-        W, H = self.data_files[0].shape[:2]
+        W, H = self.data_files[0][0].data.shape[:2]
         w, h = self.window_size
         nwin = (W*H)/(w*h)
         return np.int32(nwin*len(self.data_files))
@@ -51,17 +52,19 @@ class MultiDataset(torch.utils.data.Dataset):
         # Read data
         #data = open_file(self.data_files[random_idx])
         #data = np.asarray(data, dtype="float32")
-        data = self.data_files[random_idx]
+        #data = self.data_files[random_idx]
            
         # Read ground truth
         #label = open_file(self.gt_files[random_idx])
         #label = label.astype("int64")
-        label = self.gt_files[random_idx]
+        #label = self.gt_files[random_idx]
 
         # Get a random patch
-        x1, x2, y1, y2 = get_random_pos(data, self.window_size)
-        data_p = data[x1:x2,y1:y2].transpose((2, 0, 1))
-        label_p = label[x1:x2,y1:y2].astype("int64")
+        x1, x2, y1, y2 = get_random_pos(self.data_files[random_idx], self.window_size)
+        data_p = self.data_files[random_idx][0].data[x1:x2,y1:y2]
+        data_p = data_p.astype("float32").transpose((2, 0, 1))
+        label_p = self.gt_files[random_idx][0].data[x1:x2,y1:y2].astype("int64") - 1
+        #print('data_p shape', data_p.shape)
         
         #Normalisation
         #data_p = (data_p - np.min(data_p)) / (np.max(data_p) - np.min(data_p))
@@ -125,6 +128,7 @@ class HSIDataset(torch.utils.data.Dataset):
         # Extract window from image/ground truth
         data = self.data[x : x + w, y : y + h].transpose((2, 0, 1))
         target = self.ground_truth[x : x + w, y : y + h]
+        #print('data shape', data.shape)
         # TODO: data augmentation
         return torch.from_numpy(data), torch.from_numpy(target)
 

@@ -21,6 +21,7 @@ except ImportError:
 
 from datautils import IGNORED_INDEX
 from utils import open_file
+from astropy.io import fits
 
 DATASETS_CONFIG = {
     "PaviaC": {
@@ -349,24 +350,26 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
         # Normalization
         img = np.asarray(img, dtype="float32")
         print(img.shape)
+        print("label_values",le.classes_)
         # TODO: make this configurable
         # img = (img - np.min(img)) / (np.max(img) - np.min(img))
         # img = (img - np.mean(img)) / np.std(img)
     
     if isinstance(img,list):
-        for labelmap in gt:
-            ignored_labels = list(set(ignored_labels))
-            # Remove ignored classes from the ground truth
-            for c in ignored_labels:
-                mask = labelmap == c
-                labelmap[mask] = IGNORED_INDEX
+        #for labelmap in gt:
+        labelmap = gt[0][0].data.astype("uint8")
+        ignored_labels = list(set(ignored_labels))
+        # Remove ignored classes from the ground truth
+        for c in ignored_labels:
+            mask = labelmap == c
+            labelmap[mask] = IGNORED_INDEX
 
-            # Relabel the classes based on what has been ignored
-            from sklearn.preprocessing import LabelEncoder
+        # Relabel the classes based on what has been ignored
+        from sklearn.preprocessing import LabelEncoder
 
-            mask = labelmap == IGNORED_INDEX
-            le = LabelEncoder()
-            labelmap[~mask] = le.fit_transform(labelmap[~mask])#.reshape(gt.shape)
+        mask = labelmap == IGNORED_INDEX
+        le = LabelEncoder()
+        labelmap[~mask] = le.fit_transform(labelmap[~mask])#.reshape(gt.shape)
 
         # Fix the palette after relabeling
         palette = {
@@ -377,6 +380,7 @@ def get_dataset(dataset_name, target_folder="./", datasets=DATASETS_CONFIG):
         palette[IGNORED_INDEX] = (0, 0, 0)
         # Fix the label values after relabeling
         label_values = [label_values[c] for c in le.classes_ if c != IGNORED_INDEX]
+        print("label_values",le.classes_)
         
     return img, gt, label_values, rgb_bands, palette
 
